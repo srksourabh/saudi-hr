@@ -40,13 +40,24 @@ export default function LoginPage() {
     setLoading(true);
     setError("");
     try {
+      const res = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: "admin@demo.com", password: "Demo@1234" }),
+      });
+      const data = await res.json();
+      if (!data.ok) {
+        setError(data.error || "Demo login failed");
+        setLoading(false);
+        return;
+      }
       const result = await signIn("credentials", {
         email: "admin@demo.com",
         password: "Demo@1234",
         redirect: false,
       });
       if (result?.error) {
-        setError("Demo login failed. Check your credentials or database connection.");
+        setError("Session creation failed. Try again.");
         setLoading(false);
         return;
       }

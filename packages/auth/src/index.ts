@@ -18,7 +18,14 @@ declare module "next-auth" {
 }
 
 const nextAuthResult = NextAuth({
-  secret: (process.env.AUTH_SECRET || process.env.NEXTAUTH_SECRET) as string,
+  trustHost: true,
+  logger: {
+    error(code, metadata) {
+      console.error("[next-auth][error]", code, metadata?.error ?? "", metadata?.message ?? "");
+    },
+    warn(code) { console.warn("[next-auth][warn]", code); },
+    debug(code, metadata) { console.log("[next-auth][debug]", code, metadata); },
+  },
   session: { strategy: "jwt" },
   pages: {
     signIn: "/login",
