@@ -9,16 +9,17 @@ import { LlmError } from "../types";
 /**
  * Google Gemini provider.
  *
- * Default model: gemini-3.5-flash-latest (per user direction, 2026-07-12,
+ * Default model: gemini-3.5-flash (per user direction, 2026-07-12,
  * as the active LLM provider — replaces Claude in the runtime config while
- * keeping Claude as the documented default in the PRD).
+ * keeping the package provider-agnostic). Google currently exposes this
+ * model as `models/gemini-3.5-flash` via the v1beta generateContent API.
  *
  * Gemini's REST API is invoked directly via fetch (no SDK dependency) to
  * keep the package minimal. API reference:
  * https://ai.google.dev/api/generate-content
  */
 const GEMINI_API_BASE = "https://generativelanguage.googleapis.com/v1beta/models";
-const DEFAULT_MODEL = "gemini-3.5-flash-latest";
+const DEFAULT_MODEL = "gemini-3.5-flash";
 const DEFAULT_MAX_TOKENS = 4000; // PRD Section 6.4 cap
 
 export interface GeminiClientConfig {
