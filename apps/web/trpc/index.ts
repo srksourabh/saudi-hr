@@ -11,6 +11,7 @@ import { settlementRouter } from "./routers/settlement";
 import { recruitmentRouter } from "./routers/recruitment";
 import { retentionRouter } from "./routers/retention";
 import { complianceRouter } from "./routers/compliance";
+import { qiwaRouter } from "./routers/qiwa";
 
 export const appRouter = createTRPCRouter({
   auth: authRouter,
@@ -25,6 +26,7 @@ export const appRouter = createTRPCRouter({
   recruitment: recruitmentRouter,
   compliance: complianceRouter,
   retention: retentionRouter,
+  qiwa: qiwaRouter,
 });
 
 export type AppRouter = typeof appRouter;

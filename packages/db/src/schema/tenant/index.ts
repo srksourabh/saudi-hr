@@ -96,3 +96,10 @@ export {
   aiAuditLogs,
   aiRetentionRiskFlags,
 } from "./ai";
+
+export {
+  qiwaContracts,
+  qiwaSyncLogs,
+  qiwaContractStatusEnum,
+  qiwaContractTypeEnum,
+} from "./qiwa_contracts";

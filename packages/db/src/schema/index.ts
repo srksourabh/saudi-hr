@@ -133,6 +133,12 @@ export {
   aiRetentionRiskFlags,
 } from "./tenant/ai";
 export {
+  qiwaContracts,
+  qiwaSyncLogs,
+  qiwaContractStatusEnum,
+  qiwaContractTypeEnum,
+} from "./tenant/qiwa_contracts";
+export {
   aiSuggestionsRelations,
   aiChurnPredictionsRelations,
   aiCompliancePredictionsRelations,
