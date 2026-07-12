@@ -1,12 +1,11 @@
 "use client";
 
 import { signIn } from "next-auth/react";
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useRef } from "react";
 import { Button, Input, Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@hrms-app/ui";
 
 export default function LoginPage() {
-  const router = useRouter();
+  const formRef = useRef<HTMLFormElement>(null);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -18,21 +17,26 @@ export default function LoginPage() {
     setError("");
 
     try {
-      const result = await signIn("credentials", {
-        email,
-        password,
-        redirect: false,
+      const res = await fetch("/api/auth/callback/credentials", {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: new URLSearchParams({
+          email,
+          password,
+          csrfToken: await getCsrfToken(),
+          callbackUrl: "/",
+          json: "true",
+        }),
       });
 
-      if (result?.error) {
+      const data = await res.json();
+      if (data.error) {
         setError("Invalid email or password");
         setLoading(false);
         return;
       }
-
-      if (result?.ok) {
-        router.push("/");
-        router.refresh();
+      if (data.ok || data.url) {
+        window.location.href = "/";
       }
     } catch {
       setError("Something went wrong. Try again.");
@@ -44,24 +48,37 @@ export default function LoginPage() {
     setLoading(true);
     setError("");
     try {
-      const result = await signIn("credentials", {
-        email: "admin@demo.com",
-        password: "Demo@1234",
-        redirect: false,
+      const res = await fetch("/api/auth/callback/credentials", {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: new URLSearchParams({
+          email: "admin@demo.com",
+          password: "Demo@1234",
+          csrfToken: await getCsrfToken(),
+          callbackUrl: "/",
+          json: "true",
+        }),
       });
-      if (result?.error) {
-        setError("Demo login failed. Try setting up a local database or check your database connection.");
+
+      const data = await res.json();
+      if (data.error) {
+        setError("Demo login failed. Check your credentials or database connection.");
         setLoading(false);
         return;
       }
-      if (result?.ok) {
-        router.push("/");
-        router.refresh();
+      if (data.ok || data.url) {
+        window.location.href = "/";
       }
     } catch {
       setError("Something went wrong. Try again.");
       setLoading(false);
     }
+  }
+
+  async function getCsrfToken() {
+    const res = await fetch("/api/auth/csrf");
+    const data = await res.json();
+    return data.csrfToken;
   }
 
   return (
