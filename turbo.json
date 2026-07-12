@@ -10,8 +10,7 @@
       "outputs": [".next/**", "dist/**"],
       "env": [
         "AUTH_SECRET",
-        "AUTH_GOOGLE_ID",
-        "AUTH_GOOGLE_SECRET",
+        "AUTH_URL",
         "DATABASE_URL",
         "REDIS_URL",
         "RESEND_API_KEY",

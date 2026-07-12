@@ -1,10 +1,8 @@
 import NextAuth, { type DefaultSession } from "next-auth";
-import Google from "next-auth/providers/google";
 import Credentials from "next-auth/providers/credentials";
 import { adminDb } from "@hrms-app/db";
 import { users, tenants } from "@hrms-app/db";
 import { compare } from "bcryptjs";
-import { env } from "@hrms-app/config";
 import { eq } from "drizzle-orm";
 
 declare module "next-auth" {
@@ -20,16 +18,13 @@ declare module "next-auth" {
 }
 
 const nextAuthResult = NextAuth({
+  secret: (process.env.AUTH_SECRET || process.env.NEXTAUTH_SECRET) as string,
   session: { strategy: "jwt" },
   pages: {
     signIn: "/login",
     error: "/login",
   },
   providers: [
-    Google({
-      clientId: env.AUTH_GOOGLE_ID ?? "",
-      clientSecret: env.AUTH_GOOGLE_SECRET ?? "",
-    }),
     Credentials({
       name: "credentials",
       credentials: {
