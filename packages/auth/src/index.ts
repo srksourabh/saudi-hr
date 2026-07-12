@@ -27,7 +27,7 @@ const nextAuthResult = NextAuth({
     sessionsTable: sessions as any,
     verificationTokensTable: verificationTokens as any,
   }),
-  session: { strategy: "database" },
+  session: { strategy: "jwt" },
   pages: {
     signIn: "/login",
     error: "/login",
@@ -85,13 +85,13 @@ const nextAuthResult = NextAuth({
       }
       return token;
     },
-    async session({ session, user, token }) {
+    async session({ session, token }) {
       if (session.user) {
-        session.user.id = user.id;
-        (session.user as any).role = (token as any).role ?? (user as any).role;
-        (session.user as any).tenantId = (token as any).tenantId ?? (user as any).tenantId;
+        session.user.id = (token as any).sub ?? (token as any).id;
+        (session.user as any).role = (token as any).role;
+        (session.user as any).tenantId = (token as any).tenantId;
         (session.user as any).regulatoryContext = (token as any).regulatoryContext ?? "saudi";
-        (session.user as any).preferredLanguage = (token as any).preferredLanguage ?? (user as any).preferredLanguage ?? "en";
+        (session.user as any).preferredLanguage = (token as any).preferredLanguage ?? "en";
       }
       return session;
     },
