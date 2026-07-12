@@ -13,7 +13,12 @@ export const aiConfidenceLevelEnum = z.enum(["low", "medium", "high", "very_high
 export const aiAssistantSchema = z.object({
   name: z.string().min(1).max(255),
   description: z.string().optional(),
-  model: z.string().min(1).default("claude-3.5-sonnet"),
+  // Model is now required and must be a concrete model string (e.g.
+  // "claude-3-5-sonnet-latest", "gemini-3.5-flash-latest"). The set of
+  // valid models is enforced at the application layer via packages/llm;
+  // this schema intentionally stays permissive to keep it in sync with
+  // any new provider added later.
+  model: z.string().min(1),
   systemPrompt: z.string().optional(),
   capabilities: z.array(z.string()).optional(),
   isActive: z.boolean().default(true),

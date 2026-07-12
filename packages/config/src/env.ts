@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 const envSchema = z.object({
-  DATABASE_URL: z.string().url().default("postgresql://postgres:postgres@localhost:5432/hrms-app"),
+  DATABASE_URL: z.string().url().default("postgresql://postgres:***@localhost:5432/hrms-app"),
   AUTH_SECRET: z.string().min(32, "AUTH_SECRET must be at least 32 characters"),
   AUTH_GOOGLE_ID: z.string().optional(),
   AUTH_GOOGLE_SECRET: z.string().optional(),
@@ -12,6 +12,15 @@ const envSchema = z.object({
   SENTRY_DSN: z.string().optional(),
   NEXT_PUBLIC_APP_URL: z.string().url().default("http://localhost:3000"),
   NODE_ENV: z.enum(["development", "production", "test"]).default("development"),
+
+  // LLM provider configuration (see packages/llm).
+  // PRD Section 4 documents Claude as the default; runtime provider is
+  // overridable via LLM_PROVIDER for cases where the platform is run with
+  // a different vendor (e.g. Gemini 3.5 Flash). API key is required only
+  // for the active provider.
+  LLM_PROVIDER: z.enum(["claude", "gemini"]).default("claude"),
+  ANTHROPIC_API_KEY: z.string().optional(),
+  GEMINI_API_KEY: z.string().optional(),
 });
 
 export type Env = z.infer<typeof envSchema>;

@@ -16,7 +16,10 @@ export const aiAssistants = pgTable("ai_assistants", {
   id: uuid("id").defaultRandom().primaryKey(),
   name: text("name").notNull(),
   description: text("description"),
-  model: text("model").default("claude-3.5-sonnet").notNull(),
+  // Active LLM provider (informational; default model resolved by
+  // packages/llm at request time). Leave empty to use the platform
+  // default (Claude per PRD Section 4).
+  model: text("model").notNull(),
   systemPrompt: text("system_prompt"),
   capabilities: jsonb("capabilities").default([]),
   isActive: boolean("is_active").default(true).notNull(),
