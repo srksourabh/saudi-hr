@@ -1,0 +1,31 @@
+{
+  "name": "@hrms-app/db",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./schema": "./src/schema/index.ts",
+    "./schema/*": "./src/schema/*.ts",
+    "./schema/tenant": "./src/schema/tenant/index.ts"
+  },
+  "scripts": {
+    "db:push": "drizzle-kit push",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "drizzle-kit migrate",
+    "db:studio": "drizzle-kit studio",
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest"
+  },
+  "dependencies": {
+    "drizzle-orm": "^0.38.0",
+    "drizzle-kit": "^0.30.0",
+    "postgres": "^3.4.0"
+  },
+  "devDependencies": {
+    "@hrms-app/typescript-config": "workspace:*",
+    "@hrms-app/eslint-config": "workspace:*",
+    "typescript": "^5.7.0",
+    "vitest": "^3.0.0"
+  }
+}

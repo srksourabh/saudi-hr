@@ -1,0 +1,29 @@
+{
+  "name": "@hrms-app/auth",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest"
+  },
+  "dependencies": {
+    "@hrms-app/db": "workspace:*",
+    "@hrms-app/config": "workspace:*",
+    "drizzle-orm": "^0.38.0",
+    "next": "^16.0.0",
+    "next-auth": "5.0.0-beta.25",
+    "@auth/drizzle-adapter": "^1.7.0",
+    "bcryptjs": "^2.4.3"
+  },
+  "devDependencies": {
+    "@hrms-app/typescript-config": "workspace:*",
+    "@hrms-app/eslint-config": "workspace:*",
+    "@types/bcryptjs": "^2.4.6",
+    "typescript": "^5.7.0",
+    "vitest": "^3.0.0"
+  }
+}

@@ -1,0 +1,13 @@
+node_modules/
+.env
+.env.local
+dist/
+.next/
+*.log
+.turbo/
+coverage/
+.drizzle/
+tsconfig.tsbuildinfo
+*.tsbuildinfo
+playwright-report/
+test-results/

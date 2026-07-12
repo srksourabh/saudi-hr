@@ -1,0 +1,10 @@
+{
+  "name": "@hrms-app/typescript-config",
+  "private": true,
+  "exports": {
+    "./base": "./base.json",
+    "./base.json": "./base.json",
+    "./next": "./next.json",
+    "./next.json": "./next.json"
+  }
+}
