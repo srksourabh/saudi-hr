@@ -27,7 +27,7 @@ export default function LoginPage() {
       }
 
       if (result?.ok) {
-        router.push("/");
+        router.push("/employees");
         router.refresh();
       }
     } catch {
@@ -43,7 +43,7 @@ export default function LoginPage() {
       email: "admin@demo.com",
       password: "Demo@1234",
       redirect: true,
-      callbackUrl: "/",
+      callbackUrl: "/employees",
     });
   }
 
