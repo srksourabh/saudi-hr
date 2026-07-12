@@ -37,27 +37,18 @@ export default function LoginPage() {
   }
 
   async function handleDemoLogin() {
+    setEmail("admin@demo.com");
+    setPassword("Demo@1234");
     setLoading(true);
     setError("");
     try {
-      const res = await fetch("/api/auth/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: "admin@demo.com", password: "Demo@1234" }),
-      });
-      const data = await res.json();
-      if (!data.ok) {
-        setError(data.error || "Demo login failed");
-        setLoading(false);
-        return;
-      }
       const result = await signIn("credentials", {
         email: "admin@demo.com",
         password: "Demo@1234",
         redirect: false,
       });
       if (result?.error) {
-        setError("Session creation failed. Try again.");
+        setError("Demo login failed. Try again.");
         setLoading(false);
         return;
       }
