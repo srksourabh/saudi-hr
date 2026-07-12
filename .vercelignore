@@ -1,0 +1,12 @@
+node_modules
+.next
+.turbo
+.git
+.env
+.env.local
+*.log
+coverage
+dist
+playwright-report
+test-results
+.drizzle

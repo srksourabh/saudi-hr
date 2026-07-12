@@ -11,3 +11,5 @@ tsconfig.tsbuildinfo
 *.tsbuildinfo
 playwright-report/
 test-results/
+
+.vercel
