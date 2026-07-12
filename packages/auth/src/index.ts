@@ -95,12 +95,12 @@ const nextAuthResult = NextAuth({
     },
     async session({ session, token }) {
       if (session.user) {
-          session.user.id = (token.sub ?? token.id) as string;
-          session.user.role = token.role ?? "";
-          session.user.tenantId = token.tenantId ?? "";
-          session.user.regulatoryContext = token.regulatoryContext ?? "saudi";
-          session.user.preferredLanguage = token.preferredLanguage ?? "en";
-        }
+        session.user.id = (token.sub ?? token.id) as string;
+        session.user.role = (token.role as string) ?? "";
+        session.user.tenantId = (token.tenantId as string) ?? "";
+        session.user.regulatoryContext = (token.regulatoryContext as "saudi" | "india") ?? "saudi";
+        session.user.preferredLanguage = (token.preferredLanguage as "en" | "ar") ?? "en";
+      }
       return session;
     },
   },
