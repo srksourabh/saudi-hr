@@ -48,7 +48,7 @@ export function SaudiBackdrop({
 }: SaudiBackdropProps) {
   return (
     <div
-      className={`relative overflow-hidden ${className}`}
+      className={`overflow-hidden ${className}`}
       aria-hidden={!children ? "true" : undefined}
     >
       {/* Layer 1: sky gradient */}

@@ -36,14 +36,30 @@ export default function LoginPage() {
   }
 
   async function handleDemoLogin() {
+    setLoading(true);
+    setError("");
     setEmail("admin@demo.com");
     setPassword("Demo@1234");
-    await signIn("credentials", {
-      email: "admin@demo.com",
-      password: "Demo@1234",
-      redirect: true,
-      callbackUrl: "/",
-    });
+
+    try {
+      const result = await signIn("credentials", {
+        email: "admin@demo.com",
+        password: "Demo@1234",
+        redirect: false,
+      });
+
+      if (result?.ok) {
+        router.push("/");
+        router.refresh();
+        return;
+      }
+
+      setError("Demo access is temporarily unavailable. Please try again.");
+    } catch {
+      setError("Demo access is temporarily unavailable. Please try again.");
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (
@@ -83,7 +99,7 @@ export default function LoginPage() {
             <span className="text-[hsl(var(--saudi-gold))]">modern workforce.</span>
           </h1>
           <p className="mb-10 max-w-md text-lg leading-relaxed text-white/85">
-            The AI-native HR & payroll platform built for the Kingdom's
+            The AI-native HR & payroll platform built for the Kingdom&apos;s
             SMEs — compliant with Qiwa, Mudad, and GOSI from day one.
           </p>
 

@@ -56,13 +56,29 @@ const nextAuthResult: AuthResult = NextAuth({
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) return null;
 
+        const email = credentials.email as string;
+        const password = credentials.password as string;
+        const isDemoLogin =
+          process.env.DEMO_MODE === "true" &&
+          email === "admin@demo.com" &&
+          password === "Demo@1234";
+
+        if (isDemoLogin) {
+          return {
+            id: "demo-user",
+            email,
+            name: "Sourabh",
+            role: "hr_manager",
+          };
+        }
+
         const user = await adminDb.query.users.findFirst({
-          where: eq(users.email, credentials.email as string),
+          where: eq(users.email, email),
         });
 
         if (!user || !user.passwordHash) return null;
 
-        const valid = await compare(credentials.password as string, user.passwordHash);
+        const valid = await compare(password, user.passwordHash);
         if (!valid) return null;
 
         return {
