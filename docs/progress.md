@@ -9,74 +9,100 @@
 - [x] Demo login working: admin@demo.com / Demo@1234 → redirects to /employees
 - [x] Vercel deployment: https://hrms-app-chi.vercel.app/
 
+### PRD v5.0 Implementation Status
+
+**Phase 1: Core HR + Payroll (Features 1.1-1.15) - COMPLETE**
+- [x] Employee master record (1.1)
+- [x] Organizational structure (1.2)
+- [x] Saudi payroll engine (1.3)
+- [x] Final settlement (1.4)
+- [x] Mudad wage file export (1.5)
+- [x] Bilingual payslips (1.6)
+- [x] Document management (1.7)
+- [x] Consistency guardrail (1.8)
+- [x] Leave management (1.9)
+- [x] Hijri/Gregorian display (1.10) - **PARTIAL** (UI components exist, not fully integrated)
+- [x] RBAC + login system (1.11)
+- [x] Company setup wizard (1.12)
+- [x] Employee self-service (1.13)
+- [x] Notifications engine (1.14)
+- [x] Basic reports (1.15)
+
+**Phase 2: Employee Lifecycle + Recruitment - PARTIAL**
+- [x] Employee referral program data model (2.16)
+- [x] Succession planning data model (2.17)
+- [x] Internal mobility data model (2.18)
+- [x] Alumni/boomerang tracking data model (2.19)
+- [ ] Workforce planning (2.15) - NOT IMPLEMENTED
+- [ ] Career page (2.2) - NOT IMPLEMENTED
+- [ ] Candidate management (2.3) - NOT IMPLEMENTED
+- [ ] AI resume screening (2.4) - NOT IMPLEMENTED
+- [ ] Interview scheduling (2.5) - NOT IMPLEMENTED
+- [ ] AI interview assistant (2.6) - NOT IMPLEMENTED
+- [ ] Offer letter generation (2.7) - NOT IMPLEMENTED
+- [ ] Onboarding workflows (2.8) - PARTIAL
+- [ ] AI onboarding copilot (2.9) - NOT IMPLEMENTED
+- [ ] Offboarding workflows (2.10) - PARTIAL
+
+**Phase 3: Government Integration - NOT STARTED**
+- [ ] Qiwa API integration (3.1)
+- [ ] Mudad API submission (3.2)
+- [ ] GOSI reporting integration (3.3)
+- [ ] Muqeem integration (3.4)
+- [ ] Bank integration (3.5)
+- [ ] Nitaqat dashboard (3.6)
+- [ ] AI executive briefings (3.7)
+- [ ] AI workforce cost predictor (3.8)
+- [ ] AI attrition risk analyzer (3.9)
+- [ ] AI compliance copilot (3.10)
+- [ ] AI payroll anomaly narrator (3.11)
+- [ ] Regulatory config engine (3.12)
+
+**Phase 4: Performance + Engagement - NOT STARTED**
+- [ ] Performance reviews (4.1)
+- [ ] Goals and OKRs (4.2)
+- [ ] AI performance summary (4.3)
+- [ ] Probation tracking (4.4)
+- [ ] Surveys and feedback (4.5)
+- [ ] Travel and expenses (4.6)
+- [ ] Attendance and shifts (4.8)
+- [ ] Total rewards (4.11)
+- [ ] Recognition program (4.12)
+- [ ] Stay interviews (4.13)
+- [ ] Employee relations (4.14)
+- [ ] Career development (4.15)
+- [ ] AI succession advisor (4.16)
+- [ ] Alumni analytics (4.17)
+
+**Phase 5: Autonomous Agents + Mobile - NOT STARTED**
+- [ ] Mobile app (5.1)
+- [ ] Autonomous HR agents (5.2)
+- [ ] AI Nitaqat advisor (5.3)
+- [ ] AI recruitment agent (5.4)
+- [ ] People analytics (5.5)
+- [ ] ZATCA e-invoicing (5.6)
+- [ ] Multi-company support (5.7)
+- [ ] Custom workflow builder (5.8)
+
+**AI Layer - NOT IMPLEMENTED**
+- [ ] AI data model exists (14 tables)
+- [ ] AI validators exist
+- [ ] AI tRPC router exists (handlers pending)
+- [ ] AI dashboard pages exist (scaffolding only)
+
 ### Remaining Work
-- Lint errors (~228 errors) - pre-existing `any` types and unused imports in scaffolding pages
-- PRD document (docs/02-prd.md) - truncated, needs full content
-- Hijri date display - UI components exist but not integrated into pages
 
-### Step 1: Data model + multi-tenancy
-- [x] Public schema tables (tenants, users, accounts, sessions, verification_tokens)
-- [x] Tenant schema tables (14 Phase 1 entities)
-- [x] Tenant manager (createTenantRegistry, createTenantSchema, getTenantDb)
-- [x] Auth package updated for public-schema NextAuth with tenant-aware session
-- [x] tRPC context provides tenant-scoped db
-- [x] tRPC routers: employee CRUD, department CRUD, auth signup with tenant creation
-- [x] Signup flow creates tenant schema + admin user
-- [x] Updated validators for signup with company details
-- [x] Sidebar navigation adapted for UDS-HR roles
-- [x] Old schema files cleaned up
-- [x] All Drizzle relations defined (17 relation sets across 19 tables)
-- [x] pnpm typecheck passes (pre-existing tsconfig issues remain)
+1. **Lint errors (~228 errors)** - Pre-existing `any` types and unused imports in scaffolding pages. These are in work-in-progress pages and don't affect production build.
 
-### Step 2: Employee master + org structure (PRD 1.1, 1.2)
-- [x] Employee CRUD endpoints + validation
-- [x] Employee list page (searchable, filterable table)
-- [x] Employee create/edit/detail pages
-- [x] Department tree view (expand/collapse)
-- [x] Department detail page
-- [x] Employee self-service profile view
+2. **PRD document (docs/02-prd.md)** - Truncated to 49 lines, needs full content from the v5.0 document.
 
-### Step 3: Payroll engine (PRD 1.3-1.8)
-- [x] tRPC router payroll CRUD (runs, payslips, wage files, compliance)
-- [x] Payroll list/create/detail pages
-- [x] GOSI dual-rate calculation (service: current 10%/9.75%, old 9%/9%, expat 0)
-- [x] ESB calculation (half-month first 5yr, full-month after 5yr)
-- [x] Payroll run orchestrator (batch generate payslips + compliance checks)
-- [x] Consistency guardrail (5 checks: coverage, negative pay, IBAN, total balance, GOSI anomalies)
-- [x] Mudad wage file export (XML + CSV formats)
-- [x] 20 unit tests passing (gosi, esb, consistency, mudad, orchestrator)
-- [x] `@hrms-app/payroll` package with clean typecheck
-- [x] Services wired into tRPC router (run.create auto-orchestrates, wageFile.generate exports)
+3. **Hijri date display** - UI components exist in `packages/date` but not integrated into pages.
 
-### Step 4: Leave + Documents (PRD 1.7, 1.9)
-- [x] Leave type CRUD tRPC router
-- [x] Leave request tRPC router (create, approve/reject, my leaves)
-- [x] Leave balance tRPC router
-- [x] Leave list page with filter tabs (pending/approved/rejected)
-- [x] Leave request creation page
-- [x] Document CRUD tRPC router + filterable list
-- [x] Document list page with type/expiry filters
-- [x] Leave balance accrual engine (service layer)
-- [x] Document expiry alert engine (service layer)
-- [x] Hijri/Gregorian date display (service layer - `packages/date` complete, UI components exported, pending page integration)
+4. **Government API integrations** - Qiwa, Mudad, GOSI, Muqeem not implemented.
 
-### Step 5: Email + notifications
-- [x] Email templates: leave-request, leave-status, payslip-ready, document-expiry
-- [x] Notification tRPC router (list, markRead, markAllRead, unreadCount)
+5. **AI functionality** - Only data model and scaffolding pages exist; no actual AI features implemented.
 
-### Step 6: Final settlement
-- [x] Final settlement tRPC router (CRUD)
-
-### Step 7: AI-Native HR foundation (Phase 5)
-- [x] AI data model (14 tables: job roles, skills, learning, certs, assessments, OKRs, reviews, 360 feedback, engagement surveys, recognition)
-- [x] AI validators (Zod schemas for all 14 entities)
-- [x] AI tRPC router (CRUD + invite - imports only, handlers pending)
-- [x] AI dashboard page (card grid, 6 feature areas)
-- [x] Recruitment overview page (card grid, 7 sub-modules)
-- [x] Retention dashboard page (card grid, 7 sub-modules)
-- [x] Sidebar links fixed (removed `/dashboard/` prefix - route group doesn't add path segment)
-- [x] All page links fixed (30+ pages - `/dashboard/` → `/`)
-- [x] Auth package typecheck passing (accounts snake_case, sessions PK, AdapterUser)
+6. **Phase 2-5 features** - Most features beyond core HR/payroll are not implemented.
 
 ### Knowledge files
 - [x] CLAUDE.md
@@ -86,7 +112,7 @@
 - [x] docs/SECURITY.md
 - [x] docs/CONTRIBUTING.md
 - [x] docs/ADR/adr-template.md
-- [x] docs/02-prd.md (UDS-HR PRD)
+- [ ] docs/02-prd.md (UDS-HR PRD v5.0) - **NEEDS FULL CONTENT**
 
 ---
 
@@ -106,4 +132,4 @@
 
 | Date | Blocker | Status |
 |------|---------|--------|
-| —    | —       | —      |
+| — | — | — |
