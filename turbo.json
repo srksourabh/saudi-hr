@@ -16,6 +16,7 @@
         "REDIS_URL",
         "RESEND_API_KEY",
         "NEXT_PUBLIC_APP_URL",
+        "NEXTAUTH_URL",
         "NODE_ENV"
       ]
     },
