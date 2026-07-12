@@ -3,7 +3,7 @@
 import { useSession } from "next-auth/react";
 import { api } from "~/trpc/react";
 import {
-  Users, Building2, CalendarCheck, TrendingUp,
+  Users, Building2, TrendingUp,
   Clock, UserCheck, Landmark, ShieldCheck,
 } from "lucide-react";
 import { useRegulatoryContext } from "~/lib/regulatory-context";

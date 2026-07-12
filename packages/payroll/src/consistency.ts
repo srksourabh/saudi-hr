@@ -1,4 +1,4 @@
-import type { EmployeeContext, PayslipCalculation, ComplianceResult, CheckSeverity } from "./types";
+import type { EmployeeContext, PayslipCalculation, ComplianceResult } from "./types";
 
 interface GuardrailInput {
   payslips: PayslipCalculation[];

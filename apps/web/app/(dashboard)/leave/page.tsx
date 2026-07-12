@@ -75,7 +75,7 @@ export default function LeavePage() {
           </thead>
           <tbody>
             {requests?.map((req: any) => {
-              const badge = (statusBadge[req.status] ?? statusBadge.pending)!;
+              const badge = statusBadge[req.status as keyof typeof statusBadge] ?? statusBadge.pending;
               return (
                 <tr key={req.id} className="border-b hover:bg-muted/50">
                   <td className="p-4 align-middle">{req.employee?.fullName}</td>
@@ -83,7 +83,7 @@ export default function LeavePage() {
                   <td className="p-4 align-middle">{req.startDate}</td>
                   <td className="p-4 align-middle">{req.endDate}</td>
                   <td className="p-4 align-middle">
-                    <Badge variant={badge.variant} className={badge.className}>
+                    <Badge variant={badge!.variant} className={badge!.className}>
                       {req.status}
                     </Badge>
                   </td>

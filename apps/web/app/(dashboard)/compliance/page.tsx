@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Button, Card, CardHeader, CardTitle, CardContent, Badge, Table, TableHeader, TableBody, TableRow, TableHead, TableCell, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@hrms-app/ui";
+import { Button, Card, CardHeader, CardContent, Badge, Table, TableHeader, TableBody, TableRow, TableHead, TableCell, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@hrms-app/ui";
 import { api } from "~/trpc/react";
 import { Shield, Plus, Search, AlertTriangle, CheckCircle2, XCircle } from "lucide-react";
 import { Input } from "@hrms-app/ui";
@@ -29,7 +29,7 @@ export default function CompliancePage() {
 
   const { data, isLoading } = api.compliance.list.useQuery({
     status: (status as "passed" | "flagged" | "blocked") || undefined,
-    checkType: (checkType || undefined) as any,
+    checkType: (checkType || undefined) as string | undefined,
     page,
     pageSize: 20,
   });
@@ -39,10 +39,6 @@ export default function CompliancePage() {
     return 0;
   };
 
-  const flaggedIssuesPreview = (issues: unknown): string => {
-    if (Array.isArray(issues) && issues.length > 0) return issues[0] as string;
-    return "-";
-  };
 
   return (
     <div className="space-y-6">
@@ -134,7 +130,7 @@ export default function CompliancePage() {
                         {check.checkType.replace(/_/g, " ")}
                       </span>
                     </TableCell>
-                    <TableCell>{check.payrollRun?.id?.slice(0, 8) ?? "-"}</TableCell>
+                    <TableCell>                        {check.payrollRun?.id?.slice(0, 8) ?? "-"}</TableCell>
                     <TableCell>
                       <Badge variant={statusVariants[check.status] ?? "outline"}>
                         <span className="flex items-center gap-1">

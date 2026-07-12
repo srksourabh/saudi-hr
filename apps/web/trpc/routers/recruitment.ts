@@ -33,9 +33,7 @@ import {
 } from "@hrms-app/validators";
 import { and, eq, desc, ilike, or, gte, lte, inArray } from "drizzle-orm";
 
-function parseNumeric(value: string | null | undefined): number {
-  return value ? Number.parseFloat(value) : 0;
-}
+
 
 export const recruitmentRouter = createTRPCRouter({
   jobRequisition: createTRPCRouter({

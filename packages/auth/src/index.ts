@@ -6,6 +6,12 @@ import { compare } from "bcryptjs";
 import { eq } from "drizzle-orm";
 
 declare module "next-auth" {
+  interface User {
+    role?: string;
+    tenantId?: string;
+    preferredLanguage?: "en" | "ar";
+  }
+
   interface Session {
     user: {
       id: string;
@@ -14,6 +20,14 @@ declare module "next-auth" {
       regulatoryContext: "saudi" | "india";
       preferredLanguage: "en" | "ar";
     } & DefaultSession["user"];
+  }
+
+  interface JWT {
+    role?: string;
+    tenantId?: string;
+    id?: string;
+    regulatoryContext?: "saudi" | "india";
+    preferredLanguage?: "en" | "ar";
   }
 }
 
@@ -24,7 +38,6 @@ const nextAuthResult = NextAuth({
       console.error("[next-auth][error]", error instanceof Error ? error.message : String(error), error instanceof Error ? error.stack : "");
     },
     warn(code) { console.warn("[next-auth][warn]", code); },
-    debug(code, metadata) { console.log("[next-auth][debug]", code, metadata); },
   },
   session: { strategy: "jwt" },
   pages: {
@@ -62,40 +75,35 @@ const nextAuthResult = NextAuth({
     }),
   ],
   callbacks: {
-    async jwt({ token, user, account }) {
+    async jwt({ token, user, account: _account }) {
       if (user) {
-        (token as any).role = (user as any).role;
-        (token as any).tenantId = (user as any).tenantId;
+        token.role = user.role;
+        token.tenantId = user.tenantId;
 
-        if ((user as any).tenantId) {
+        if (user.tenantId) {
           const tenant = await adminDb.query.tenants.findFirst({
-            where: eq(tenants.id, (user as any).tenantId),
+            where: eq(tenants.id, user.tenantId),
           });
-          (token as any).regulatoryContext = tenant?.regulatoryContext ?? "saudi";
+          token.regulatoryContext = tenant?.regulatoryContext ?? "saudi";
         } else {
-          (token as any).regulatoryContext = "saudi";
+          token.regulatoryContext = "saudi";
         }
 
-        (token as any).preferredLanguage = (user as any).preferredLanguage ?? "en";
+        token.preferredLanguage = user.preferredLanguage ?? "en";
       }
       return token;
     },
     async session({ session, token }) {
       if (session.user) {
-        session.user.id = (token as any).sub ?? (token as any).id;
-        (session.user as any).role = (token as any).role;
-        (session.user as any).tenantId = (token as any).tenantId;
-        (session.user as any).regulatoryContext = (token as any).regulatoryContext ?? "saudi";
-        (session.user as any).preferredLanguage = (token as any).preferredLanguage ?? "en";
-      }
+          session.user.id = (token.sub ?? token.id) as string;
+          session.user.role = token.role ?? "";
+          session.user.tenantId = token.tenantId ?? "";
+          session.user.regulatoryContext = token.regulatoryContext ?? "saudi";
+          session.user.preferredLanguage = token.preferredLanguage ?? "en";
+        }
       return session;
     },
   },
 });
 
-export const { handlers, signIn, signOut, auth } = nextAuthResult as unknown as {
-  handlers: { GET: Function; POST: Function };
-  signIn: Function;
-  signOut: Function;
-  auth: Function;
-};
+export const { handlers, signIn, signOut, auth } = nextAuthResult;

@@ -6,8 +6,6 @@ import {
   Container,
   Section,
   Text,
-  Row,
-  Column,
   Button,
   Hr,
 } from "@react-email/components";

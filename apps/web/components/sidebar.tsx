@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 import {
   Users, LayoutDashboard, Settings, Building2, Briefcase,
   ClipboardCheck, CalendarCheck, FileText, UserPlus,
-  HeartHandshake, Brain, Landmark,
+  HeartHandshake, Brain,
 } from "lucide-react";
 import { useRegulatoryContext } from "~/lib/regulatory-context";
 import { t } from "~/lib/i18n";
@@ -24,7 +24,7 @@ export function Sidebar({ user }: SidebarProps) {
   const lang = preferredLanguage;
 
   const baseNav = [
-    { href: "/employees", label: t("nav.dashboard", lang), icon: LayoutDashboard },
+    { href: "/", label: t("nav.dashboard", lang), icon: LayoutDashboard },
     { href: "/employees", label: t("nav.employees", lang), icon: Users },
     { href: "/departments", label: t("nav.departments", lang), icon: Building2 },
     { href: "/leave", label: t("nav.leave", lang), icon: CalendarCheck },
@@ -42,7 +42,7 @@ export function Sidebar({ user }: SidebarProps) {
   const navItems = user.role === "super_admin" || user.role === "hr_manager"
     ? [...baseNav, ...secondaryNav, { href: "/settings", label: t("nav.settings", lang), icon: Settings }]
     : [
-        { href: "/employees", label: t("nav.dashboard", lang), icon: LayoutDashboard },
+        { href: "/", label: t("nav.dashboard", lang), icon: LayoutDashboard },
         { href: "/employees", label: t("nav.employees", lang), icon: Users },
         { href: "/leave", label: t("nav.leave", lang), icon: CalendarCheck },
         { href: "/documents", label: t("nav.documents", lang), icon: FileText },

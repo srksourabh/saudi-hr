@@ -6,9 +6,9 @@ export { EXPIRY_THRESHOLDS };
 function parseDate(dateStr: string): Date | null {
   const match = dateStr.match(/^(\d{4})-(\d{2})-(\d{2})$/);
   if (!match) return null;
-  const year = parseInt(match[1]!, 10);
-  const month = parseInt(match[2]!, 10) - 1;
-  const day = parseInt(match[3]!, 10);
+  const year = Number(match[1]);
+  const month = Number(match[2]) - 1;
+  const day = Number(match[3]);
   return new Date(year, month, day);
 }
 

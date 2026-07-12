@@ -36,9 +36,9 @@ describe("orchestratePayrollRun", () => {
       deductions: { e1: 500 },
     });
 
-    const slip = result.payslips[0]!;
-    expect(slip.overtime).toBe(1000);
-    expect(slip.deductions).toBe(500);
+    const slip = result.payslips[0];
+    expect(slip?.overtime).toBe(1000);
+    expect(slip?.deductions).toBe(500);
   });
 
   it("calculates net pay as gross minus deductions", () => {
@@ -47,8 +47,8 @@ describe("orchestratePayrollRun", () => {
       employees: [emp("e1", { salaryBasic: 10000, salaryHousing: 0, salaryTransport: 0 })],
     });
 
-    const slip = result.payslips[0]!;
-    expect(slip.netPay).toBeGreaterThan(0);
+    const slip = result.payslips[0];
+    expect(slip?.netPay).toBeGreaterThan(0);
   });
 
   it("returns empty payslips for no employees", () => {

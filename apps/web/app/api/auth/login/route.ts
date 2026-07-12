@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { adminDb, users, tenants } from "@hrms-app/db";
+import { adminDb, users } from "@hrms-app/db";
 import { compare } from "bcryptjs";
 import { eq } from "drizzle-orm";
 

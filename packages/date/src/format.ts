@@ -88,8 +88,8 @@ export function parseDateString(dateStr: string): GregorianDate | null {
   const match = dateStr.match(/^(\d{4})-(\d{2})-(\d{2})$/);
   if (!match) return null;
   return {
-    year: parseInt(match[1]!, 10),
-    month: parseInt(match[2]!, 10),
-    day: parseInt(match[3]!, 10),
+    year: Number(match[1]),
+    month: Number(match[2]),
+    day: Number(match[3]),
   };
 }

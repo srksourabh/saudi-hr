@@ -2,7 +2,7 @@
 
 import { api } from "~/trpc/react";
 import Link from "next/link";
-import { Button, Badge } from "@hrms-app/ui";
+import { Button } from "@hrms-app/ui";
 import { Plus, Trash2, ChevronRight, ChevronDown } from "lucide-react";
 import { useState } from "react";
 

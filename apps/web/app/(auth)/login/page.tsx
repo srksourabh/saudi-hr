@@ -27,7 +27,7 @@ export default function LoginPage() {
       }
 
       if (result?.ok) {
-        router.push("/employees");
+        router.push("/");
         router.refresh();
       }
     } catch {
@@ -43,7 +43,7 @@ export default function LoginPage() {
       email: "admin@demo.com",
       password: "Demo@1234",
       redirect: true,
-      callbackUrl: "/employees",
+      callbackUrl: "/",
     });
   }
 
@@ -122,7 +122,7 @@ export default function LoginPage() {
               </Button>
               <div className="text-center pt-1">
                 <Button variant="link" className="text-sm text-slate-500 hover:text-slate-700" asChild>
-                  <a href="/signup">Don't have an account? Sign up</a>
+                  <a href="/signup">Don&apos;t have an account? Sign up</a>
                 </Button>
               </div>
             </CardFooter>

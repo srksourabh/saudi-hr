@@ -44,12 +44,12 @@ export default function PayrollPage() {
           </thead>
           <tbody>
             {runs?.map((run: any) => {
-              const badge = (statusBadge[run.status] ?? statusBadge.draft)!;
+              const badge = statusBadge[run.status as keyof typeof statusBadge] ?? statusBadge.draft;
               return (
                 <tr key={run.id} className="border-b hover:bg-muted/50">
                   <td className="p-4 align-middle">{run.periodMonth}</td>
                   <td className="p-4 align-middle">
-                    <Badge variant={badge.variant} className={badge.className}>
+                    <Badge variant={badge!.variant} className={badge!.className}>
                       {run.status.replace("_", " ")}
                     </Badge>
                   </td>

@@ -12,7 +12,7 @@ export interface OrchestratorInput {
 
 export interface OrchestratorResult {
   payslips: PayslipCalculation[];
-  checks: Array<{ checkType: string; status: CheckSeverity; flaggedIssues: string[] }>;
+  checks: { checkType: string; status: CheckSeverity; flaggedIssues: string[] }[];
   totalAmount: number;
 }
 

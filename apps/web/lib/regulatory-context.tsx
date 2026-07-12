@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useCallback } from "react";
+import { createContext, useContext } from "react";
 import type { Lang } from "./i18n";
 
 export interface RegulatoryContextValue {
@@ -12,7 +12,7 @@ export interface RegulatoryContextValue {
 export const RegulatoryContext = createContext<RegulatoryContextValue>({
   regulatoryContext: "saudi",
   preferredLanguage: "en",
-  setPreferredLanguage: () => {},
+  setPreferredLanguage: (_lang: Lang) => { /* noop */ },
 });
 
 export function useRegulatoryContext() {

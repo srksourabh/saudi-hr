@@ -10,7 +10,7 @@ export async function GET() {
     const u = new URL(dbUrl ?? "");
     dbHost = u.hostname;
     dbPort = u.port || "5432";
-  } catch {}
+  } catch { /* ignore */ }
 
   return Response.json({
     hasAuthSecret: !!authSecret,

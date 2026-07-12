@@ -33,7 +33,7 @@ export default function PayrollDetailPage() {
   if (isLoading) return <div>Loading...</div>;
   if (!run) return <div>Payroll run not found</div>;
 
-  const badge = (statusBadge[run.status] ?? statusBadge.draft)!;
+  const badge = statusBadge[run.status as keyof typeof statusBadge] ?? statusBadge.draft;
 
   return (
     <div className="space-y-6">
@@ -53,7 +53,7 @@ export default function PayrollDetailPage() {
             <CardTitle>Status</CardTitle>
           </CardHeader>
           <CardContent>
-            <Badge variant={badge.variant} className={badge.className}>
+            <Badge variant={badge!.variant} className={badge!.className}>
               {run.status.replace("_", " ")}
             </Badge>
           </CardContent>

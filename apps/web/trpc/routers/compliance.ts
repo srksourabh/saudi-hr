@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { createTRPCRouter, protectedProcedure, requireRole } from "../server";
+import { createTRPCRouter, requireRole } from "../server";
 import { schema } from "@hrms-app/db";
 import { createComplianceCheckSchema, complianceQuerySchema } from "@hrms-app/validators";
 import { and, eq, desc } from "drizzle-orm";

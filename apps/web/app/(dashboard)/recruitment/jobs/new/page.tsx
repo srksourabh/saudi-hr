@@ -9,7 +9,7 @@ import { Plus, Briefcase, Users, MapPin, DollarSign, ArrowLeft, Save } from "luc
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { createJobRequisitionSchema, jobTypeEnum } from "@hrms-app/validators";
-import { z } from "zod";
+import type { z } from "zod";
 
 const statusColors = {
   draft: "outline",

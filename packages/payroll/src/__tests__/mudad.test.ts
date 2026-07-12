@@ -40,7 +40,7 @@ describe("generateMudadFile", () => {
     expect(result.period).toBe("2026-07");
     expect(result.totalEmployees).toBe(1);
     expect(result.totalWages).toBe(13500);
-    expect(result.employees[0]!.fullName).toBe("Ahmed Al-Saud");
+    expect(result.employees[0]?.fullName).toBe("Ahmed Al-Saud");
   });
 });
 

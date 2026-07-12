@@ -32,7 +32,7 @@ import {
   createTalentReviewParticipantSchema, updateTalentReviewParticipantSchema,
   idSchema, dateRangeSchema,
 } from "@hrms-app/validators";
-import { and, eq, desc, ilike, or, gte, lte, inArray } from "drizzle-orm";
+import { and, eq, desc } from "drizzle-orm";
 
 export const retentionRouter = createTRPCRouter({
   goal: createTRPCRouter({

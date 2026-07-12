@@ -3,7 +3,6 @@ import { z } from "zod";
 import { createTRPCRouter, protectedProcedure } from "../server";
 import { schema } from "@hrms-app/db";
 import {
-  aiSuggestionTypeEnum, aiSuggestionStatusEnum, aiConfidenceLevelEnum,
   aiAssistantSchema, aiAssistantUpdateSchema,
   aiSuggestionSchema, aiSuggestionUpdateSchema, aiSuggestionQuerySchema,
   aiChurnPredictionQuerySchema,
@@ -13,7 +12,7 @@ import {
   aiAuditLogQuerySchema,
   idSchema,
 } from "@hrms-app/validators";
-import { and, eq, desc, ilike, or } from "drizzle-orm";
+import { and, eq, desc, ilike } from "drizzle-orm";
 
 export const aiRouter = createTRPCRouter({
   assistant: createTRPCRouter({

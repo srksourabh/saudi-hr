@@ -10,9 +10,6 @@ function employee(id: string, hireDate: string, status = "active"): EmployeeCont
   return { id, fullName: `Employee ${id}`, hireDate, employmentStatus: status };
 }
 
-function balance(employeeId: string, leaveTypeId: string, year: number, balance: number): LeaveBalanceContext {
-  return { id: `${employeeId}-${leaveTypeId}-${year}`, employeeId, leaveTypeId, balance, year };
-}
 
 describe("calculateAccrual", () => {
   const baseConfig: AccrualConfig = {
@@ -92,7 +89,7 @@ describe("runMonthlyAccrual", () => {
 
     // Both employees processed, but terminated gets 0 accrual
     expect(results.length).toBe(2);
-    expect(results.find((r) => r.employeeId === "e2")!.daysAccrued).toBe(0);
+    expect(results.find((r) => r.employeeId === "e2")?.daysAccrued).toBe(0);
   });
 
   it("applies carryOverMax to existing balances", () => {

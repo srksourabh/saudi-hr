@@ -1,24 +1,18 @@
 "use client";
 
-import { useState, use } from "react";
+import { use } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Button, Input, Card, CardHeader, CardTitle, CardContent, Badge, Table, TableHeader, TableBody, TableRow, TableHead, TableCell, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Textarea, Label } from "@hrms-app/ui";
+import { Button, Card, CardHeader, CardTitle, CardContent, Badge, Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@hrms-app/ui";
 import { api } from "~/trpc/react";
-import { Plus, Search, Briefcase, Users, Clock, MapPin, DollarSign, ArrowLeft, Save } from "lucide-react";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { createJobRequisitionSchema, jobTypeEnum } from "@hrms-app/validators";
-import { z } from "zod";
-
+import { Briefcase, ArrowLeft, MapPin, DollarSign, Users, Clock } from "lucide-react";
 const statusColors: Record<string, "default" | "destructive" | "secondary" | "outline"> = {
   draft: "outline",
   open: "default",
-  paused: "secondary",
-  closed: "destructive",
-  filled: "default",
-  cancelled: "destructive",
+  closed: "secondary",
+  on_hold: "outline",
 };
+
 
 const statusLabels: Record<string, string> = {
   draft: "Draft",

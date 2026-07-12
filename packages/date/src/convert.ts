@@ -1,7 +1,6 @@
 import type { HijriDate, GregorianDate } from "./format";
 
 const JULIAN_EPOCH = 1948439.5; // Julian day number for 1 Muharram 1 AH
-const GREGORIAN_EPOCH = 1721425.5; // Julian day number for 1 Jan 1 CE
 
 function toJulianDay(gregorian: GregorianDate): number {
   const { year, month, day } = gregorian;

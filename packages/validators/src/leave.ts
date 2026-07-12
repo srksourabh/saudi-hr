@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { uuidSchema, paginationSchema } from "./common";
+import { uuidSchema } from "./common";
 
 export const createLeaveTypeSchema = z.object({
   name: z.string().min(1, "Leave type name is required").max(100).describe("Leave type name"),

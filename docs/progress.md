@@ -44,8 +44,8 @@
 - [x] Leave request creation page
 - [x] Document CRUD tRPC router + filterable list
 - [x] Document list page with type/expiry filters
-- [ ] Leave balance accrual engine (service layer)
-- [ ] Document expiry alert engine (service layer)
+- [x] Leave balance accrual engine (service layer)
+- [x] Document expiry alert engine (service layer)
 - [ ] Hijri/Gregorian date display
 
 ### Step 5: Email + notifications

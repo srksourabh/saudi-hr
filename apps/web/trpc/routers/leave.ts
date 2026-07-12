@@ -8,7 +8,7 @@ import {
   updateLeaveRequestSchema,
   leaveBalanceSchema,
 } from "@hrms-app/validators";
-import { and, eq, desc, gte, lte } from "drizzle-orm";
+import { and, eq, desc } from "drizzle-orm";
 import { runMonthlyAccrual, runAnnualAccrual } from "@hrms-app/leave";
 
 function parseNumeric(value: string | null | undefined): number {

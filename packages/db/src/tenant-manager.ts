@@ -16,7 +16,7 @@ export function getTenantDb(schemaName: string) {
 
   const sql = postgres(ADMIN_DB_URL, { max: 5 });
   // Set search_path via raw query
-  sql`SET search_path TO ${sql(schemaName)}`.catch(() => {});
+  void sql`SET search_path TO ${sql(schemaName)}`;
   
   const db = drizzle(sql, { schema: tenantSchema });
   tenantPools.set(schemaName, db);

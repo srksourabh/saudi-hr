@@ -5,7 +5,7 @@ const startTime = Date.now();
 
 export async function GET() {
   let dbStatus = "disconnected";
-  let redisStatus = "disconnected";
+  const redisStatus = "disconnected";
 
   try {
     const { adminDb } = await import("@hrms-app/db");
