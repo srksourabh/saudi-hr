@@ -20,8 +20,8 @@ declare module "next-auth" {
 const nextAuthResult = NextAuth({
   trustHost: true,
   logger: {
-    error(code, metadata) {
-      console.error("[next-auth][error]", code, metadata?.error ?? "", metadata?.message ?? "");
+    error(error) {
+      console.error("[next-auth][error]", error instanceof Error ? error.message : String(error), error instanceof Error ? error.stack : "");
     },
     warn(code) { console.warn("[next-auth][warn]", code); },
     debug(code, metadata) { console.log("[next-auth][debug]", code, metadata); },
