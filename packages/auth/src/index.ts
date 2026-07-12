@@ -125,9 +125,6 @@ const nextAuthResult: AuthResult = NextAuth({
 });
 
 export const handlers = nextAuthResult.handlers;
-export const signIn = nextAuthResult.signIn as (
-  provider: "credentials",
-  options: { email: string; password: string; redirectTo: string },
-) => Promise<void>;
+export const signIn = nextAuthResult.signIn as (options: { redirect: boolean; callbackUrl?: string }) => Promise<void>;
 export const signOut = nextAuthResult.signOut as (options: { redirect: boolean; callbackUrl?: string }) => Promise<void>;
 export const auth = nextAuthResult.auth as () => Promise<Session | null>;

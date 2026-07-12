@@ -1,13 +1,59 @@
 "use client";
 
-import { useActionState } from "react";
-import { useFormStatus } from "react-dom";
-import { loginAction, type LoginState } from "./actions";
-
-const initialState: LoginState = { error: "" };
+import { signIn } from "next-auth/react";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
 
 export function LoginForm() {
-  const [state, formAction] = useActionState(loginAction, initialState);
+  const router = useRouter();
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  async function authenticate(credentials: { email: string; password: string }, isDemo = false) {
+    setLoading(true);
+    setError("");
+
+    try {
+      const result = await signIn("credentials", {
+        ...credentials,
+        redirect: false,
+      });
+
+      if (result?.ok) {
+        router.push("/");
+        router.refresh();
+        return;
+      }
+
+      setError(
+        isDemo
+          ? "Demo access is temporarily unavailable. Please try again."
+          : "بيانات الدخول غير صحيحة",
+      );
+    } catch {
+      setError(
+        isDemo
+          ? "Demo access is temporarily unavailable. Please try again."
+          : "حدث خطأ ما. حاول مرة أخرى",
+      );
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    await authenticate({ email, password });
+  }
+
+  async function handleDemoLogin() {
+    const demoCredentials = { email: "admin@demo.com", password: "Demo@1234" };
+    setEmail(demoCredentials.email);
+    setPassword(demoCredentials.password);
+    await authenticate(demoCredentials, true);
+  }
 
   return (
     <div className="saudi-glass w-full max-w-md rounded-xl border-0 shadow-2xl">
@@ -19,14 +65,14 @@ export function LoginForm() {
         <p className="mt-1 text-sm text-slate-500">Sign in to your UDS-HR account</p>
       </div>
 
-      <form action={formAction}>
+      <form onSubmit={handleSubmit}>
         <div className="space-y-4 p-6 pt-4">
-          {state.error && (
+          {error && (
             <div
               role="alert"
               className="rounded-lg border border-[hsl(var(--saudi-rose))]/30 bg-[hsl(var(--saudi-rose))]/10 px-4 py-3 text-sm text-[hsl(var(--saudi-rose))]"
             >
-              {state.error}
+              {error}
             </div>
           )}
           <div className="space-y-2">
@@ -39,6 +85,8 @@ export function LoginForm() {
               type="email"
               placeholder="you@company.sa"
               autoComplete="email"
+              value={email}
+              onChange={(event) => setEmail(event.target.value)}
               required
               className="flex h-11 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm outline-none transition placeholder:text-slate-400 focus:border-emerald-700 focus:ring-2 focus:ring-emerald-700/15"
             />
@@ -53,6 +101,8 @@ export function LoginForm() {
               type="password"
               placeholder="••••••••"
               autoComplete="current-password"
+              value={password}
+              onChange={(event) => setPassword(event.target.value)}
               required
               className="flex h-11 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm outline-none transition placeholder:text-slate-400 focus:border-emerald-700 focus:ring-2 focus:ring-emerald-700/15"
             />
@@ -60,7 +110,30 @@ export function LoginForm() {
         </div>
 
         <div className="flex flex-col gap-3 px-6 pb-6 pt-2">
-          <LoginButtons />
+          <button
+            type="submit"
+            disabled={loading}
+            className="saudi-gradient-primary inline-flex h-11 w-full items-center justify-center rounded-md px-4 text-base font-semibold text-white shadow-md transition hover:shadow-lg disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {loading ? "Signing in..." : "Sign In"}
+          </button>
+
+          <div className="relative flex w-full items-center">
+            <div className="flex-1 border-t border-slate-200" />
+            <span className="px-3 text-xs font-medium uppercase tracking-wider text-slate-400">or</span>
+            <div className="flex-1 border-t border-slate-200" />
+          </div>
+
+          <button
+            type="button"
+            onClick={handleDemoLogin}
+            disabled={loading}
+            className="saudi-badge-premium inline-flex h-11 w-full items-center justify-center rounded-md border px-4 font-medium transition disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            <span className="mr-2">★</span>
+            {loading ? "Opening demo..." : "Try the demo (one click)"}
+          </button>
+
           <div className="pt-1 text-center text-sm text-slate-500">
             Don&apos;t have an account?{" "}
             <a
@@ -73,42 +146,5 @@ export function LoginForm() {
         </div>
       </form>
     </div>
-  );
-}
-
-function LoginButtons() {
-  const { pending, data } = useFormStatus();
-  const intent = data?.get("intent");
-
-  return (
-    <>
-      <button
-        type="submit"
-        name="intent"
-        value="login"
-        disabled={pending}
-        className="saudi-gradient-primary inline-flex h-11 w-full items-center justify-center rounded-md px-4 text-base font-semibold text-white shadow-md transition hover:shadow-lg disabled:cursor-not-allowed disabled:opacity-60"
-      >
-        {pending && intent === "login" ? "Signing in..." : "Sign In"}
-      </button>
-
-      <div className="relative flex w-full items-center">
-        <div className="flex-1 border-t border-slate-200" />
-        <span className="px-3 text-xs font-medium uppercase tracking-wider text-slate-400">or</span>
-        <div className="flex-1 border-t border-slate-200" />
-      </div>
-
-      <button
-        type="submit"
-        name="intent"
-        value="demo"
-        formNoValidate
-        disabled={pending}
-        className="saudi-badge-premium inline-flex h-11 w-full items-center justify-center rounded-md border px-4 font-medium transition disabled:cursor-not-allowed disabled:opacity-60"
-      >
-        <span className="mr-2">★</span>
-        {pending && intent === "demo" ? "Opening demo..." : "Try the demo (one click)"}
-      </button>
-    </>
   );
 }
