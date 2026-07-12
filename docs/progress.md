@@ -46,7 +46,7 @@
 - [x] Document list page with type/expiry filters
 - [x] Leave balance accrual engine (service layer)
 - [x] Document expiry alert engine (service layer)
-- [ ] Hijri/Gregorian date display
+- [x] Hijri/Gregorian date display (service layer - `packages/date` complete, UI components exported, pending page integration)
 
 ### Step 5: Email + notifications
 - [x] Email templates: leave-request, leave-status, payslip-ready, document-expiry
