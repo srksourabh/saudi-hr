@@ -1,9 +1,8 @@
 import NextAuth, { type DefaultSession } from "next-auth";
 import Google from "next-auth/providers/google";
 import Credentials from "next-auth/providers/credentials";
-import { DrizzleAdapter } from "@auth/drizzle-adapter";
 import { adminDb } from "@hrms-app/db";
-import { users, tenants, accounts, sessions, verificationTokens } from "@hrms-app/db";
+import { users, tenants } from "@hrms-app/db";
 import { compare } from "bcryptjs";
 import { env } from "@hrms-app/config";
 import { eq } from "drizzle-orm";
@@ -21,12 +20,6 @@ declare module "next-auth" {
 }
 
 const nextAuthResult = NextAuth({
-  adapter: DrizzleAdapter(adminDb, {
-    usersTable: users as any,
-    accountsTable: accounts as any,
-    sessionsTable: sessions as any,
-    verificationTokensTable: verificationTokens as any,
-  }),
   session: { strategy: "jwt" },
   pages: {
     signIn: "/login",
