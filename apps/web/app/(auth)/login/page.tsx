@@ -40,8 +40,28 @@ export default function LoginPage() {
     }
   }
 
-  function handleDemoLogin() {
-    signIn("credentials", { email: "admin@demo.com", password: "Demo@1234", callbackUrl: "/" });
+  async function handleDemoLogin() {
+    setLoading(true);
+    setError("");
+    try {
+      const result = await signIn("credentials", {
+        email: "admin@demo.com",
+        password: "Demo@1234",
+        redirect: false,
+      });
+      if (result?.error) {
+        setError("Demo login failed. Try setting up a local database or check your database connection.");
+        setLoading(false);
+        return;
+      }
+      if (result?.ok) {
+        router.push("/");
+        router.refresh();
+      }
+    } catch {
+      setError("Something went wrong. Try again.");
+      setLoading(false);
+    }
   }
 
   return (
