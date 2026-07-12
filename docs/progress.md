@@ -99,7 +99,8 @@
 | 2026-07-11 | Design system | docs/design.md created: Saudi-centric color palette, typography, layout, RTL strategy, dark mode |
 | 2026-07-11 | Serena installed | serena-agent v1.5.3, 28 LSP tools, OpenCode MCP |
 | 2026-07-11 | CRUD shell (UI + API) | tRPC routers + UI pages for all 8 entities; Drizzle relations; Zod validators; email templates |
-| 2026-07-12 | Phase 5 AI-Native HR foundation | AI schema + validators + router + dashboard pages; all route links fixed; auth typecheck passing; PostgreSQL + Redis containers running; demo account created |
+| 2026-07-12 | Production build | Build, typecheck, and tests all passing; demo login working |
+| 2026-07-12 | Lint fixes | Fixed unused imports, @ts-nocheck, Drizzle eq() type errors |
 
 ## Blockers
 
