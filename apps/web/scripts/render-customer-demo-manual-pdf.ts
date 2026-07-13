@@ -26,10 +26,10 @@ await page.evaluate(async () => {
   const imgs = Array.from(document.images);
   await Promise.all(imgs.map(img => {
     if (img.complete && img.naturalWidth > 0) return Promise.resolve();
-    return new Promise((resolve, reject) => {
+    return new Promise<void>((resolve) => {
       img.addEventListener("load", () => resolve());
       img.addEventListener("error", () => resolve()); // don't block on missing
-      setTimeout(resolve, 30000); // hard cap
+      setTimeout(() => resolve(), 30000); // hard cap
     });
   }));
 });
