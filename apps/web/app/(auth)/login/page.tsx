@@ -35,7 +35,7 @@ export default function LoginPage() {
             <span className="text-[hsl(var(--saudi-gold))]">modern workforce.</span>
           </h1>
           <p className="mb-10 max-w-md text-lg leading-relaxed text-white/85">
-            The AI-native HR & payroll platform built for the Kingdom&apos;s
+            The AI-native HR &amp; payroll platform built for the Kingdom&apos;s
             SMEs — designed around Qiwa, Mudad, and GOSI workflows.
           </p>
 
@@ -64,9 +64,17 @@ export default function LoginPage() {
         </section>
       </main>
 
-      {/* Bottom: trust strip */}
-      <footer className="relative z-10 px-6 pb-4 text-center text-xs text-white/60 sm:px-10">
-        Fictional customer demo · No production employee records · External integrations are simulated
+      {/* Bottom: trust strip + customer-demo manual download */}
+      <footer className="relative z-10 flex flex-col items-center justify-between gap-2 px-6 pb-4 text-center text-xs text-white/60 sm:flex-row sm:px-10 sm:text-left">
+        <span>Fictional customer demo · No production employee records · External integrations are simulated</span>
+        <a
+          href="/docs/customer-demo-manual/customer-demo-user-manual.pdf"
+          target="_blank"
+          rel="noreferrer"
+          className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-4 py-1.5 text-white/85 transition hover:border-[hsl(var(--saudi-gold))] hover:text-white"
+        >
+          Download customer demo manual · دليل العميل التجريبي
+        </a>
       </footer>
     </div>
   );
