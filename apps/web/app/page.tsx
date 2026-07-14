@@ -5,6 +5,7 @@ import { can, type AppRole, type Capability } from "@hrms-app/auth/rbac";
 import { taazurEnergyDemo } from "@hrms-app/demo";
 import { adminDb, getTenantDb, tenants } from "@hrms-app/db";
 import { eq, sql } from "drizzle-orm";
+import { formatDual, todayHijri } from "@hrms-app/date";
 import {
   ArrowRight,
   ArrowUpRight,
@@ -113,6 +114,16 @@ function CommandCenter({ userName, role, dbCounts }: { userName: string; role: A
   const openJobsCount = dbCounts ? dbCounts.openJobsCount : taazurEnergyDemo.recruitment.requisitions.length;
   const payslipsCount = dbCounts ? dbCounts.payslipCount : taazurEnergyDemo.payroll.payslips.length;
 
+  // Hijri-focal date: today in both Umm al-Qura and Gregorian. Saudi HR
+  // decisions are pegged to the Hijri calendar (GOSI cut-offs, Iqama
+  // expirations, EOSB accrual), so the dashboard surfaces both in focus.
+  const today = new Date();
+  const gregDate = { year: today.getFullYear(), month: today.getMonth() + 1, day: today.getDate() };
+  const hijriDate = todayHijri();
+  const dualDateEn = formatDual(gregDate, hijriDate, "en");
+  const dualDateAr = formatDual(gregDate, hijriDate, "ar");
+  const gregOnlyEn = today.toLocaleDateString("en-GB", { weekday: "long", day: "2-digit", month: "long", year: "numeric" });
+
   const metrics = [
     { label: "Active people", value: String(activeCount), delta: `${departmentCount} departments · ${taazurEnergyDemo.branches.length} branches`, icon: Users, tone: "emerald", capability: "people:view_company" as Capability },
     { label: "Payroll run", value: `SAR ${(taazurEnergyDemo.payroll.net / 1000).toFixed(0)}k`, delta: `${payslipsCount} payslips · ${taazurEnergyDemo.payroll.anomalies.length} to review`, icon: BriefcaseBusiness, tone: "amber", capability: "payroll:view_company" as Capability },
@@ -129,6 +140,33 @@ function CommandCenter({ userName, role, dbCounts }: { userName: string; role: A
 
   return (
     <div className="space-y-6">
+      {/* Hijri-focal banner: anchors the Saudi HR workflow to the Umm al-Qura
+          calendar that drives GOSI, Iqama and EOSB. */}
+      <section className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-emerald-100 bg-gradient-to-r from-emerald-50 via-white to-amber-50 px-5 py-3.5">
+        <div className="flex items-center gap-3">
+          <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-700 text-white shadow-sm">
+            <CalendarClock className="h-4 w-4" />
+          </span>
+          <div>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-emerald-800">
+              {taazurEnergyDemo.company.name} · Hijri Calendar
+            </p>
+            <p className="mt-0.5 text-sm font-bold text-slate-900" dir="rtl">
+              {dualDateAr}
+            </p>
+            <p className="mt-0.5 text-xs text-slate-500">
+              {dualDateEn} · {gregOnlyEn}
+            </p>
+          </div>
+        </div>
+        <div className="flex items-center gap-2 text-[11px] font-medium text-slate-500">
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-white px-3 py-1 ring-1 ring-emerald-100">
+            <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+            Umm al-Qura · {hijriDate.year} AH
+          </span>
+        </div>
+      </section>
+
       <section className="relative overflow-hidden rounded-[24px] border border-slate-200 bg-white px-6 py-7 sm:px-8">
         <div className="grid gap-6 xl:grid-cols-[1.35fr_.65fr] xl:items-end">
           <div>
