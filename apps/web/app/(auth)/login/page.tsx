@@ -66,7 +66,7 @@ export default function LoginPage() {
 
       {/* Bottom: trust strip */}
       <footer className="relative z-10 px-6 pb-4 text-center text-xs text-white/60 sm:px-10">
-        Fictional customer demo · No production employee records · External integrations are simulated
+        {`© ${new Date().getFullYear()} Taāzur HRMS · All rights reserved · `}
       </footer>
     </div>
   );

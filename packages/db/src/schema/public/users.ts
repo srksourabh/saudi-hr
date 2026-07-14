@@ -1,7 +1,16 @@
 import { pgTable, uuid, text, timestamp, pgEnum } from "drizzle-orm/pg-core";
 import { tenants } from "./tenants";
 
-export const userRoleEnum = pgEnum("user_role", ["super_admin", "hr_manager", "department_manager", "hr_specialist", "employee", "candidate"]);
+export const userRoleEnum = pgEnum("user_role", [
+  "super_admin",
+  "hr_manager",
+  "department_manager",
+  "hr_specialist",
+  "payroll_admin",
+  "recruiter",
+  "employee",
+  "candidate",
+]);
 export const preferredLanguageEnum = pgEnum("preferred_language", ["en", "ar"]);
 
 export const users = pgTable("users", {

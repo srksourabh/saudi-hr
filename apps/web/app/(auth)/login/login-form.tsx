@@ -169,7 +169,7 @@ export function LoginForm() {
             ))}
           </div>
           <p className="text-center text-[10px] leading-4 text-slate-400">
-            Fictional Rukn Energy data · role-based access · no real employee records
+            Sign in to your tenant workspace
           </p>
 
           <div className="pt-1 text-center text-sm text-slate-500">

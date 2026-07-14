@@ -20,24 +20,24 @@ const saudiEmployee = (overrides: Partial<EmployeeContext> = {}): EmployeeContex
 describe("calculateGosi", () => {
   it("returns 0 for expat employees", () => {
     const result = calculateGosi(saudiEmployee({ nationality: "expat" }));
-    expect(result).toEqual({ employeeContribution: 0, employerContribution: 0 });
+    expect(result).toEqual({ pension: { employee: 0, employer: 0 } });
   });
 
   it("calculates employee 10% and employer 9.75% for Saudi on current system", () => {
     const result = calculateGosi(saudiEmployee({ salaryBasic: 10000, salaryHousing: 2000, salaryTransport: 1000 }));
-    expect(result.employeeContribution).toBe(1300);
-    expect(result.employerContribution).toBe(1267.5);
+    expect(result.pension.employee).toBe(1300);
+    expect(result.pension.employer).toBe(1267.5);
   });
 
   it("calculates on (basic + housing + transport) capped at 45,000", () => {
     const result = calculateGosi(saudiEmployee({ salaryBasic: 50000, salaryHousing: 0, salaryTransport: 0 }));
-    expect(result.employeeContribution).toBe(4500);
-    expect(result.employerContribution).toBe(4387.5);
+    expect(result.pension.employee).toBe(4500);
+    expect(result.pension.employer).toBe(4387.5);
   });
 
   it("uses old rates (9% / 9%) when gosiSystem is 'old'", () => {
     const result = calculateGosi(saudiEmployee({ gosiSystem: "old", salaryBasic: 10000, salaryHousing: 0, salaryTransport: 0 }));
-    expect(result.employeeContribution).toBe(900);
-    expect(result.employerContribution).toBe(900);
+    expect(result.pension.employee).toBe(900);
+    expect(result.pension.employer).toBe(900);
   });
 });

@@ -21,56 +21,48 @@ const modules = [
     description: "Recommendations and next-best HR actions",
     icon: Lightbulb,
     href: "/modules/ai-intelligence",
-    status: "Operational demo",
   },
   {
     title: "Attrition Predictions",
     description: "Identify employees at risk of leaving",
     icon: TrendingDown,
     href: "/modules/ai-intelligence",
-    status: "Operational demo",
   },
   {
     title: "Compliance Copilot",
     description: "Saudi labor-law answers with citations",
     icon: ShieldCheck,
     href: "/modules/nitaqat-compliance",
-    status: "Operational demo",
   },
   {
     title: "Salary Benchmarks",
     description: "Market positioning and pay-equity insights",
     icon: DollarSign,
     href: "/modules/benefits-rewards",
-    status: "Operational demo",
   },
   {
     title: "Skill Recommendations",
     description: "Skill-gap analysis and learning paths",
     icon: BookOpen,
     href: "/modules/learning-skills",
-    status: "Operational demo",
   },
   {
     title: "People Analytics",
     description: "Retention, recruitment and compensation signals",
     icon: BarChart3,
     href: "/modules/people-analytics",
-    status: "Operational demo",
   },
   {
     title: "AI Audit Trail",
     description: "Human approvals and AI action traceability",
     icon: ListChecks,
     href: "/modules/workflow-automation",
-    status: "Operational demo",
   },
   {
     title: "Autonomous Assistants",
     description: "Configure governed multi-step HR agents",
     icon: Brain,
     href: "/modules/workflow-automation",
-    status: "Operational demo",
   },
 ] as const;
 
@@ -107,7 +99,6 @@ export default function AiPage() {
               <div className="flex items-center gap-3">
                 <module.icon className="h-5 w-5 text-primary" />
                 <CardTitle className="text-lg">{module.title}</CardTitle>
-                <Badge variant="secondary" className="ml-auto">{module.status}</Badge>
               </div>
               <CardDescription>{module.description}</CardDescription>
             </CardHeader>

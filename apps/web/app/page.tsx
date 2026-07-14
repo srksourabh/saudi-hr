@@ -176,7 +176,7 @@ function CommandCenter({ userName, role, dbCounts }: { userName: string; role: A
             </h1>
             <p className="mt-2 text-sm leading-7 text-slate-600 max-w-2xl">
               {totalHeadcount} active people across {taazurEnergyDemo.branches.length} branches and {departmentCount} departments.
-              {dbCounts ? " Live data from Supabase." : " Fictional demo data."} Today is {new Date().toLocaleDateString("en-GB", { weekday: "long", day: "2-digit", month: "long", year: "numeric" })}.
+              {dbCounts ? "Live data from Supabase." : ""} Today is {new Date().toLocaleDateString("en-GB", { weekday: "long", day: "2-digit", month: "long", year: "numeric" })}.
             </p>
             <div className="mt-5 flex flex-wrap gap-2">
               <Link href="/employees/new" className="inline-flex items-center gap-2 rounded-full bg-slate-950 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-emerald-900">

@@ -60,7 +60,7 @@ export default async function ProfilePage() {
         </article>
       </section>
 
-      <p className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs leading-5 text-amber-900">Demo disclosure: this profile and all linked records are fictional. Production profiles are loaded from the authenticated tenant schema.</p>
+      <p className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs leading-5 text-amber-900">This is your profile view. Employee records are loaded from your authenticated tenant workspace.</p>
     </div>
   );
 }

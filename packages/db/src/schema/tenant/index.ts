@@ -3,6 +3,7 @@ export { employees, employmentStatusEnum, gosiSystemEnum, nationalityEnum } from
 export { employmentHistory } from "./employment_history";
 export { documents } from "./documents";
 export { auditLogs } from "./audit_logs";
+export { policyDocuments, policyCategoryEnum } from "./policy-documents";
 export { leaveTypes } from "./leave_types";
 export { leaveRequests } from "./leave_requests";
 export { leaveBalances } from "./leave_balances";

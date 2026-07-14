@@ -1,8 +1,16 @@
 export { calculateGosi } from "./gosi";
 export { calculateEsb } from "./esb";
+export { SaudiLeaveEngine, computeLeave, getLeaveBalance } from "./leave";
+export type { LeaveType, LeaveStatus, LeaveRequest, LeaveEntitlementSummary, LeaveBalance, LeaveCalculation, LeavePeriod } from "./leave";
+export { DisciplineEngine } from "./discipline";
+export type { OffenceCategory, SanctionLevel, Offence, DisciplinaryRecord, SanctionRecommendation, ClockStatus } from "./discipline";
+export { TerminationWorkflow } from "./offboarding";
+export type { TerminationInitiator, TerminationInitiation, NoticePeriod, GroundsCheck, ImmigrationRepatriationStep, ServiceCertificate, NitaqatImpact, OffboardingChecklist } from "./offboarding";
+export { getActiveConfig, getConfigHistory, upsertConfig, getGosiRate, getLeaveEntitlement } from "./regulatory-config";
+export type { RegulatoryConfig, GosiConfig, LeaveEntitlement, SickLeaveEntitlement, MaternityLeaveEntitlement, WorkingTimeConfig, NitaqatConfig, DisciplineConfig, EOSBConfig } from "./regulatory-config";
 export { orchestratePayrollRun } from "./orchestrator";
 export type { OrchestratorInput, OrchestratorResult } from "./orchestrator";
 export { runConsistencyGuard } from "./consistency";
 export { generateMudadFile, mudadToXml, mudadToCsv } from "./mudad";
 export type { MudadWageFile, MudadEmployeeRecord, MudadGenerationInput } from "./mudad";
-export type { EmployeeContext, GosiResult, PayslipCalculation, CheckSeverity, ComplianceResult } from "./types";
+export type { EmployeeContext, GosiResult, Nationality, PayslipCalculation, CheckSeverity, ComplianceResult, OvertimeCalculation } from "./types";

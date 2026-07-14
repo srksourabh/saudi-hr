@@ -61,12 +61,9 @@ export default function DashboardPage() {
             Here's what's happening across your company today.
           </p>
         </div>
-        <div className="flex items-center gap-2 self-start rounded-full border border-emerald-200/60 bg-emerald-50/80 px-3.5 py-2 text-sm font-medium text-emerald-800">
-          <span className="relative flex h-2 w-2">
-            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
-            <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
-          </span>
-          All systems operational
+        <div className="self-start rounded-full border border-emerald-200/60 bg-emerald-50/80 px-3.5 py-2 text-sm font-medium text-emerald-800">
+          <span className="mr-2 inline-block h-2 w-2 rounded-full bg-emerald-500 align-middle" />
+          Live data
         </div>
       </header>
 

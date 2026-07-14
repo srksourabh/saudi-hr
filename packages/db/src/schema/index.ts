@@ -39,6 +39,7 @@ export { employees, employmentStatusEnum, gosiSystemEnum, nationalityEnum } from
 export { employmentHistory } from "./tenant/employment_history";
 export { documents } from "./tenant/documents";
 export { auditLogs } from "./tenant/audit_logs";
+export { policyDocuments, policyCategoryEnum } from "./tenant/policy-documents";
 export { leaveTypes } from "./tenant/leave_types";
 export { leaveRequests } from "./tenant/leave_requests";
 export { leaveBalances } from "./tenant/leave_balances";

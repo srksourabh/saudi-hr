@@ -10,7 +10,7 @@ import {
 } from "@hrms-app/validators";
 import { orchestratePayrollRun, generateMudadFile, mudadToXml, mudadToCsv } from "@hrms-app/payroll";
 import { and, eq, desc } from "drizzle-orm";
-import type { EmployeeContext } from "@hrms-app/payroll";
+import type { EmployeeContext, Nationality } from "@hrms-app/payroll";
 
 function parseNumeric(value: string | null | undefined): number {
   return value ? Number.parseFloat(value) : 0;
@@ -20,7 +20,7 @@ function toEmployeeContext(row: typeof schema.tenant.employees.$inferSelect): Em
   return {
     id: row.id,
     fullName: row.fullName,
-    nationality: row.nationality,
+    nationality: row.nationality as Nationality,
     gosiSystem: row.gosiSystem,
     salaryBasic: parseNumeric(row.salaryBasic),
     salaryHousing: parseNumeric(row.salaryHousing),
