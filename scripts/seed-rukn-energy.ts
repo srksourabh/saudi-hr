@@ -117,6 +117,8 @@ async function main() {
       salary_basic numeric NOT NULL DEFAULT 0,
       salary_housing numeric NOT NULL DEFAULT 0,
       salary_transport numeric NOT NULL DEFAULT 0,
+      job_title text,
+      photo_url text,
       rehire_eligible text,
       rehire_reason text,
       created_at timestamp NOT NULL DEFAULT now(),
@@ -289,11 +291,19 @@ async function main() {
     CREATE TABLE IF NOT EXISTS ${S("expenses")} (
       id uuid PRIMARY KEY,
       employee_id uuid NOT NULL,
+      approver_employee_id uuid,
       category text NOT NULL,
+      description text NOT NULL,
       amount numeric NOT NULL,
       currency text NOT NULL DEFAULT 'SAR',
+      expense_date date NOT NULL,
+      receipt_url text,
       status text NOT NULL,
-      submitted_at timestamp NOT NULL DEFAULT now()
+      rejection_reason text,
+      approved_at timestamp,
+      paid_at timestamp,
+      created_at timestamp NOT NULL DEFAULT now(),
+      updated_at timestamp NOT NULL DEFAULT now()
     )
   `);
 
@@ -433,12 +443,17 @@ async function main() {
     { id: id("emp-lina"),   name: "Lina Khalil",         nat: "expat", dept: id("dept-projects"), status: "active",   hire: "2025-11-02", sal: [19000, 4750, 1250],  job: "Project Coordinator" },
     { id: id("emp-salman"), name: "Salman Al-Ghamdi",    nat: "saudi", dept: id("dept-hse"),     status: "active",   hire: "2016-11-14", sal: [25500, 6375, 1750],  job: "HSE Lead" },
   ];
+  // Add columns idempotently in case the table pre-existed without them.
+  await sql.unsafe(`ALTER TABLE ${S("employees")} ADD COLUMN IF NOT EXISTS manager_employee_id uuid`).catch(() => undefined);
+  await sql.unsafe(`ALTER TABLE ${S("employees")} ADD COLUMN IF NOT EXISTS job_title text`).catch(() => undefined);
+  await sql.unsafe(`ALTER TABLE ${S("employees")} ADD COLUMN IF NOT EXISTS photo_url text`).catch(() => undefined);
+
   for (const e of employees) {
     await sql.unsafe(`
       INSERT INTO ${S("employees")}
-        (id, full_name, nationality, department_id, employment_status, hire_date, salary_basic, salary_housing, salary_transport)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-    `, [e.id, e.name, e.nat, e.dept, e.status, e.hire, e.sal[0], e.sal[1], e.sal[2]]);
+        (id, full_name, nationality, department_id, employment_status, hire_date, salary_basic, salary_housing, salary_transport, manager_employee_id, job_title)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+    `, [e.id, e.name, e.nat, e.dept, e.status, e.hire, e.sal[0], e.sal[1], e.sal[2], e.manager ?? null, e.job]);
   }
   console.log(`  ✓ Inserted ${employees.length} employees`);
 

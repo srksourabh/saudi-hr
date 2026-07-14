@@ -81,3 +81,31 @@ export const aiAuditLogQuerySchema = paginationSchema.extend({
   entityType: z.string().optional(),
   success: z.boolean().optional(),
 });
+
+
+// ─── AI chat ────────────────────────────────────────────────────────
+export const aiChatRoleSchema = z.enum(["user", "assistant", "system"]);
+export const aiChatMessageSchema = z.object({
+  role: aiChatRoleSchema,
+  content: z.string().min(1).max(8000),
+});
+export const aiChatRequestSchema = z.object({
+  messages: z.array(aiChatMessageSchema).min(1).max(20),
+  /** Optional context hint to bias the LLM toward a particular topic. */
+  topic: z.enum([
+    "general",
+    "saudi_statutory",
+    "leave_policy",
+    "payroll",
+    "expense_policy",
+    "recruitment",
+    "onboarding",
+    "performance",
+  ]).default("general"),
+  /** Optional override of the model to use for this turn. */
+  model: z.string().min(1).optional(),
+  /** Optional temperature override (defaults applied server-side per topic). */
+  temperature: z.number().min(0).max(2).optional(),
+});
+export type AiChatMessage = z.infer<typeof aiChatMessageSchema>;
+export type AiChatRequest = z.infer<typeof aiChatRequestSchema>;

@@ -20,6 +20,7 @@
         "@hrms-app/documents": "workspace:*",
     "@hrms-app/email": "workspace:*",
     "@hrms-app/leave": "workspace:*",
+    "@hrms-app/llm": "workspace:*",
     "@hrms-app/payroll": "workspace:*",
     "@hrms-app/ui": "workspace:*",
     "@hrms-app/validators": "workspace:*",

@@ -13,6 +13,7 @@ import {
   ChevronRight,
   CircleUserRound,
   FileText,
+  GitBranch,
   Grid2X2,
   HeartHandshake,
   Landmark,
@@ -20,6 +21,8 @@ import {
   LogOut,
   Settings,
   ShieldCheck,
+  Sparkles,
+  ReceiptText,
   Users,
   WalletCards,
 } from "lucide-react";
@@ -104,6 +107,7 @@ const employeeNavGroups = [
       { href: "/modules/performance-goals", label: "My goals", labelAr: "أهدافي", icon: HeartHandshake },
       { href: "/modules/learning-skills", label: "My learning", labelAr: "تعلمي", icon: BookOpenCheck },
       { href: "/modules/travel-expenses", label: "My expenses", labelAr: "مصروفاتي", icon: WalletCards },
+      { href: "/expenses", label: "Submit expense", labelAr: "تقديم مصروف", icon: ReceiptText },
     ],
   },
 ];

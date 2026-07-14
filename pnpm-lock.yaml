@@ -54,6 +54,9 @@ importers:
       '@hrms-app/leave':
         specifier: workspace:*
         version: link:../../packages/leave
+      '@hrms-app/llm':
+        specifier: workspace:*
+        version: link:../../packages/llm
       '@hrms-app/payroll':
         specifier: workspace:*
         version: link:../../packages/payroll

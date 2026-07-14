@@ -35,9 +35,9 @@ export function EmployeeCommandCenter({ employeeId }: { employeeId: string }) {
 
   const quickActions = [
     { href: "/modules/time-leave-attendance", label: "Request leave", icon: CalendarDays },
+    { href: "/expenses", label: "Submit expense", icon: ReceiptText },
     { href: "/profile", label: "My profile", icon: UserRoundCheck },
     { href: "/modules/documents-certificates", label: "My documents", icon: FileBadge },
-    { href: "/modules/travel-expenses", label: "Submit expense", icon: ReceiptText },
   ];
 
   return (

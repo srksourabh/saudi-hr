@@ -1,4 +1,5 @@
 import { hash } from "bcryptjs";
+import { TRPCError } from "@trpc/server";
 import { adminDb, users } from "@hrms-app/db";
 import { eq } from "drizzle-orm";
 import { signupSchema } from "@hrms-app/validators";
@@ -51,5 +52,51 @@ export const authRouter = createTRPCRouter({
   session: protectedProcedure.query(async ({ ctx }) => {
     const session = await auth();
     return session;
+  }),
+
+  /**
+   * Platform-admin: list every tenant + recent users across the registry.
+   * Gated to super_admin (the platform operator). Returns minimal,
+   * non-PII metadata so the super-admin dashboard can show tenant
+   * counts without exposing customer data.
+   */
+  tenantsList: protectedProcedure.query(async ({ ctx }) => {
+    const role = ctx.session!.user.role;
+    if (role !== "super_admin") {
+      throw new TRPCError({
+        code: "FORBIDDEN",
+        message: "Only platform super_admin can list tenants",
+      });
+    }
+    const { tenants, users } = await import("@hrms-app/db");
+    const { desc } = await import("drizzle-orm");
+    const allTenants = await ctx.adminDb.query.tenants.findMany({
+      orderBy: [desc(tenants.createdAt)],
+      limit: 25,
+    });
+    const recentUsers = await ctx.adminDb.query.users.findMany({
+      orderBy: [desc(users.createdAt)],
+      limit: 15,
+    });
+    return {
+      tenants: allTenants.map((t: any) => ({
+        id: t.id,
+        name: t.companyName,
+        crNumber: t.crNumber,
+        nitaqatActivity: t.nitaqatActivity,
+        planTier: t.planTier,
+        regulatoryContext: t.regulatoryContext,
+        schemaName: t.schemaName,
+        createdAt: t.createdAt,
+      })),
+      users: recentUsers.map((u: any) => ({
+        id: u.id,
+        email: u.email,
+        name: u.name,
+        role: u.role,
+        tenantId: u.tenantId,
+        createdAt: u.createdAt,
+      })),
+    };
   }),
 });
