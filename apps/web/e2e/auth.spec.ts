@@ -34,16 +34,17 @@ test.describe("Taāzur customer-demo journeys", () => {
   });
 
   test("all four demo role buttons open the correct fixture session", async ({ page, context }) => {
-    const roleJourneys = [
-      { role: "admin", name: "Reem Al-Harbi", roleText: "hr manager" },
-      { role: "hrSpecialist", name: "Aisha Al-Otaibi", roleText: "hr specialist" },
-      { role: "departmentManager", name: "Fahad Al-Qahtani", roleText: "department manager" },
-      { role: "employee", name: "Omar Nasser Al-Dossary", roleText: "employee" },
-    ] as const;
+      const roleJourneys = [
+        { role: "admin", name: "Reem", roleText: "hr manager" },
+        { role: "hrSpecialist", name: "Aisha", roleText: "hr specialist" },
+        { role: "departmentManager", name: "Fahad", roleText: "department manager" },
+        { role: "employee", name: "Omar", roleText: "employee" },
+      ] as const;
 
     for (const journey of roleJourneys) {
       await loginAs(page, journey.role);
-      await expect(page.getByText(journey.name, { exact: true }).first()).toBeVisible();
+      // Verify the dashboard greeted the user by first name
+      await expect(page.getByRole("heading", { name: new RegExp(`Good morning,\\s+${journey.name}`) })).toBeVisible();
       await expect(page.getByText(journey.roleText, { exact: true }).first()).toBeVisible();
 
       if (journey.role === "hrSpecialist") {
