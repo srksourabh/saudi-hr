@@ -8,6 +8,7 @@ export * from "./document";
 export * from "./compliance";
 export * from "./notification";
 export * from "./settlement";
+export * from "./expense";
 export * from "./recruitment";
 export * from "./retention";
 export * from "./ai";

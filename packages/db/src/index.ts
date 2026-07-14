@@ -14,6 +14,7 @@ export { auditLogs } from "./schema/tenant/audit_logs";
 export { leaveTypes } from "./schema/tenant/leave_types";
 export { leaveRequests } from "./schema/tenant/leave_requests";
 export { leaveBalances } from "./schema/tenant/leave_balances";
+export { expenses, expenseStatusEnum, expenseCategoryEnum } from "./schema/tenant/expenses";
 export { payrollRuns } from "./schema/tenant/payroll_runs";
 export { payslips } from "./schema/tenant/payslips";
 export { wageFiles } from "./schema/tenant/wage_files";

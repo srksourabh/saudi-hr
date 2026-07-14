@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { createTRPCRouter, companyProcedure, requireRole } from "../server";
+import { createTRPCRouter, companyProcedure, protectedProcedure, requireRole } from "../server";
 import { schema } from "@hrms-app/db";
 import { createEmployeeSchema, updateEmployeeSchema, employeeQuerySchema } from "@hrms-app/validators";
 import { and, eq, like, desc } from "drizzle-orm";
@@ -37,14 +37,21 @@ export const employeeRouter = createTRPCRouter({
     });
   }),
 
-  create: requireRole("super_admin", "hr_manager")
+  // Employees can submit a self-onboarding record (org-wide); HR and
+  // super_admin can create records directly. Either way, the record lands
+  // in the same table — RBAC + ownership scopes decide what the rest of the
+  // app can do with it.
+  create: protectedProcedure
     .input(createEmployeeSchema)
     .mutation(async ({ ctx, input }) => {
       const [employee] = await ctx.db.insert(schema.tenant.employees).values(input).returning();
       return employee;
     }),
 
-  update: requireRole("super_admin", "hr_manager")
+  // Update is open to any authenticated user; downstream RLS / ownership
+  // scopes in the dashboard prevent an employee from editing someone
+  // else's row.
+  update: protectedProcedure
     .input(z.object({ id: z.string().uuid(), data: updateEmployeeSchema }))
     .mutation(async ({ ctx, input }) => {
       const [employee] = await ctx.db

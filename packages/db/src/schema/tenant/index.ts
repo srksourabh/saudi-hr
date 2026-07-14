@@ -6,6 +6,7 @@ export { auditLogs } from "./audit_logs";
 export { leaveTypes } from "./leave_types";
 export { leaveRequests } from "./leave_requests";
 export { leaveBalances } from "./leave_balances";
+export { expenses, expenseStatusEnum, expenseCategoryEnum } from "./expenses";
 export { payrollRuns } from "./payroll_runs";
 export { payslips } from "./payslips";
 export { wageFiles } from "./wage_files";
