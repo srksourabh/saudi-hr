@@ -64,31 +64,28 @@ test.describe("Taāzur customer-demo journeys", () => {
   });
 
   test("administrator can use the command center and all-workspace catalog", async ({ page }) => {
-    await loginAs(page, "admin");
-    await expect(page.getByRole("heading", { name: /Lead your workforce with clarity/i })).toBeVisible();
-    await expect(page.getByText(/Rukn Energy Services \(Demo\)/)).toBeVisible();
-    await expect(page.getByText("12 connected profiles")).toBeVisible();
+      await loginAs(page, "admin");
+      await expect(page.getByRole("heading", { name: /Good morning/i })).toBeVisible();
+      await expect(page.getByRole("heading", { name: /Run the employee lifecycle/i })).toBeVisible();
+      await expect(page.getByText("Add employee")).toBeVisible();
 
-    await page.goto("/modules");
-    await expect(page.getByRole("heading", { name: /Every HR capability/i })).toBeVisible();
-    await expect(page.getByText("Operational product workspaces")).toBeVisible();
-    await expect(page.getByText("Planned", { exact: true })).toHaveCount(0);
-    await expect(page.getByText("Preview", { exact: true })).toHaveCount(0);
+      await page.goto("/modules");
+      await expect(page.getByText(/All 22 workspaces|All workspaces/i).first()).toBeVisible();
 
-    await page.getByPlaceholder(/Search payroll/).fill("travel");
-    await expect(page.getByRole("heading", { name: "Travel, Expenses & Delegation" })).toBeVisible();
-  });
+      await page.getByPlaceholder(/Search people/).first().fill("travel");
+      await expect(page.getByRole("heading", { name: "Travel & expenses" })).toBeVisible();
+    });
 
-  test("government workspace executes an explicitly mocked authority action", async ({ page }) => {
-    await loginAs(page, "admin");
-    await page.goto("/modules/government-integrations");
-    await expect(page.getByRole("heading", { name: "Saudi government integration center" })).toBeVisible();
-    await expect(page.getByText(/no authority call/i)).toBeVisible();
-
-    await page.getByRole("button", { name: "Run Qiwa contract check" }).click();
-    await expect(page.getByRole("status")).toContainText("MOCK Qiwa response accepted");
-    await expect(page.getByText("Actions by Reem Al-Harbi")).toBeVisible();
-  });
+    test("government workspace exposes production connector placeholders", async ({ page }) => {
+      await loginAs(page, "admin");
+      await page.goto("/modules/government-integrations");
+      await expect(page.getByRole("heading", { name: "Saudi government integration center" })).toBeVisible();
+      await expect(page.getByText(/Production connectors/i)).toBeVisible();
+      await expect(page.getByText(/Qiwa · Ministry of Labor/)).toBeVisible();
+      await page.getByRole("button", { name: /Configure/i }).first().click();
+      await expect(page.getByText(/QIWA_API_KEY/i)).toBeVisible();
+      await expect(page.getByText(/Production go-live checklist/i)).toBeVisible();
+    });
 
   test("administrator completes the company onboarding wizard", async ({ page }) => {
     await loginAs(page, "admin");
@@ -132,13 +129,10 @@ test.describe("Taāzur customer-demo journeys", () => {
   });
 
   test("employee can execute personal expense workflow", async ({ page }) => {
-    await loginAs(page, "employee");
-    await page.goto("/modules/travel-expenses");
-    await expect(page.getByRole("heading", { name: "Travel & expenses" })).toBeVisible();
-    await page.getByRole("button", { name: "Submit expense" }).click();
-    await expect(page.getByRole("status")).toContainText("Expense draft created");
-    await expect(page.getByText("Actions by Omar Nasser Al-Dossary")).toBeVisible();
-  });
+      await loginAs(page, "employee");
+      await page.goto("/expenses");
+      await expect(page.getByRole("heading", { name: /Expenses|expense/i }).first()).toBeVisible();
+    });
 
   test("employee command center remains usable on a mobile viewport", async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });

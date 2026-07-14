@@ -4,6 +4,62 @@ import { schema } from "@hrms-app/db";
 import { createFinalSettlementSchema } from "@hrms-app/validators";
 import { eq, desc } from "drizzle-orm";
 
+const ktItemSchema = z.object({
+  task: z.string().min(2),
+  successor: z.string().min(2),
+  interimOwner: z.string().optional(),
+  dueDate: z.string().min(8),
+  status: z.enum(["pending", "in_progress", "complete"]),
+  notes: z.string().optional(),
+});
+
+const assetReturnSchema = z.object({
+  asset: z.enum(["laptop", "phone", "id_card", "parking", "uniform", "keys", "other"]),
+  serial: z.string().optional(),
+  status: z.enum(["pending", "returned", "lost"]),
+  returnedAt: z.string().optional(),
+});
+
+const exitInterviewSchema = z.object({
+  conductedBy: z.string().min(2),
+  date: z.string().min(8),
+  primaryReason: z.enum(["resignation", "termination", "end_of_contract", "retirement", "transfer", "other"]),
+  satisfaction: z.number().min(1).max(5),
+  wouldRecommend: z.boolean(),
+  rehireEligibility: z.enum(["yes", "no", "conditional"]),
+  rehireReason: z.string().optional(),
+  highlights: z.string().optional(),
+  concerns: z.string().optional(),
+});
+
+const itRevocationSchema = z.object({
+  system: z.string(),
+  scheduledFor: z.string(),
+  revokedAt: z.string().optional(),
+  status: z.enum(["scheduled", "completed"]),
+});
+
+function safeParse(s: string | null | undefined): any {
+  if (!s) return {};
+  try {
+    return JSON.parse(s);
+  } catch {
+    return {};
+  }
+}
+
+function readPayload(existing: { exitReason: string | null }) {
+  if (!existing.exitReason) return { offboarding: {} as Record<string, any> };
+  const parts = existing.exitReason.split(" :: ");
+  if (parts.length < 2) return { offboarding: {} as Record<string, any> };
+  return safeParse(parts[1]);
+}
+
+function writePayload(existing: { exitReason: string | null }, payload: any) {
+  const prefix = (existing.exitReason ?? "").split(" :: ")[0];
+  return `${prefix} :: ${JSON.stringify(payload)}`;
+}
+
 export const settlementRouter = createTRPCRouter({
   list: companyProcedure
     .input(
@@ -35,5 +91,123 @@ export const settlementRouter = createTRPCRouter({
       where: eq(schema.tenant.finalSettlements.employeeId, input),
       with: { employee: true },
     });
+  }),
+
+  offboarding: createTRPCRouter({
+    initiate: requireRole("super_admin", "hr_manager", "hr_specialist")
+      .input(
+        z.object({
+          employeeId: z.string().uuid(),
+          lastWorkingDay: z.string().min(8),
+          primaryReason: z.enum(["resignation", "termination", "end_of_contract", "retirement", "transfer", "other"]),
+          initiatedBy: z.string().min(2),
+        })
+      )
+      .mutation(async ({ ctx, input }) => {
+        const payload = {
+          offboarding: {
+            initiatedBy: input.initiatedBy,
+            initiatedAt: new Date().toISOString(),
+            lastWorkingDay: input.lastWorkingDay,
+            primaryReason: input.primaryReason,
+            ktItems: [] as z.infer<typeof ktItemSchema>[],
+            assetReturns: [] as z.infer<typeof assetReturnSchema>[],
+            itRevocations: [
+              { system: "Email & SSO", scheduledFor: input.lastWorkingDay, status: "scheduled" },
+              { system: "VPN & network access", scheduledFor: input.lastWorkingDay, status: "scheduled" },
+              { system: "HR self-service portal", scheduledFor: input.lastWorkingDay, status: "scheduled" },
+            ] as z.infer<typeof itRevocationSchema>[],
+            exitInterview: null as z.infer<typeof exitInterviewSchema> | null,
+          },
+        };
+        const [settlement] = await ctx.db
+          .insert(schema.tenant.finalSettlements)
+          .values({
+            employeeId: input.employeeId,
+            exitReason: `${input.primaryReason} :: ${JSON.stringify(payload)}`,
+          })
+          .returning();
+        return { ...settlement, structured: payload };
+      }),
+
+    addKtItem: requireRole("super_admin", "hr_manager", "hr_specialist")
+      .input(z.object({ settlementId: z.string().uuid(), item: ktItemSchema }))
+      .mutation(async ({ ctx, input }) => {
+        const existing = await ctx.db.query.finalSettlements.findFirst({
+          where: eq(schema.tenant.finalSettlements.id, input.settlementId),
+        });
+        if (!existing) throw new Error("Settlement not found");
+        const payload = readPayload(existing);
+        payload.offboarding = payload.offboarding ?? {};
+        payload.offboarding.ktItems = payload.offboarding.ktItems ?? [];
+        payload.offboarding.ktItems.push(input.item);
+        await ctx.db
+          .update(schema.tenant.finalSettlements)
+          .set({ exitReason: writePayload(existing, payload) })
+          .where(eq(schema.tenant.finalSettlements.id, input.settlementId));
+        return { ok: true };
+      }),
+
+    addAssetReturn: requireRole("super_admin", "hr_manager", "hr_specialist")
+      .input(z.object({ settlementId: z.string().uuid(), asset: assetReturnSchema }))
+      .mutation(async ({ ctx, input }) => {
+        const existing = await ctx.db.query.finalSettlements.findFirst({
+          where: eq(schema.tenant.finalSettlements.id, input.settlementId),
+        });
+        if (!existing) throw new Error("Settlement not found");
+        const payload = readPayload(existing);
+        payload.offboarding = payload.offboarding ?? {};
+        payload.offboarding.assetReturns = payload.offboarding.assetReturns ?? [];
+        payload.offboarding.assetReturns.push(input.asset);
+        await ctx.db
+          .update(schema.tenant.finalSettlements)
+          .set({ exitReason: writePayload(existing, payload) })
+          .where(eq(schema.tenant.finalSettlements.id, input.settlementId));
+        return { ok: true };
+      }),
+
+    recordExitInterview: requireRole("super_admin", "hr_manager", "hr_specialist")
+      .input(z.object({ settlementId: z.string().uuid(), interview: exitInterviewSchema }))
+      .mutation(async ({ ctx, input }) => {
+        const existing = await ctx.db.query.finalSettlements.findFirst({
+          where: eq(schema.tenant.finalSettlements.id, input.settlementId),
+        });
+        if (!existing) throw new Error("Settlement not found");
+        const payload = readPayload(existing);
+        payload.offboarding = payload.offboarding ?? {};
+        payload.offboarding.exitInterview = input.interview;
+        await ctx.db
+          .update(schema.tenant.finalSettlements)
+          .set({ exitReason: writePayload(existing, payload) })
+          .where(eq(schema.tenant.finalSettlements.id, input.settlementId));
+        return { ok: true };
+      }),
+
+    complete: requireRole("super_admin", "hr_manager")
+      .input(z.object({ settlementId: z.string().uuid() }))
+      .mutation(async ({ ctx, input }) => {
+        const existing = await ctx.db.query.finalSettlements.findFirst({
+          where: eq(schema.tenant.finalSettlements.id, input.settlementId),
+        });
+        if (!existing) throw new Error("Settlement not found");
+        const payload = readPayload(existing);
+        payload.offboarding = payload.offboarding ?? {};
+        payload.offboarding.completedAt = new Date().toISOString();
+        await ctx.db
+          .update(schema.tenant.finalSettlements)
+          .set({ exitReason: writePayload(existing, payload) })
+          .where(eq(schema.tenant.finalSettlements.id, input.settlementId));
+        return { ok: true };
+      }),
+
+    getPayload: companyProcedure.input(z.object({ settlementId: z.string().uuid() })).query(async ({ ctx, input }) => {
+      const existing = await ctx.db.query.finalSettlements.findFirst({
+        where: eq(schema.tenant.finalSettlements.id, input.settlementId),
+        with: { employee: true },
+      });
+      if (!existing) throw new Error("Settlement not found");
+      const payload = readPayload(existing);
+      return { settlement: existing, offboarding: payload.offboarding ?? {} };
+    }),
   }),
 });

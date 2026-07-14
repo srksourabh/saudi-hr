@@ -75,5 +75,10 @@ export const config = {
     "/ai/:path*",
     "/modules/:path*",
     "/retention/:path*",
+    "/offboarding/:path*",
+    "/workforce-planning/:path*",
+    "/profile/:path*",
+    "/leave/:path*",
+    "/documents/:path*",
   ],
 };

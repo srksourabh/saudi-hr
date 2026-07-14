@@ -20,7 +20,6 @@ import {
   LogOut,
   Settings,
   ShieldCheck,
-  Sparkles,
   Users,
   WalletCards,
 } from "lucide-react";
@@ -128,19 +127,18 @@ export function Sidebar({ user, onNavigate }: SidebarProps) {
     <aside className="flex h-screen w-[278px] shrink-0 flex-col overflow-hidden bg-[#071b14] text-white">
       <div className="px-5 pb-4 pt-5">
         <BrandLockup inverse priority />
-        <div className="mt-5 flex items-center justify-between rounded-2xl border border-white/10 bg-white/[0.055] px-3 py-2.5">
-          <div className="flex items-center gap-2.5">
-            <span className="relative flex h-2 w-2">
-              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-300 opacity-40" />
-              <span className="relative h-2 w-2 rounded-full bg-emerald-300" />
-            </span>
-            <div>
-              <p className="text-xs font-medium text-white">{user.role === "employee" ? "Employee self-service" : "Saudi workspace"}</p>
-              <p className="text-[10px] text-white/40">Rukn Energy · fictional demo</p>
-            </div>
-          </div>
-          <Sparkles className="h-4 w-4 text-amber-300" />
-        </div>
+                <div className="mt-5 flex items-center justify-between rounded-2xl border border-white/10 bg-white/[0.055] px-3 py-2.5">
+                  <div className="flex items-center gap-2.5">
+                    <span className="relative flex h-2 w-2">
+                      <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-300 opacity-40" />
+                      <span className="relative h-2 w-2 rounded-full bg-emerald-300" />
+                    </span>
+                    <div>
+                      <p className="text-xs font-medium text-white">{user.role === "employee" ? "Employee self-service" : "Rukn Energy Services"}</p>
+                      <p className="text-[10px] text-white/40">CR 1010987654 · Riyadh</p>
+                    </div>
+                  </div>
+                </div>
       </div>
 
       <nav className="flex-1 overflow-y-auto px-3 pb-4 [scrollbar-color:rgba(255,255,255,.12)_transparent] [scrollbar-width:thin]">

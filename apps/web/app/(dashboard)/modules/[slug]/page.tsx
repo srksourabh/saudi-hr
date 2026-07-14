@@ -20,6 +20,20 @@ export default async function ModuleDetailPage({ params }: ModuleDetailPageProps
   const workflow = demoWorkflows[slug];
   if (!productModule || !workflow) notFound();
 
+  // Redirect to the real workspace route when one exists, so customers
+  // never land on the demo-wrapper. The wrapper remains available for
+  // onboarding, settings, and reports which do not yet have dedicated
+  // workspace pages.
+  const wrapperOnlySlugs = new Set([
+    "company-onboarding",
+    "notifications-reports",
+    "integration-marketplace",
+    "workflow-automation",
+  ]);
+  if (productModule.href && !wrapperOnlySlugs.has(slug)) {
+    redirect(productModule.href);
+  }
+
   const allowed = workflow.allowedRoles.some((role) => role === session.user.role);
   if (!allowed) {
     return (
