@@ -15,6 +15,8 @@ import { qiwaRouter } from "./routers/qiwa";
 import { expenseRouter } from "./routers/expense";
 import { policyRouter } from "./routers/policy";
 import { aiRouter } from "./routers/ai";
+import { inviteRouter } from "./routers/invite";
+import { attendanceRouter } from "./routers/attendance";
 
 export const appRouter = createTRPCRouter({
   auth: authRouter,
@@ -33,6 +35,8 @@ export const appRouter = createTRPCRouter({
   expense: expenseRouter,
   policy: policyRouter,
   ai: aiRouter,
+  invite: inviteRouter,
+  attendance: attendanceRouter,
 });
 
 export type AppRouter = typeof appRouter;

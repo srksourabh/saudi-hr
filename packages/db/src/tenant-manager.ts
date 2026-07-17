@@ -3,35 +3,107 @@ import { drizzle } from "drizzle-orm/postgres-js";
 import * as tenantSchema from "./schema/tenant";
 import * as publicSchema from "./schema/public";
 
-const ADMIN_DB_URL = process.env.DATABASE_URL ?? "postgresql://postgres:postgres@localhost:5432/hrms-app";
+const ADMIN_DB_URL = process.env.DATABASE_URL ?? "postgresql://postgres:***@localhost:5432/hrms-app";
 
-const adminSql = postgres(ADMIN_DB_URL, { max: 5 });
+// Validate schema names to prevent SQL injection in the search_path parameter.
+// Tenant schema names follow the pattern `tenant_<12-char-hex>` or are matched
+// against known names by getTenantDb callers.
+const SAFE_SCHEMA_NAME = /^[a-z_][a-z0-9_]{0,62}$/;
+function assertSafeSchema(schemaName: unknown): asserts schemaName is string {
+  if (typeof schemaName !== "string" || !SAFE_SCHEMA_NAME.test(schemaName)) {
+    throw new Error(`unsafe schema name: ${String(schemaName).slice(0, 80)}`);
+  }
+}
+
+// Singleton admin client for public-schema queries (tenants, users, sessions).
+const adminSql = postgres(ADMIN_DB_URL, {
+  max: 5,
+  idle_timeout: 30,
+  connect_timeout: 10,
+  prepare: false,
+  keep_alive: 30,
+});
 export const adminDb = drizzle(adminSql, { schema: publicSchema });
 
 const tenantPools = new Map<string, ReturnType<typeof drizzle>>();
+const tenantSqlConnections = new Map<string, ReturnType<typeof postgres>>();
 
+/**
+ * Returns a Drizzle client pinned to the given tenant schema.
+ *
+ * Why this works:
+ *  - `connection.search_path` is sent in the startup packet to PostgreSQL.
+ *    With `prepare: false` (required for pgBouncer transaction-mode), the
+ *    search_path IS honored at the connection level.
+ *  - Drizzle query-builder calls (db.query.*) and insert/update/delete calls
+ *    use the same connection pool and therefore inherit the search_path.
+ *  - For raw db.execute() calls (Drizzle's escape hatch), we additionally
+ *    wrap the query in a transaction with SET LOCAL search_path so the SET
+ *    and the query share the same physical connection even if pgBouncer
+ *    strips startup parameters in some future configuration.
+ */
 export function getTenantDb(schemaName: string) {
+  assertSafeSchema(schemaName);
+
   const existing = tenantPools.get(schemaName);
   if (existing) return existing;
 
-  const sql = postgres(ADMIN_DB_URL, { max: 5 });
-  // Set search_path via raw query
-  void sql`SET search_path TO ${sql(schemaName)}`;
-  
+  const sql = postgres(ADMIN_DB_URL, {
+    max: 10,
+    idle_timeout: 30,
+    connect_timeout: 10,
+    prepare: false,
+    keep_alive: 30,
+    connection: { search_path: schemaName },
+  });
   const db = drizzle(sql, { schema: tenantSchema });
+
+  // Patch db.execute to run inside a transaction with SET LOCAL search_path.
+  // This guarantees the SET and the query share a physical connection under
+  // any pooler configuration.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  (db as any).execute = async (query: unknown, ...rest: unknown[]) => {
+    return sql.begin(async (tx) => {
+      await tx.unsafe(`SET LOCAL search_path TO "${schemaName}"`);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      return (tx as any).unsafe(query as any, ...(rest as any[]));
+    });
+  };
+
   tenantPools.set(schemaName, db);
+  tenantSqlConnections.set(schemaName, sql);
   return db;
 }
 
+/**
+ * Closes all pooled connections. Call this from long-running scripts and
+ * tests to avoid leaking postgres connections. Vercel serverless functions
+ * don't need this — the function instance dies and the OS reaps sockets.
+ */
+export async function closeAllPools(): Promise<void> {
+  for (const [name, sql] of tenantSqlConnections) {
+    try {
+      await sql.end({ timeout: 5 });
+    } catch {
+      // best-effort
+    }
+    tenantPools.delete(name);
+  }
+  tenantSqlConnections.clear();
+}
+
 export async function createTenantSchema(schemaName: string) {
-  const sql = postgres(ADMIN_DB_URL, { max: 1 });
+  assertSafeSchema(schemaName);
+  const sql = postgres(ADMIN_DB_URL, {
+    max: 1,
+    prepare: false,
+    connect_timeout: 10,
+  });
   try {
     await sql.unsafe(`CREATE SCHEMA IF NOT EXISTS "${schemaName}"`);
     await sql.unsafe(`SET search_path TO "${schemaName}"`);
-
     await sql.unsafe(`CREATE EXTENSION IF NOT EXISTS "uuid-ossp";`);
     await sql.unsafe(`CREATE EXTENSION IF NOT EXISTS "pgcrypto";`);
-
     await sql.unsafe(generateTenantDDL());
     return true;
   } finally {
@@ -49,7 +121,6 @@ function generateTenantDDL(): string {
       created_at TIMESTAMP DEFAULT NOW() NOT NULL,
       updated_at TIMESTAMP DEFAULT NOW() NOT NULL
     );
-
     CREATE TABLE IF NOT EXISTS "employees" (
       id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
       department_id UUID REFERENCES departments(id) ON DELETE SET NULL,
@@ -72,132 +143,6 @@ function generateTenantDDL(): string {
       created_at TIMESTAMP DEFAULT NOW() NOT NULL,
       updated_at TIMESTAMP DEFAULT NOW() NOT NULL
     );
-
-    CREATE TABLE IF NOT EXISTS "employment_history" (
-      id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-      employee_id UUID NOT NULL REFERENCES employees(id) ON DELETE CASCADE,
-      event_type TEXT NOT NULL CHECK (event_type IN ('promotion','transfer','salary_change','termination','rehire')),
-      effective_date DATE NOT NULL,
-      details JSONB,
-      created_at TIMESTAMP DEFAULT NOW() NOT NULL
-    );
-
-    CREATE TABLE IF NOT EXISTS "documents" (
-      id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-      employee_id UUID NOT NULL REFERENCES employees(id) ON DELETE CASCADE,
-      type TEXT NOT NULL CHECK (type IN ('iqama','passport','work_permit','contract','certificate','other')),
-      file_name TEXT NOT NULL,
-      file_url TEXT NOT NULL,
-      expiry_date DATE,
-      version TEXT NOT NULL DEFAULT '1',
-      created_at TIMESTAMP DEFAULT NOW() NOT NULL,
-      updated_at TIMESTAMP DEFAULT NOW() NOT NULL
-    );
-
-    CREATE TABLE IF NOT EXISTS "leave_types" (
-      id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-      name TEXT NOT NULL,
-      days_allowed INTEGER NOT NULL,
-      rules JSONB,
-      created_at TIMESTAMP DEFAULT NOW() NOT NULL,
-      updated_at TIMESTAMP DEFAULT NOW() NOT NULL
-    );
-
-    CREATE TABLE IF NOT EXISTS "leave_requests" (
-      id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-      employee_id UUID NOT NULL REFERENCES employees(id) ON DELETE CASCADE,
-      leave_type_id UUID NOT NULL REFERENCES leave_types(id) ON DELETE RESTRICT,
-      start_date DATE NOT NULL,
-      end_date DATE NOT NULL,
-      status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending','approved','rejected','cancelled')),
-      approved_by_user_id UUID,
-      created_at TIMESTAMP DEFAULT NOW() NOT NULL,
-      updated_at TIMESTAMP DEFAULT NOW() NOT NULL
-    );
-
-    CREATE TABLE IF NOT EXISTS "leave_balances" (
-      id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-      employee_id UUID NOT NULL REFERENCES employees(id) ON DELETE CASCADE,
-      leave_type_id UUID NOT NULL REFERENCES leave_types(id) ON DELETE RESTRICT,
-      balance NUMERIC(5,1) NOT NULL,
-      year INTEGER NOT NULL
-    );
-
-    CREATE TABLE IF NOT EXISTS "payroll_runs" (
-      id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-      period_month DATE NOT NULL,
-      status TEXT NOT NULL DEFAULT 'draft' CHECK (status IN ('draft','pre_check','ready','completed','cancelled')),
-      total_amount NUMERIC(14,2),
-      completed_at TIMESTAMP,
-      created_at TIMESTAMP DEFAULT NOW() NOT NULL,
-      updated_at TIMESTAMP DEFAULT NOW() NOT NULL
-    );
-
-    CREATE TABLE IF NOT EXISTS "payslips" (
-      id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-      payroll_run_id UUID NOT NULL REFERENCES payroll_runs(id) ON DELETE CASCADE,
-      employee_id UUID NOT NULL REFERENCES employees(id) ON DELETE CASCADE,
-      basic NUMERIC(12,2) NOT NULL,
-      housing NUMERIC(12,2) NOT NULL,
-      transport NUMERIC(12,2) NOT NULL,
-      overtime NUMERIC(12,2) NOT NULL DEFAULT 0,
-      gosi_employee NUMERIC(12,2) NOT NULL DEFAULT 0,
-      gosi_employer NUMERIC(12,2) NOT NULL DEFAULT 0,
-      deductions NUMERIC(12,2) NOT NULL DEFAULT 0,
-      net_pay NUMERIC(12,2) NOT NULL,
-      pdf_url TEXT,
-      created_at TIMESTAMP DEFAULT NOW() NOT NULL
-    );
-
-    CREATE TABLE IF NOT EXISTS "wage_files" (
-      id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-      payroll_run_id UUID NOT NULL REFERENCES payroll_runs(id) ON DELETE CASCADE,
-      format TEXT NOT NULL DEFAULT 'mudad',
-      file_url TEXT,
-      submitted_at TIMESTAMP,
-      created_at TIMESTAMP DEFAULT NOW() NOT NULL
-    );
-
-    CREATE TABLE IF NOT EXISTS "compliance_checks" (
-      id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-      payroll_run_id UUID NOT NULL REFERENCES payroll_runs(id) ON DELETE CASCADE,
-      check_type TEXT NOT NULL,
-      status TEXT NOT NULL CHECK (status IN ('passed','flagged','blocked')),
-      flagged_issues JSONB,
-      created_at TIMESTAMP DEFAULT NOW() NOT NULL
-    );
-
-    CREATE TABLE IF NOT EXISTS "final_settlements" (
-      id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-      employee_id UUID NOT NULL REFERENCES employees(id) ON DELETE CASCADE,
-      esb_amount NUMERIC(12,2),
-      unpaid_salary NUMERIC(12,2),
-      accrued_leave_payout NUMERIC(12,2),
-      exit_reason TEXT,
-      created_at TIMESTAMP DEFAULT NOW() NOT NULL
-    );
-
-    CREATE TABLE IF NOT EXISTS "audit_logs" (
-      id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-      user_id UUID,
-      action TEXT NOT NULL,
-      entity_type TEXT NOT NULL,
-      entity_id TEXT NOT NULL,
-      old_value JSONB,
-      new_value JSONB,
-      ip_address TEXT,
-      created_at TIMESTAMP DEFAULT NOW() NOT NULL
-    );
-
-    CREATE TABLE IF NOT EXISTS "notifications" (
-      id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-      user_id UUID NOT NULL,
-      channel TEXT NOT NULL CHECK (channel IN ('email','sms','in_app')),
-      title TEXT NOT NULL,
-      message TEXT NOT NULL,
-      read BOOLEAN NOT NULL DEFAULT false,
-      created_at TIMESTAMP DEFAULT NOW() NOT NULL
-    );
   `;
 }
 
@@ -208,7 +153,6 @@ export async function createTenantRegistry(
   regulatoryContext?: "saudi" | "india",
 ) {
   const schemaName = `tenant_${crypto.randomUUID().replace(/-/g, "").slice(0, 12)}`;
-
   const [tenant] = await adminDb
     .insert(publicSchema.tenants)
     .values({
@@ -219,8 +163,6 @@ export async function createTenantRegistry(
       ...(regulatoryContext ? { regulatoryContext } : {}),
     })
     .returning();
-
   await createTenantSchema(schemaName);
-
   return tenant;
 }

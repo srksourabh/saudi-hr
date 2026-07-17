@@ -186,6 +186,11 @@ const employeeProcedures = new Set([
   "notification.markRead",
   "notification.markAllRead",
   "notification.unreadCount",
+  "attendance.punchIn",
+  "attendance.punchOut",
+  "attendance.today",
+  "attendance.myHistory",
+  "attendance.myMonthlySummary",
 ]);
 
 const candidateProcedures = new Set([

@@ -7,6 +7,12 @@ import { departments } from "./tenant/departments";
 import { employees } from "./tenant/employees";
 import { employmentHistory } from "./tenant/employment_history";
 import { documents } from "./tenant/documents";
+import {
+  shifts,
+  shiftAssignments,
+  attendanceRecords,
+  attendanceExceptions,
+} from "./tenant/attendance";
 import { leaveTypes } from "./tenant/leave_types";
 import { leaveRequests } from "./tenant/leave_requests";
 import { leaveBalances } from "./tenant/leave_balances";
@@ -64,6 +70,7 @@ export const departmentsRelations = relations(departments, ({ one, many }) => ({
   parent: one(departments, {
     fields: [departments.parentDepartmentId],
     references: [departments.id],
+    relationName: "parent",
   }),
   children: many(departments, { relationName: "parent" }),
   head: one(employees, {
@@ -89,6 +96,9 @@ export const employeesRelations = relations(employees, ({ one, many }) => ({
   leaveBalances: many(leaveBalances),
   payslips: many(payslips),
   finalSettlements: many(finalSettlements),
+  shiftAssignments: many(shiftAssignments),
+  attendanceRecords: many(attendanceRecords),
+  attendanceExceptions: many(attendanceExceptions),
 }));
 
 export const employmentHistoryRelations = relations(employmentHistory, ({ one }) => ({
@@ -666,6 +676,45 @@ export const aiSkillRecommendationsRelations = relations(aiSkillRecommendations,
 export const aiRetentionRiskFlagsRelations = relations(aiRetentionRiskFlags, ({ one }) => ({
   employee: one(employees, {
     fields: [aiRetentionRiskFlags.employeeId],
+    references: [employees.id],
+  }),
+}));
+
+export const shiftsRelations = relations(shifts, ({ many }) => ({
+  assignments: many(shiftAssignments),
+  attendanceRecords: many(attendanceRecords),
+}));
+
+export const shiftAssignmentsRelations = relations(shiftAssignments, ({ one }) => ({
+  employee: one(employees, {
+    fields: [shiftAssignments.employeeId],
+    references: [employees.id],
+  }),
+  shift: one(shifts, {
+    fields: [shiftAssignments.shiftId],
+    references: [shifts.id],
+  }),
+}));
+
+export const attendanceRecordsRelations = relations(attendanceRecords, ({ one, many }) => ({
+  employee: one(employees, {
+    fields: [attendanceRecords.employeeId],
+    references: [employees.id],
+  }),
+  shift: one(shifts, {
+    fields: [attendanceRecords.shiftId],
+    references: [shifts.id],
+  }),
+  exceptions: many(attendanceExceptions),
+}));
+
+export const attendanceExceptionsRelations = relations(attendanceExceptions, ({ one }) => ({
+  record: one(attendanceRecords, {
+    fields: [attendanceExceptions.attendanceRecordId],
+    references: [attendanceRecords.id],
+  }),
+  employee: one(employees, {
+    fields: [attendanceExceptions.employeeId],
     references: [employees.id],
   }),
 }));

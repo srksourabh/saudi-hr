@@ -4,7 +4,7 @@
 > **Platform attribution:** powered by UDS-Noon JV
 > **Delivery mode:** Single-agent, resumable, evidence-based
 > **Plan:** `.hermes/plans/2026-07-13_085441-taazur-customer-demo-shipment.md`
-> **Last updated:** 2026-07-13 after Saudi statutory research and documentation verification
+> **Last updated:** 2026-07-17 after attendance feature delivery and Rukn Energy seed run
 
 ## Status vocabulary
 
@@ -96,3 +96,68 @@
 5. Update this file immediately after each verified milestone with actual command/browser evidence.
 6. Do not change a module from Preview/Planned to operational until its route, data, action, role access, and browser verification exist.
 7. Never print or commit Supabase, Gemini, government, bank, or other credentials.
+
+## Attendance + Rukn Energy seed delivery — 2026-07-17
+
+### What changed
+
+- **Attendance schema** (new): `tenant.shifts`, `tenant.shift_assignments`, `tenant.attendance_records`, `tenant.attendance_exceptions` with full Drizzle relations and exports.
+- **Attendance validators** (`packages/validators/src/attendance.ts`): Zod schemas for shifts, shift assignments, punch in, punch out, exception resolution, monthly queries.
+- **Attendance tRPC router** (`apps/web/trpc/routers/attendance.ts`):
+  - HR/manager endpoints: `shift.{list,create,update,delete}`, `assignment.{list,create}`, `list` (records), `monthlyReport`, `exceptions`, `resolveException`.
+  - Employee endpoints: `punchIn`, `punchOut`, `today`, `myHistory`, `myMonthlySummary`.
+  - Auto-derives late minutes from scheduled shift start + grace, half-day from short worked time, overtime from end-of-shift.
+- **HR admin attendance page** at `/attendance`: monthly stats tiles, per-employee breakdown, search, exception feed.
+- **Employee self-service page** at `/attendance/me`: punch in/out buttons, today's status, monthly summary, history table.
+- **Sidebar links** added for both views; capability `attendance:view_company` for admin, employee RBAC allowlist extended for `attendance.{punchIn,punchOut,today,myHistory,myMonthlySummary}`.
+- **Demo identity fix**: `resolveDemoIdentity` now takes a third `demoModeEnabled` parameter that gates the hard-coded demo identities; wired through `process.env.DEMO_MODE === "true"` in `packages/auth/src/index.ts`. Tests pass against the new signature.
+- **Env schema**: added `DEMO_MODE` to `@hrms-app/config` env validator (defaults to `"false"`).
+- **Cleanup**: removed unused `originalExecute` capture in `packages/db/src/tenant-manager.ts`.
+- **`.env`**: corrected stale Supabase pooler password (rotated by the platform).
+
+### Rukn Energy seed (`scripts/seed-rukn-energy.ts`)
+
+Treats Rukn Energy Services as a real client (not a "demo mode" toggle). All identities are bcrypt-hashed; no demo-mode flag is required to log in.
+
+- Tenant row inserted in `public.tenants` (Rukn Energy Services, CR 1010987654, saudi regulatory context, schema `tenant_1ed8b6bd3743`).
+- 12 user accounts in `public.users` linked to employees; password = `Rukn2026!`.
+- 5 departments + 12 employees (People & Culture, Field Operations, Projects & PMO, Finance & Procurement, HSE & Quality).
+- 4 shifts (Corporate day, Field rotation A, Field rotation B, Maintenance early) + 12 shift assignments.
+- 31 days of attendance per employee (280 records) with realistic late arrivals, half-days, and missed punch-outs; 150 auto-raised exceptions.
+- 6 leave requests (annual, sick, personal, exam), 12 leave balances, 4 leave types.
+- 3 payroll runs × 12 payslips = 36 payslips with GOSI splits (9.75% / 11.75% Saudi, 2% hazards employer for expats).
+- 8 documents (contracts, iqama, certificates with expiries).
+- Recruitment pipeline: 3 jobs, 4 candidates, 4 applications, 3 interviews, 2 offers.
+- 6 expenses (approved/pending/draft mix).
+- Priya Menon final settlement with offboarding payload.
+
+### Verification — 2026-07-17
+
+- `pnpm run typecheck`: 15/15 tasks passed.
+- Seed run output (against Supabase pooler):
+  - 5 departments, 12 employees, 4 shifts, 12 shift assignments
+  - 280 attendance records, 150 attendance exceptions
+  - 8 leave types, 6 leave requests, 12 leave balances
+  - 3 payroll runs, 36 payslips
+  - 8 documents, 3 jobs, 4 candidates, 4 applications, 3 interviews, 2 offers
+  - 6 expenses, 1 final settlement
+- Local dev server boots cleanly on `http://localhost:3000` (Next.js 16.2.10 Turbopack, ready in 1.5s).
+
+### Login credentials (Rukn Energy tenant)
+
+| Email | Role |
+|---|---|
+| reem.alharbi@rukn-energy.example | HR Manager (Reem Al-Harbi) |
+| aisha.alotaibi@rukn-energy.example | HR Specialist (Aisha Al-Otaibi) |
+| fahad.alqahtani@rukn-energy.example | Department Manager (Fahad Al-Qahtani) |
+| omar.aldossary@rukn-energy.example | Employee (Omar Al-Dossary) |
+| priya.menon@rukn-energy.example | Employee (Priya Menon) |
+| noura.alsubaie@rukn-energy.example | HR Specialist (Noura Al-Subaie) |
+| khalid.almutairi@rukn-energy.example | Department Manager (Khalid Al-Mutairi) |
+| mariam.aldosari@rukn-energy.example | Payroll Admin (Mariam Al-Dosari) |
+| yousef.alharbi@rukn-energy.example | Employee (Yousef Al-Harbi) |
+| ahmed.alshehri@rukn-energy.example | Department Manager (Ahmed Al-Shehri) |
+| lina.khalil@rukn-energy.example | Employee (Lina Khalil) |
+| salman.alghamdi@rukn-energy.example | Department Manager (Salman Al-Ghamdi) |
+
+Password for all accounts: `Rukn2026!`.

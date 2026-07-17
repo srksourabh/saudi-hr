@@ -70,6 +70,7 @@ const adminNavGroups: NavGroup[] = [
     items: [
       { href: "/employees", label: "People", labelAr: "الموظفون", icon: Users, capability: "people:view_company" },
       { href: "/departments", label: "Organization", labelAr: "الهيكل التنظيمي", icon: Building2, capability: "people:view_company" },
+      { href: "/attendance", label: "Attendance", labelAr: "الحضور", icon: CalendarCheck, capability: "attendance:view_company" },
       { href: "/leave", label: "Time & leave", labelAr: "الوقت والإجازات", icon: CalendarCheck, capability: "attendance:view_company" },
       { href: "/payroll", label: "Payroll", labelAr: "الرواتب", icon: BriefcaseBusiness, capability: "payroll:view_company" },
       { href: "/documents", label: "Documents", labelAr: "المستندات", icon: FileText, capability: "documents:view_company" },
@@ -102,6 +103,7 @@ const employeeNavGroups = [
     items: [
       { href: "/", label: "My day", labelAr: "يومي", icon: LayoutDashboard },
       { href: "/profile", label: "My profile", labelAr: "ملفي", icon: CircleUserRound },
+      { href: "/attendance/me", label: "My attendance", labelAr: "حضوري", icon: CalendarCheck },
       { href: "/modules/time-leave-attendance", label: "My leave", labelAr: "إجازاتي", icon: CalendarCheck },
       { href: "/modules/documents-certificates", label: "My documents", labelAr: "مستنداتي", icon: FileText },
       { href: "/modules/performance-goals", label: "My goals", labelAr: "أهدافي", icon: HeartHandshake },

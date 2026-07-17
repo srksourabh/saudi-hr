@@ -1,19 +1,19 @@
-import NextAuth, { type DefaultSession, type Session } from "next-auth";
-import Credentials from "next-auth/providers/credentials";
-import { adminDb } from "@hrms-app/db";
-import { users, tenants } from "@hrms-app/db";
-import { compare } from "bcryptjs";
-import { eq } from "drizzle-orm";
-import { resolveDemoIdentity } from "./demo-identities";
+import NextAuth, { type DefaultSession, type Session } from 'next-auth';
+import Credentials from 'next-auth/providers/credentials';
+import { adminDb } from '@hrms-app/db';
+import { users, tenants } from '@hrms-app/db';
+import { compare } from 'bcryptjs';
+import { eq } from 'drizzle-orm';
+import { resolveDemoIdentity } from './demo-identities';
 
 type AuthResult = ReturnType<typeof NextAuth>;
 
-declare module "next-auth" {
+declare module 'next-auth' {
   interface User {
     role?: string;
     tenantId?: string;
     employeeId?: string;
-    preferredLanguage?: "en" | "ar";
+    preferredLanguage?: 'en' | 'ar';
   }
 
   interface Session {
@@ -22,9 +22,9 @@ declare module "next-auth" {
       tenantId: string;
       employeeId: string;
       role: string;
-      regulatoryContext: "saudi" | "india";
-      preferredLanguage: "en" | "ar";
-    } & DefaultSession["user"];
+      regulatoryContext: 'saudi' | 'india';
+      preferredLanguage: 'en' | 'ar';
+    } & DefaultSession['user'];
   }
 
   interface JWT {
@@ -32,8 +32,8 @@ declare module "next-auth" {
     tenantId?: string;
     employeeId?: string;
     id?: string;
-    regulatoryContext?: "saudi" | "india";
-    preferredLanguage?: "en" | "ar";
+    regulatoryContext?: 'saudi' | 'india';
+    preferredLanguage?: 'en' | 'ar';
   }
 }
 
@@ -41,51 +41,41 @@ const nextAuthResult: AuthResult = NextAuth({
   trustHost: true,
   logger: {
     error(error) {
-      console.error("[next-auth][error]", error instanceof Error ? error.message : String(error), error instanceof Error ? error.stack : "");
+      console.error('[next-auth][error]', error instanceof Error ? error.message : String(error));
     },
-    warn(code) { console.warn("[next-auth][warn]", code); },
+    warn(code) { console.warn('[next-auth][warn]', code); },
   },
-  session: { strategy: "jwt" },
-  pages: {
-    signIn: "/login",
-    error: "/login",
-  },
+  session: { strategy: 'jwt' },
+  pages: { signIn: '/login', error: '/login' },
   providers: [
     Credentials({
-      name: "credentials",
+      name: 'credentials',
       credentials: {
-        email: { label: "Email", type: "email" },
-        password: { label: "Password", type: "password" },
+        email: { label: 'Email', type: 'email' },
+        password: { label: 'Password', type: 'password' },
       },
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) return null;
-
         const email = credentials.email as string;
         const password = credentials.password as string;
-        const demoIdentity = resolveDemoIdentity(
-          email,
-          password,
-          process.env.DEMO_MODE === "true",
-        );
 
+        const demoModeEnabled = process.env.DEMO_MODE === "true";
+        const demoIdentity = resolveDemoIdentity(email, password, demoModeEnabled);
         if (demoIdentity) {
           return {
             id: demoIdentity.id,
             email: demoIdentity.email,
             name: demoIdentity.name,
             role: demoIdentity.role,
+            tenantId: demoIdentity.tenantId,
             employeeId: demoIdentity.employeeId,
             image: demoIdentity.image,
             preferredLanguage: demoIdentity.preferredLanguage,
           };
         }
 
-        const user = await adminDb.query.users.findFirst({
-          where: eq(users.email, email),
-        });
-
+        const user = await adminDb.query.users.findFirst({ where: eq(users.email, email) });
         if (!user || !user.passwordHash) return null;
-
         const valid = await compare(password, user.passwordHash);
         if (!valid) return null;
 
@@ -101,33 +91,29 @@ const nextAuthResult: AuthResult = NextAuth({
     }),
   ],
   callbacks: {
-    async jwt({ token, user, account: _account }) {
+    async jwt({ token, user }) {
       if (user) {
         token.role = user.role;
         token.tenantId = user.tenantId;
         token.employeeId = user.employeeId;
-
         if (user.tenantId) {
-          const tenant = await adminDb.query.tenants.findFirst({
-            where: eq(tenants.id, user.tenantId),
-          });
-          token.regulatoryContext = tenant?.regulatoryContext ?? "saudi";
+          const tenant = await adminDb.query.tenants.findFirst({ where: eq(tenants.id, user.tenantId) });
+          token.regulatoryContext = tenant?.regulatoryContext ?? 'saudi';
         } else {
-          token.regulatoryContext = "saudi";
+          token.regulatoryContext = 'saudi';
         }
-
-        token.preferredLanguage = user.preferredLanguage ?? "en";
+        token.preferredLanguage = user.preferredLanguage ?? 'en';
       }
       return token;
     },
     async session({ session, token }) {
       if (session.user) {
         session.user.id = (token.sub ?? token.id) as string;
-        session.user.role = (token.role as string) ?? "";
-        session.user.tenantId = (token.tenantId as string) ?? "";
-        session.user.employeeId = (token.employeeId as string) ?? "";
-        session.user.regulatoryContext = (token.regulatoryContext as "saudi" | "india") ?? "saudi";
-        session.user.preferredLanguage = (token.preferredLanguage as "en" | "ar") ?? "en";
+        session.user.role = (token.role as string) ?? '';
+        session.user.tenantId = (token.tenantId as string) ?? '';
+        session.user.employeeId = (token.employeeId as string) ?? '';
+        session.user.regulatoryContext = (token.regulatoryContext as 'saudi' | 'india') ?? 'saudi';
+        session.user.preferredLanguage = (token.preferredLanguage as 'en' | 'ar') ?? 'en';
       }
       return session;
     },

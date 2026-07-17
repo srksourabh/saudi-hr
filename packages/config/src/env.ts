@@ -21,6 +21,11 @@ const envSchema = z.object({
   LLM_PROVIDER: z.enum(["claude", "gemini"]).default("claude"),
   ANTHROPIC_API_KEY: z.string().optional(),
   GEMINI_API_KEY: z.string().optional(),
+
+  // Demo mode: when "true", the four fixed demo identities in
+  // packages/auth/src/demo-identities.ts are accepted at sign-in.
+  // Production tenants must leave this unset or "false".
+  DEMO_MODE: z.enum(["true", "false"]).default("false"),
 });
 
 export type Env = z.infer<typeof envSchema>;

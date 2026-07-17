@@ -2,6 +2,15 @@ export { departments } from "./departments";
 export { employees, employmentStatusEnum, gosiSystemEnum, nationalityEnum } from "./employees";
 export { employmentHistory } from "./employment_history";
 export { documents } from "./documents";
+export {
+  shifts,
+  shiftAssignments,
+  attendanceRecords,
+  attendanceExceptions,
+  attendanceStatusEnum,
+  exceptionTypeEnum,
+  exceptionStatusEnum,
+} from "./attendance";
 export { auditLogs } from "./audit_logs";
 export { policyDocuments, policyCategoryEnum } from "./policy-documents";
 export { leaveTypes } from "./leave_types";
@@ -37,6 +46,13 @@ export {
   referenceChecks,
   referenceCheckStatusEnum,
 } from "./recruitment";
+
+export {
+  employeeInvitations,
+  inviteStatusEnum,
+  inviteRoleEnum,
+} from "./employee-invitations";
+
 export {
   goals,
   goalTypeEnum,
@@ -99,6 +115,7 @@ export {
   aiRetentionRiskFlags,
 } from "./ai";
 
+export * from "../relations";
 export {
   qiwaContracts,
   qiwaSyncLogs,
