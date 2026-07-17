@@ -86,12 +86,15 @@ const nextAuthResult: AuthResult = NextAuth({
           image: user.image,
           role: user.role,
           tenantId: user.tenantId,
+          employeeId: user.employeeId ?? undefined,
+          preferredLanguage: user.preferredLanguage ?? "en",
         };
       },
     }),
   ],
   callbacks: {
     async jwt({ token, user }) {
+      // First sign-in: copy the user fields the seed stores.
       if (user) {
         token.role = user.role;
         token.tenantId = user.tenantId;
@@ -103,6 +106,19 @@ const nextAuthResult: AuthResult = NextAuth({
           token.regulatoryContext = 'saudi';
         }
         token.preferredLanguage = user.preferredLanguage ?? 'en';
+      }
+      // Subsequent requests: if the token was issued before the employeeId
+      // bug was fixed (no employeeId captured at first login), re-hydrate
+      // it from the DB so employee-role users are no longer orphaned.
+      else if (token.sub && !token.employeeId) {
+        try {
+          const u = await adminDb.query.users.findFirst({
+            where: (users, { eq }) => eq(users.id, token.sub as string),
+          });
+          if (u?.employeeId) token.employeeId = u.employeeId;
+        } catch {
+          /* never block a session refresh on a transient DB issue */
+        }
       }
       return token;
     },

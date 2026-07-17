@@ -3,7 +3,8 @@
 import { useMemo, useState } from "react";
 import { Button, Input, Card, CardHeader, CardContent, Badge } from "@hrms-app/ui";
 import { api } from "~/trpc/react";
-import { Calendar, ChevronLeft, ChevronRight, Search } from "lucide-react";
+import { LocationPicker, type LocationPickerValue } from "~/components/location-picker";
+import { Calendar, ChevronLeft, ChevronRight, MapPin, Search } from "lucide-react";
 
 const statusBadge: Record<string, { label: string; className: string }> = {
   present:    { label: "Present",    className: "bg-green-100 text-green-800 border-green-200" },

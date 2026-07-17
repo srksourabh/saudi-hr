@@ -4,7 +4,7 @@
 <!-- _note: Iqama, bankAccount, and processedResult fields require live data -->
 <wageFile format="mudad-wps-demo">
   <period>2026-06</period>
-  <generatedAt>2026-07-17T02:47:57.604Z</generatedAt>
+  <generatedAt>2026-07-17T03:17:46.169Z</generatedAt>
   <batchReference>MUD-202606-01</batchReference>
   <totalEmployees>12</totalEmployees>
   <totalWages>374000.00</totalWages>

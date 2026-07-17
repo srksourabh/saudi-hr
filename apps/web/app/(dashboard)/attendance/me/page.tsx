@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { Button, Card, CardHeader, CardContent, Badge, Input } from "@hrms-app/ui";
 import { api } from "~/trpc/react";
+import { LocationPicker, type LocationPickerValue } from "~/components/location-picker";
 import { Clock, MapPin, LogIn, LogOut, AlertTriangle, Calendar } from "lucide-react";
 
 const statusBadge: Record<string, { label: string; className: string }> = {
@@ -36,6 +37,7 @@ function currentMonth(): string {
 
 export default function MyAttendancePage() {
   const [month, setMonth] = useState<string>(currentMonth());
+  const [location, setLocation] = useState<LocationPickerValue | null>(null);
   const utils = api.useUtils();
 
   const { data: today, isLoading: loadingToday } = api.attendance.today.useQuery();
@@ -61,6 +63,16 @@ export default function MyAttendancePage() {
   const shift = today?.assignment?.shift;
   const punchedIn = !!record?.punchInAt;
   const punchedOut = !!record?.punchOutAt;
+  const todayLocation = useMemo<LocationPickerValue | null>(() => {
+    if (record?.workLocation) {
+      return {
+        lat: record.workLocation.split(",")[0]?.trim() ? Number(record.workLocation.split(",")[0]) : 0,
+        lng: record.workLocation.split(",")[1]?.trim() ? Number(record.workLocation.split(",")[1]) : 0,
+        siteName: record.workLocation,
+      };
+    }
+    return null;
+  }, [record?.workLocation]);
 
   const monthLabel = useMemo(() => {
     const [y, m] = month.split("-").map(Number);
@@ -142,13 +154,25 @@ export default function MyAttendancePage() {
                 </div>
               )}
 
+              <div className="rounded-lg border border-slate-200 bg-white p-3">
+                <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  Punch-in location
+                </div>
+                <LocationPicker
+                  value={todayLocation}
+                  onChange={setLocation}
+                  variant="compact"
+                />
+              </div>
+
               <div className="flex flex-wrap gap-3 pt-1">
                 <Button
                   size="lg"
-                  disabled={punchedIn || punchInMutation.isPending}
+                  disabled={punchedIn || punchInMutation.isPending || !location}
                   onClick={() =>
                     punchInMutation.mutate({
-                      workLocation: "Riyadh HQ",
+                      workLocation: location?.siteName ?? `${location?.lat?.toFixed(4)}, ${location?.lng?.toFixed(4)}`,
+                      notes: location ? `lat=${location.lat},lng=${location.lng}${location.accuracy ? `,acc=${Math.round(location.accuracy)}m` : ""}` : undefined,
                     })
                   }
                 >
@@ -158,10 +182,11 @@ export default function MyAttendancePage() {
                 <Button
                   size="lg"
                   variant="outline"
-                  disabled={!punchedIn || punchedOut || punchOutMutation.isPending}
+                  disabled={!punchedIn || punchedOut || punchOutMutation.isPending || !location}
                   onClick={() =>
                     punchOutMutation.mutate({
-                      workLocation: record?.workLocation ?? "Riyadh HQ",
+                      workLocation: location?.siteName ?? record?.workLocation ?? `${location?.lat?.toFixed(4)}, ${location?.lng?.toFixed(4)}`,
+                      notes: location ? `lat=${location.lat},lng=${location.lng}${location.accuracy ? `,acc=${Math.round(location.accuracy)}m` : ""}` : undefined,
                     })
                   }
                 >

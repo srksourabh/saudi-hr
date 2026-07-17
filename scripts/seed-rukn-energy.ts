@@ -94,18 +94,20 @@ const EMPLOYEES = [
   // GOSI registration dates mirror the hire date so the orchestrator picks the
   // correct rate tier (old system for hires before 2024-07-01, new system after).
   // IQAMA expiry for expats is set so the document-renewal agent can fire alerts.
-  { slug: "emp-reem",   name: "Reem Al-Harbi",      email: "reem.alharbi@rukn-energy.example",      role: "hr_manager",         dept: "dept-people",  status: "active",   hire: "2021-03-14", gosi: "2021-03-14", nat: "saudi", sal: [32000, 8000, 2500], job: "People & Culture Director",           iban: "SA0380000000608010167519" },
-  { slug: "emp-fahad",  name: "Fahad Al-Qahtani",    email: "fahad.alqahtani@rukn-energy.example",    role: "department_manager", dept: "dept-field",   status: "active",   hire: "2020-09-01", gosi: "2020-09-01", nat: "saudi", sal: [28500, 7125, 2000], job: "Eastern Operations Manager",         iban: "SA8000000060801016752204" },
-  { slug: "emp-aisha",  name: "Aisha Al-Otaibi",     email: "aisha.alotaibi@rukn-energy.example",     role: "hr_specialist",      dept: "dept-people",  status: "active",   hire: "2022-01-10", gosi: "2022-01-10", nat: "saudi", sal: [22500, 5625, 1500], job: "Payroll & GOSI Specialist",          iban: "SA2000000060801016752604" },
-  { slug: "emp-omar",   name: "Omar Al-Dossary",     email: "omar.aldossary@rukn-energy.example",     role: "employee",           dept: "dept-field",   status: "active",   hire: "2026-05-03", gosi: "2026-05-03", nat: "saudi", sal: [14000, 3500, 1000], job: "Field Engineer",                     iban: "SA0380000000608010167519" },
-  { slug: "emp-priya",  name: "Priya Menon",         email: "priya.menon@rukn-energy.example",         role: "employee",           dept: "dept-projects",status: "on_leave", hire: "2021-11-08", gosi: null,         nat: "expat", sal: [26000, 6500, 2000], job: "Senior Project Coordinator",        iban: "SA4420000060801016756137", iqamaExpiry: "2026-09-10" },
-  { slug: "emp-noura",  name: "Noura Al-Subaie",     email: "noura.alsubaie@rukn-energy.example",     role: "hr_specialist",      dept: "dept-people",  status: "active",   hire: "2022-06-15", gosi: "2022-06-15", nat: "saudi", sal: [20000, 5000, 1500], job: "Talent Acquisition Lead",           iban: "SA1500000060801016754106" },
-  { slug: "emp-khalid", name: "Khalid Al-Mutairi",   email: "khalid.almutairi@rukn-energy.example",   role: "department_manager", dept: "dept-projects",status: "active",   hire: "2019-04-22", gosi: "2019-04-22", nat: "saudi", sal: [31000, 7750, 2250], job: "Projects Director",                 iban: "SA2500000060801016756107" },
-  { slug: "emp-mariam", name: "Mariam Al-Dosari",    email: "mariam.aldosari@rukn-energy.example",    role: "payroll_admin",      dept: "dept-finance", status: "active",   hire: "2023-02-20", gosi: "2023-02-20", nat: "saudi", sal: [18000, 4500, 1250], job: "Procurement Analyst",               iban: "SA0380000000608010167519" },
-  { slug: "emp-yousef", name: "Yousef Al-Harbi",     email: "yousef.alharbi@rukn-energy.example",     role: "employee",           dept: "dept-field",   status: "active",   hire: "2018-08-12", gosi: "2018-08-12", nat: "saudi", sal: [22000, 5500, 1500], job: "Senior Field Supervisor",           iban: "SA8000000060801016758109" },
-  { slug: "emp-ahmed",  name: "Ahmed Al-Shehri",     email: "ahmed.alshehri@rukn-energy.example",     role: "department_manager", dept: "dept-hse",     status: "active",   hire: "2017-03-05", gosi: "2017-03-05", nat: "saudi", sal: [24500, 6125, 1750], job: "HSE Manager",                       iban: "SA9000000060801016752112" },
-  { slug: "emp-lina",   name: "Lina Khalil",         email: "lina.khalil@rukn-energy.example",         role: "employee",           dept: "dept-projects",status: "active",   hire: "2025-11-02", gosi: null,         nat: "expat", sal: [19000, 4750, 1250], job: "Project Coordinator",               iban: "SA7800000060801016751111", iqamaExpiry: "2027-03-12" },
-  { slug: "emp-salman", name: "Salman Al-Ghamdi",    email: "salman.alghamdi@rukn-energy.example",    role: "department_manager", dept: "dept-hse",     status: "active",   hire: "2016-11-14", gosi: "2016-11-14", nat: "saudi", sal: [25500, 6375, 1750], job: "HSE Lead",                          iban: "SA4200000060801016752112" },
+  // `mgr` = reporting line (slug of the direct manager). The HR Manager Reem
+  // is at the top of the chain (no manager) so the organogram has a clear root.
+  { slug: "emp-reem",   name: "Reem Al-Harbi",      email: "reem.alharbi@rukn-energy.example",      role: "hr_manager",         dept: "dept-people",  status: "active",   hire: "2021-03-14", gosi: "2021-03-14", nat: "saudi", sal: [32000, 8000, 2500], job: "People & Culture Director",           iban: "SA0380000000608010167519", mgr: null },
+  { slug: "emp-fahad",  name: "Fahad Al-Qahtani",    email: "fahad.alqahtani@rukn-energy.example",    role: "department_manager", dept: "dept-field",   status: "active",   hire: "2020-09-01", gosi: "2020-09-01", nat: "saudi", sal: [28500, 7125, 2000], job: "Eastern Operations Manager",         iban: "SA8000000060801016752204", mgr: "emp-reem" },
+  { slug: "emp-aisha",  name: "Aisha Al-Otaibi",     email: "aisha.alotaibi@rukn-energy.example",     role: "hr_specialist",      dept: "dept-people",  status: "active",   hire: "2022-01-10", gosi: "2022-01-10", nat: "saudi", sal: [22500, 5625, 1500], job: "Payroll & GOSI Specialist",          iban: "SA2000000060801016752604", mgr: "emp-reem" },
+  { slug: "emp-omar",   name: "Omar Al-Dossary",     email: "omar.aldossary@rukn-energy.example",     role: "employee",           dept: "dept-field",   status: "active",   hire: "2026-05-03", gosi: "2026-05-03", nat: "saudi", sal: [14000, 3500, 1000], job: "Field Engineer",                     iban: "SA0380000000608010167519", mgr: "emp-fahad" },
+  { slug: "emp-priya",  name: "Priya Menon",         email: "priya.menon@rukn-energy.example",         role: "employee",           dept: "dept-projects",status: "on_leave", hire: "2021-11-08", gosi: null,         nat: "expat", sal: [26000, 6500, 2000], job: "Senior Project Coordinator",        iban: "SA4420000060801016756137", iqamaExpiry: "2026-09-10", mgr: "emp-khalid" },
+  { slug: "emp-noura",  name: "Noura Al-Subaie",     email: "noura.alsubaie@rukn-energy.example",     role: "hr_specialist",      dept: "dept-people",  status: "active",   hire: "2022-06-15", gosi: "2022-06-15", nat: "saudi", sal: [20000, 5000, 1500], job: "Talent Acquisition Lead",           iban: "SA1500000060801016754106", mgr: "emp-reem" },
+  { slug: "emp-khalid", name: "Khalid Al-Mutairi",   email: "khalid.almutairi@rukn-energy.example",   role: "department_manager", dept: "dept-projects",status: "active",   hire: "2019-04-22", gosi: "2019-04-22", nat: "saudi", sal: [31000, 7750, 2250], job: "Projects Director",                 iban: "SA2500000060801016756107", mgr: "emp-reem" },
+  { slug: "emp-mariam", name: "Mariam Al-Dosari",    email: "mariam.aldosari@rukn-energy.example",    role: "payroll_admin",      dept: "dept-finance", status: "active",   hire: "2023-02-20", gosi: "2023-02-20", nat: "saudi", sal: [18000, 4500, 1250], job: "Procurement Analyst",               iban: "SA0380000000608010167519", mgr: "emp-reem" },
+  { slug: "emp-yousef", name: "Yousef Al-Harbi",     email: "yousef.alharbi@rukn-energy.example",     role: "employee",           dept: "dept-field",   status: "active",   hire: "2018-08-12", gosi: "2018-08-12", nat: "saudi", sal: [22000, 5500, 1500], job: "Senior Field Supervisor",           iban: "SA8000000060801016758109", mgr: "emp-fahad" },
+  { slug: "emp-ahmed",  name: "Ahmed Al-Shehri",     email: "ahmed.alshehri@rukn-energy.example",     role: "department_manager", dept: "dept-hse",     status: "active",   hire: "2017-03-05", gosi: "2017-03-05", nat: "saudi", sal: [24500, 6125, 1750], job: "HSE Manager",                       iban: "SA9000000060801016752112", mgr: "emp-reem" },
+  { slug: "emp-lina",   name: "Lina Khalil",         email: "lina.khalil@rukn-energy.example",         role: "employee",           dept: "dept-projects",status: "active",   hire: "2025-11-02", gosi: null,         nat: "expat", sal: [19000, 4750, 1250], job: "Project Coordinator",               iban: "SA7800000060801016751111", iqamaExpiry: "2027-03-12", mgr: "emp-khalid" },
+  { slug: "emp-salman", name: "Salman Al-Ghamdi",    email: "salman.alghamdi@rukn-energy.example",    role: "department_manager", dept: "dept-hse",     status: "active",   hire: "2016-11-14", gosi: "2016-11-14", nat: "saudi", sal: [25500, 6375, 1750], job: "HSE Lead",                          iban: "SA4200000060801016752112", mgr: "emp-ahmed" },
 ];
 
 const SHIFT_KEYS = ["shift-corporate", "shift-field-a", "shift-field-b", "shift-maintenance"] as const;
@@ -545,6 +547,7 @@ async function main() {
     "expenses", "applications", "offers", "interviews", "candidates",
     "job_requisitions", "documents", "leave_balances", "leave_requests",
     "payslips", "payroll_runs", "employees", "departments",
+    "government_sync_status", "compliance_checks",
   ];
   for (const t of tables) {
     if (t === "recognitions_legacy_skip") continue;
@@ -581,6 +584,7 @@ async function main() {
         salary_basic = EXCLUDED.salary_basic,
         salary_housing = EXCLUDED.salary_housing,
         salary_transport = EXCLUDED.salary_transport,
+        manager_employee_id = EXCLUDED.manager_employee_id,
         gosi_registration_date = EXCLUDED.gosi_registration_date,
         gosi_system = EXCLUDED.gosi_system,
         bank_iban_enc = EXCLUDED.bank_iban_enc,
@@ -599,7 +603,7 @@ async function main() {
       e.status,
       e.hire,
       e.sal[0], e.sal[1], e.sal[2],
-      null,
+      e.mgr ? id(e.mgr) : null,
       e.job,
       gosiReg,
       gosiSystem,
