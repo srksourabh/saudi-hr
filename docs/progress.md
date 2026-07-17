@@ -161,3 +161,8 @@ Treats Rukn Energy Services as a real client (not a "demo mode" toggle). All ide
 | salman.alghamdi@rukn-energy.example | Department Manager (Salman Al-Ghamdi) |
 
 Password for all accounts: `Rukn2026!`.
+
+### Deploy — 2026-07-17
+
+- Commit `7ff1a77` pushed to `master`.
+- Vercel preview deployment: `https://hrms-32ww99smt-srksourabhs-projects.vercel.app` (HTTP 200 on `/login`).
