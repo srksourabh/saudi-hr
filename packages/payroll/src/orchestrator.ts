@@ -1,6 +1,7 @@
 import type { EmployeeContext, PayslipCalculation } from "./types";
 import { calculateGosi } from "./gosi";
 import { runConsistencyGuard } from "./consistency";
+import { calculateFinalSettlement } from "./esb";
 import type { CheckSeverity } from "./types";
 
 export interface OrchestratorInput {
@@ -8,6 +9,8 @@ export interface OrchestratorInput {
   employees:    EmployeeContext[];
   overtime?:    Record<string, number>;
   deductions?:  Record<string, number>;
+  /** ISO date for the period being calculated (used for EOSB tenure + rate tier). */
+  periodDate?:  string;
 }
 
 export interface OrchestratorResult {
@@ -18,6 +21,7 @@ export interface OrchestratorResult {
 
 export function orchestratePayrollRun(input: OrchestratorInput): OrchestratorResult {
   const { employees, overtime = {}, deductions = {} } = input;
+  const periodDate = input.periodDate ?? new Date().toISOString().slice(0, 10);
 
   const payslips: PayslipCalculation[] = employees.map((emp) => {
     // ── GOSI calculation ────────────────────────────────────────────────
@@ -28,7 +32,7 @@ export function orchestratePayrollRun(input: OrchestratorInput): OrchestratorRes
       gosiRegistrationDate: emp.gosiRegistrationDate,
       salaryBasic:     emp.salaryBasic,
       salaryHousing:   emp.salaryHousing,
-      effectiveDate:   new Date().toISOString().split("T")[0],
+      effectiveDate:   periodDate,
     });
 
     // ── Core salary components ──────────────────────────────────────────
@@ -41,6 +45,28 @@ export function orchestratePayrollRun(input: OrchestratorInput): OrchestratorRes
     const gross           = basic + housing + transport + overtimeAmount;
     const totalDeductions = gosi.totalEmployeeCost + deductionAmount;
     const netPay          = Math.max(0, roundToHalal(gross - totalDeductions));
+
+    // ── EOSB accrual (informational) — full award amount, not the
+    // resignation-reduced figure. Updated each payroll period so HR
+    // can monitor liability.
+    const eosb = calculateFinalSettlement({
+      hireDate:           emp.hireDate,
+      terminationDate:   periodDate,
+      basicSalary:       basic,
+      housingAllowance:  housing,
+      transportAllowance: transport,
+      separationReason:  "termination", // assume employer-side for accrual
+      completedProbation: true,
+    });
+    const monthlyEosbAccrual = roundToHalal(eosb.eosbAmount / Math.max(eosb.components.yearsOfService, 1) / 12);
+
+    // Resolve which GOSI system was used (old vs new) by looking at the registration date.
+    const gosiSystem: "old" | "new" | null =
+      nationality === "expat" || nationality === "gcc"
+        ? null
+        : emp.gosiRegistrationDate && emp.gosiRegistrationDate < "2024-07-01"
+          ? "old"
+          : "new";
 
     return {
       employeeId: emp.id,
@@ -56,12 +82,19 @@ export function orchestratePayrollRun(input: OrchestratorInput): OrchestratorRes
       netPay,
       // Extended breakdown attached for display purposes
       _breakdown: {
+        gross,
         gosiPensionEmployee:    gosi.pension.employee,
         gosiPensionEmployer:    gosi.pension.employer,
         gosiOccupationalHaz:    gosi.occupationalHazards.employer,
         gosiSaned:              gosi.saned.employer,
-        contributoryBase:      gosi.contributoryBase,
+        contributoryBase:       gosi.contributoryBase,
+        gosiRateEmployee:       gosi.pension.rateEmployee + (gosi.occupationalHazards.rateEmployee + gosi.saned.rateEmployee),
+        gosiRateEmployer:       gosi.pension.rateEmployer + gosi.occupationalHazards.rateEmployer + gosi.saned.rateEmployer,
+        gosiSystem,
         nationality:            gosi.nationality,
+        eosbAccrued:            monthlyEosbAccrual,
+        eosbYearsOfService:     eosb.components.yearsOfService,
+        eosbFullAmount:         eosb.eosbAmount,
       },
     };
   });

@@ -76,10 +76,22 @@ export const payrollRouter = createTRPCRouter({
           housing: p.housing.toString(),
           transport: p.transport.toString(),
           overtime: p.overtime.toString(),
+          gross: (p._breakdown?.gross ?? p.basic + p.housing + p.transport + p.overtime).toString(),
           gosiEmployee: p.gosiEmployee.toString(),
           gosiEmployer: p.gosiEmployer.toString(),
+          gosiPensionEmployee: (p._breakdown?.gosiPensionEmployee ?? 0).toString(),
+          gosiPensionEmployer: (p._breakdown?.gosiPensionEmployer ?? 0).toString(),
+          gosiOccHazardsEmployer: (p._breakdown?.gosiOccupationalHaz ?? 0).toString(),
+          gosiSanedEmployer: (p._breakdown?.gosiSaned ?? 0).toString(),
+          gosiContributoryBase: (p._breakdown?.contributoryBase ?? 0).toString(),
+          gosiRateEmployee: (p._breakdown?.gosiRateEmployee ?? 0).toString(),
+          gosiRateEmployer: (p._breakdown?.gosiRateEmployer ?? 0).toString(),
+          gosiSystem: p._breakdown?.gosiSystem ?? null,
           deductions: p.deductions.toString(),
+          eosbAccrued: (p._breakdown?.eosbAccrued ?? 0).toString(),
+          eosbYearsOfService: (p._breakdown?.eosbYearsOfService ?? 0).toString(),
           netPay: p.netPay.toString(),
+          breakdown: JSON.stringify(p._breakdown ?? {}),
         }));
 
         if (payslipValues.length > 0) {

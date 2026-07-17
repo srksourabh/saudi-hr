@@ -67,6 +67,13 @@ const idSeq = (label: string): string => {
 const PRECOMPUTED_BCRYPT_HASH =
   "$2a$10$YtBHTW62qd3c1zpfG2Dt8OQ5T0qExRK1BJfV3jj4jcTAbL0PDtcCu";
 
+function hashSlug(slug: string): number {
+  return parseInt(
+    createHash("sha256").update(slug).digest("hex").slice(0, 8),
+    16,
+  );
+}
+
 async function hashPassword(plain: string): Promise<string> {
   try {
     const bcryptPath = pathToFileURL(
@@ -84,18 +91,21 @@ async function hashPassword(plain: string): Promise<string> {
 }
 
 const EMPLOYEES = [
-  { slug: "emp-reem",   name: "Reem Al-Harbi",      email: "reem.alharbi@rukn-energy.example",      role: "hr_manager",         dept: "dept-people",  status: "active",    hire: "2021-03-14", nat: "saudi", sal: [32000, 8000, 2500], job: "People & Culture Director" },
-  { slug: "emp-fahad",  name: "Fahad Al-Qahtani",    email: "fahad.alqahtani@rukn-energy.example",    role: "department_manager", dept: "dept-field",   status: "active",    hire: "2020-09-01", nat: "saudi", sal: [28500, 7125, 2000], job: "Eastern Operations Manager" },
-  { slug: "emp-aisha",  name: "Aisha Al-Otaibi",     email: "aisha.alotaibi@rukn-energy.example",     role: "hr_specialist",      dept: "dept-people",  status: "active",    hire: "2022-01-10", nat: "saudi", sal: [22500, 5625, 1500], job: "Payroll & GOSI Specialist" },
-  { slug: "emp-omar",   name: "Omar Al-Dossary",     email: "omar.aldossary@rukn-energy.example",     role: "employee",           dept: "dept-field",   status: "active",    hire: "2026-05-03", nat: "saudi", sal: [14000, 3500, 1000], job: "Field Engineer" },
-  { slug: "emp-priya",  name: "Priya Menon",         email: "priya.menon@rukn-energy.example",         role: "employee",           dept: "dept-projects",status: "on_leave",  hire: "2021-11-08", nat: "expat", sal: [26000, 6500, 2000], job: "Senior Project Coordinator" },
-  { slug: "emp-noura",  name: "Noura Al-Subaie",     email: "noura.alsubaie@rukn-energy.example",     role: "hr_specialist",      dept: "dept-people",  status: "active",    hire: "2022-06-15", nat: "saudi", sal: [20000, 5000, 1500], job: "Talent Acquisition Lead" },
-  { slug: "emp-khalid", name: "Khalid Al-Mutairi",   email: "khalid.almutairi@rukn-energy.example",   role: "department_manager", dept: "dept-projects",status: "active",    hire: "2019-04-22", nat: "saudi", sal: [31000, 7750, 2250], job: "Projects Director" },
-  { slug: "emp-mariam", name: "Mariam Al-Dosari",    email: "mariam.aldosari@rukn-energy.example",    role: "payroll_admin",      dept: "dept-finance", status: "active",    hire: "2023-02-20", nat: "saudi", sal: [18000, 4500, 1250], job: "Procurement Analyst" },
-  { slug: "emp-yousef", name: "Yousef Al-Harbi",     email: "yousef.alharbi@rukn-energy.example",     role: "employee",           dept: "dept-field",   status: "active",    hire: "2018-08-12", nat: "saudi", sal: [22000, 5500, 1500], job: "Senior Field Supervisor" },
-  { slug: "emp-ahmed",  name: "Ahmed Al-Shehri",     email: "ahmed.alshehri@rukn-energy.example",     role: "department_manager", dept: "dept-hse",     status: "active",    hire: "2017-03-05", nat: "saudi", sal: [24500, 6125, 1750], job: "HSE Manager" },
-  { slug: "emp-lina",   name: "Lina Khalil",         email: "lina.khalil@rukn-energy.example",         role: "employee",           dept: "dept-projects",status: "active",    hire: "2025-11-02", nat: "expat", sal: [19000, 4750, 1250], job: "Project Coordinator" },
-  { slug: "emp-salman", name: "Salman Al-Ghamdi",    email: "salman.alghamdi@rukn-energy.example",    role: "department_manager", dept: "dept-hse",     status: "active",    hire: "2016-11-14", nat: "saudi", sal: [25500, 6375, 1750], job: "HSE Lead" },
+  // GOSI registration dates mirror the hire date so the orchestrator picks the
+  // correct rate tier (old system for hires before 2024-07-01, new system after).
+  // IQAMA expiry for expats is set so the document-renewal agent can fire alerts.
+  { slug: "emp-reem",   name: "Reem Al-Harbi",      email: "reem.alharbi@rukn-energy.example",      role: "hr_manager",         dept: "dept-people",  status: "active",   hire: "2021-03-14", gosi: "2021-03-14", nat: "saudi", sal: [32000, 8000, 2500], job: "People & Culture Director",           iban: "SA0380000000608010167519" },
+  { slug: "emp-fahad",  name: "Fahad Al-Qahtani",    email: "fahad.alqahtani@rukn-energy.example",    role: "department_manager", dept: "dept-field",   status: "active",   hire: "2020-09-01", gosi: "2020-09-01", nat: "saudi", sal: [28500, 7125, 2000], job: "Eastern Operations Manager",         iban: "SA8000000060801016752204" },
+  { slug: "emp-aisha",  name: "Aisha Al-Otaibi",     email: "aisha.alotaibi@rukn-energy.example",     role: "hr_specialist",      dept: "dept-people",  status: "active",   hire: "2022-01-10", gosi: "2022-01-10", nat: "saudi", sal: [22500, 5625, 1500], job: "Payroll & GOSI Specialist",          iban: "SA2000000060801016752604" },
+  { slug: "emp-omar",   name: "Omar Al-Dossary",     email: "omar.aldossary@rukn-energy.example",     role: "employee",           dept: "dept-field",   status: "active",   hire: "2026-05-03", gosi: "2026-05-03", nat: "saudi", sal: [14000, 3500, 1000], job: "Field Engineer",                     iban: "SA0380000000608010167519" },
+  { slug: "emp-priya",  name: "Priya Menon",         email: "priya.menon@rukn-energy.example",         role: "employee",           dept: "dept-projects",status: "on_leave", hire: "2021-11-08", gosi: null,         nat: "expat", sal: [26000, 6500, 2000], job: "Senior Project Coordinator",        iban: "SA4420000060801016756137", iqamaExpiry: "2026-09-10" },
+  { slug: "emp-noura",  name: "Noura Al-Subaie",     email: "noura.alsubaie@rukn-energy.example",     role: "hr_specialist",      dept: "dept-people",  status: "active",   hire: "2022-06-15", gosi: "2022-06-15", nat: "saudi", sal: [20000, 5000, 1500], job: "Talent Acquisition Lead",           iban: "SA1500000060801016754106" },
+  { slug: "emp-khalid", name: "Khalid Al-Mutairi",   email: "khalid.almutairi@rukn-energy.example",   role: "department_manager", dept: "dept-projects",status: "active",   hire: "2019-04-22", gosi: "2019-04-22", nat: "saudi", sal: [31000, 7750, 2250], job: "Projects Director",                 iban: "SA2500000060801016756107" },
+  { slug: "emp-mariam", name: "Mariam Al-Dosari",    email: "mariam.aldosari@rukn-energy.example",    role: "payroll_admin",      dept: "dept-finance", status: "active",   hire: "2023-02-20", gosi: "2023-02-20", nat: "saudi", sal: [18000, 4500, 1250], job: "Procurement Analyst",               iban: "SA0380000000608010167519" },
+  { slug: "emp-yousef", name: "Yousef Al-Harbi",     email: "yousef.alharbi@rukn-energy.example",     role: "employee",           dept: "dept-field",   status: "active",   hire: "2018-08-12", gosi: "2018-08-12", nat: "saudi", sal: [22000, 5500, 1500], job: "Senior Field Supervisor",           iban: "SA8000000060801016758109" },
+  { slug: "emp-ahmed",  name: "Ahmed Al-Shehri",     email: "ahmed.alshehri@rukn-energy.example",     role: "department_manager", dept: "dept-hse",     status: "active",   hire: "2017-03-05", gosi: "2017-03-05", nat: "saudi", sal: [24500, 6125, 1750], job: "HSE Manager",                       iban: "SA9000000060801016752112" },
+  { slug: "emp-lina",   name: "Lina Khalil",         email: "lina.khalil@rukn-energy.example",         role: "employee",           dept: "dept-projects",status: "active",   hire: "2025-11-02", gosi: null,         nat: "expat", sal: [19000, 4750, 1250], job: "Project Coordinator",               iban: "SA7800000060801016751111", iqamaExpiry: "2027-03-12" },
+  { slug: "emp-salman", name: "Salman Al-Ghamdi",    email: "salman.alghamdi@rukn-energy.example",    role: "department_manager", dept: "dept-hse",     status: "active",   hire: "2016-11-14", gosi: "2016-11-14", nat: "saudi", sal: [25500, 6375, 1750], job: "HSE Lead",                          iban: "SA4200000060801016752112" },
 ];
 
 const SHIFT_KEYS = ["shift-corporate", "shift-field-a", "shift-field-b", "shift-maintenance"] as const;
@@ -313,11 +323,23 @@ async function main() {
       housing numeric NOT NULL DEFAULT 0,
       transport numeric NOT NULL DEFAULT 0,
       overtime numeric NOT NULL DEFAULT 0,
+      gross numeric NOT NULL DEFAULT 0,
       gosi_employee numeric NOT NULL DEFAULT 0,
       gosi_employer numeric NOT NULL DEFAULT 0,
+      gosi_pension_employee numeric NOT NULL DEFAULT 0,
+      gosi_pension_employer numeric NOT NULL DEFAULT 0,
+      gosi_occ_hazards_employer numeric NOT NULL DEFAULT 0,
+      gosi_saned_employer numeric NOT NULL DEFAULT 0,
+      gosi_contributory_base numeric NOT NULL DEFAULT 0,
+      gosi_rate_employee numeric NOT NULL DEFAULT 0,
+      gosi_rate_employer numeric NOT NULL DEFAULT 0,
+      gosi_system text,
       deductions numeric NOT NULL DEFAULT 0,
+      eosb_accrued numeric NOT NULL DEFAULT 0,
+      eosb_years_of_service numeric NOT NULL DEFAULT 0,
       net_pay numeric NOT NULL DEFAULT 0,
       pdf_url text,
+      breakdown text,
       currency text NOT NULL DEFAULT 'SAR',
       created_at timestamp NOT NULL DEFAULT now()
     )
@@ -331,7 +353,53 @@ async function main() {
       END IF;
     END $$;
   `).catch(() => undefined);
-  await sql.unsafe(`ALTER TABLE ${S("payslips")} ADD COLUMN IF NOT EXISTS pdf_url text`).catch(() => undefined);
+  // Tolerate older schemas missing any of the new columns.
+  for (const col of [
+    "pdf_url text",
+    "breakdown text",
+    "gross numeric DEFAULT 0",
+    "gosi_pension_employee numeric DEFAULT 0",
+    "gosi_pension_employer numeric DEFAULT 0",
+    "gosi_occ_hazards_employer numeric DEFAULT 0",
+    "gosi_saned_employer numeric DEFAULT 0",
+    "gosi_contributory_base numeric DEFAULT 0",
+    "gosi_rate_employee numeric DEFAULT 0",
+    "gosi_rate_employer numeric DEFAULT 0",
+    "gosi_system text",
+    "eosb_accrued numeric DEFAULT 0",
+    "eosb_years_of_service numeric DEFAULT 0",
+  ]) {
+    await sql
+      .unsafe(`ALTER TABLE ${S("payslips")} ADD COLUMN IF NOT EXISTS ${col}`)
+      .catch(() => undefined);
+  }
+
+  // compliance_checks table is created by drizzle migrations normally; create here
+  // for tenants where it doesn't yet exist (drives the payroll-run audit trail).
+  await sql.unsafe(`
+    CREATE TABLE IF NOT EXISTS ${S("compliance_checks")} (
+      id uuid PRIMARY KEY,
+      payroll_run_id uuid NOT NULL,
+      check_type text NOT NULL,
+      status text NOT NULL,
+      flagged_issues jsonb NOT NULL DEFAULT '[]'::jsonb,
+      created_at timestamp NOT NULL DEFAULT now()
+    )
+  `).catch(() => undefined);
+
+  // government_sync_status table tracks the last successful sync per
+  // authority (Qiwa, Mudad, GOSI, Muqeem, bank).
+  await sql.unsafe(`
+    CREATE TABLE IF NOT EXISTS ${S("government_sync_status")} (
+      id uuid PRIMARY KEY,
+      authority text NOT NULL,
+      period text,
+      status text NOT NULL,
+      last_reference text,
+      synced_at timestamp NOT NULL DEFAULT now(),
+      payload text
+    )
+  `).catch(() => undefined);
   await sql.unsafe(`
     CREATE TABLE IF NOT EXISTS ${S("leave_types")} (
       id uuid PRIMARY KEY,
@@ -497,12 +565,32 @@ async function main() {
     await sql.unsafe(`INSERT INTO ${S("departments")} (id, name) VALUES ($1, $2) ON CONFLICT (id) DO NOTHING`, [d.id, d.name]);
   }
   for (const e of EMPLOYEES) {
+    // Determine GOSI system from registration date relative to the 2024-07-01
+    // reform cutoff: hire date pre-Jul 2024 = old (9%/10%) pension system,
+    // hire date on/after Jul 2024 = new escalating (11% → 11.5% → 12%) system.
+    const gosiReg = e.gosi ?? null;
+    const gosiSystem = gosiReg && gosiReg < "2024-07-01" ? "old" : "new";
     await sql.unsafe(`
       INSERT INTO ${S("employees")}
         (id, full_name, nationality, department_id, employment_status, hire_date,
          salary_basic, salary_housing, salary_transport, manager_employee_id, job_title,
-         gosi_registration_date, gosi_system)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+         gosi_registration_date, gosi_system, bank_iban_enc, iqama_number_enc, passport_number_enc,
+         iqama_expiry, visa_type, occupation_code, skill_level, immigration_status)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21)
+      ON CONFLICT (id) DO UPDATE SET
+        salary_basic = EXCLUDED.salary_basic,
+        salary_housing = EXCLUDED.salary_housing,
+        salary_transport = EXCLUDED.salary_transport,
+        gosi_registration_date = EXCLUDED.gosi_registration_date,
+        gosi_system = EXCLUDED.gosi_system,
+        bank_iban_enc = EXCLUDED.bank_iban_enc,
+        iqama_number_enc = EXCLUDED.iqama_number_enc,
+        passport_number_enc = EXCLUDED.passport_number_enc,
+        iqama_expiry = EXCLUDED.iqama_expiry,
+        visa_type = EXCLUDED.visa_type,
+        occupation_code = EXCLUDED.occupation_code,
+        skill_level = EXCLUDED.skill_level,
+        immigration_status = EXCLUDED.immigration_status
     `, [
       id(e.slug),
       e.name,
@@ -513,8 +601,16 @@ async function main() {
       e.sal[0], e.sal[1], e.sal[2],
       null,
       e.job,
-      e.hire,
-      e.nat === "saudi" ? "old" : null,
+      gosiReg,
+      gosiSystem,
+      `enc:v1:${e.iban}`,
+      e.nat === "expat" ? `enc:v1:2${e.slug.length}${Math.abs(hashSlug(e.slug)) % 10_000_000_00}` : null,
+      e.nat === "expat" ? `enc:v1:P${Math.abs(hashSlug(e.slug + "-pass")) % 1_000_000_00}` : null,
+      e.iqamaExpiry ?? null,
+      e.nat === "expat" ? "work" : null,
+      e.nat === "expat" ? "2149" : null,        // SSCO occupation code (synthetic)
+      e.nat === "expat" ? "3" : null,            // GOSI skill level 3 = technician
+      e.iqamaExpiry && e.iqamaExpiry <= "2026-12-31" ? "expiring_soon" : "valid",
     ]);
   }
   console.log(`  ✓ Inserted ${departments.length} departments + ${EMPLOYEES.length} employees`);
@@ -702,35 +798,237 @@ async function main() {
   }
   console.log(`  ✓ Inserted ${leaveRequests.length} leave requests + ${EMPLOYEES.length} balances`);
 
-  // ─── STEP 8: Payroll runs + payslips ──────────────────────────────
-  console.log("\n=== STEP 8: Payroll runs + payslips (3 months) ===");
+  // ─── STEP 8: Payroll runs + payslips (real GOSI engine) ─────────────
+  console.log("\n=== STEP 8: Payroll runs + payslips (orchestrator-driven) ===");
+
+  // Build EmployeeContext[] exactly as the orchestrator expects.
+  const employeeContexts = EMPLOYEES.map((e) => ({
+    id: id(e.slug),
+    fullName: e.name,
+    nationality: e.nat as "saudi" | "expat",
+    gccStatus: false,
+    gosiSystem: (e.gosi && e.gosi < "2024-07-01" ? "old" : "new") as "old" | "new",
+    salaryBasic: Number(e.sal[0]),
+    salaryHousing: Number(e.sal[1]),
+    salaryTransport: Number(e.sal[2]),
+    hireDate: e.hire,
+    employmentStatus: e.status,
+    bankIbanEnc: e.iban ? `enc:v1:${e.iban}` : null,
+    gosiRegistrationDate: e.gosi ?? null,
+    passportExpiry: null,
+    iqamaExpiry: e.iqamaExpiry ?? null,
+    exitReentryExpiry: null,
+    visaType: e.nat === "expat" ? "work" : null,
+    occupationCode: e.nat === "expat" ? "2149" : null,
+    skillLevel: e.nat === "expat" ? "3" : null,
+    immigrationStatus: e.iqamaExpiry && e.iqamaExpiry <= "2026-12-31" ? "expiring_soon" : "valid",
+  }));
+
+  // Resolve the orchestrator and calculateGosi from the @hrms-app/payroll package.
+  const payrollPkgPath = pathToFileURL(
+    resolve(ROOT, "packages/payroll/src/index.ts"),
+  ).href;
+  const payrollPkg = await import(payrollPkgPath);
+  const orchestratePayrollRun = payrollPkg.orchestratePayrollRun;
+  const generateMudadFile = payrollPkg.generateMudadFile;
+  const mudadToCsv = payrollPkg.mudadToCsv;
+  const mudadToXml = payrollPkg.mudadToXml;
+  const calculateGosi = payrollPkg.calculateGosi;
+
   const payrollRuns = [
-    { id: id("payroll-apr-2026"), period: "2026-04-01", status: "completed", total: 278000 },
-    { id: id("payroll-may-2026"), period: "2026-05-01", status: "completed", total: 296000 },
-    { id: id("payroll-jun-2026"), period: "2026-06-01", status: "ready", total: 325440 },
+    { id: id("payroll-apr-2026"), period: "2026-04-01", status: "completed", date: "2026-04-15" },
+    { id: id("payroll-may-2026"), period: "2026-05-01", status: "completed", date: "2026-05-15" },
+    { id: id("payroll-jun-2026"), period: "2026-06-01", status: "ready",     date: "2026-06-15" },
   ];
-  for (const r of payrollRuns) {
-    await sql.unsafe(`INSERT INTO ${S("payroll_runs")} (id, period_month, status, total_amount, completed_at) VALUES ($1, $2, $3, $4, $5)`,
-      [r.id, r.period, r.status, r.total, r.status === "completed" ? `${r.period.slice(0, 7)}-27 18:00:00` : null]);
-  }
+
   let payslipCount = 0;
+  let mudadFiles: Array<{ period: string; path: string; total: number; net: number; rows: number }> = [];
   for (const run of payrollRuns) {
-    for (const e of EMPLOYEES) {
-      const basic = Number(e.sal[0]);
-      const housing = Number(e.sal[1]);
-      const transport = Number(e.sal[2]);
-      const gosiEmployee = e.nat === "saudi" ? Math.round(basic * 0.0975) : 0;
-      const gosiEmployer = e.nat === "saudi" ? Math.round(basic * 0.1175) : Math.round(basic * 0.02);
-      const net = basic + housing + transport - gosiEmployee;
-      await sql.unsafe(`
-        INSERT INTO ${S("payslips")}
-          (id, payroll_run_id, employee_id, basic, housing, transport, gosi_employee, gosi_employer, net_pay, pdf_url)
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
-      `, [idSeq("payslip"), run.id, id(e.slug), basic, housing, transport, gosiEmployee, gosiEmployer, net, `/payslips/${idSeq("payslip")}.pdf`]);
+    const result = orchestratePayrollRun({
+      payrollRunId: run.id,
+      employees: employeeContexts,
+      periodDate: run.date,
+    });
+
+    await sql.unsafe(
+      `INSERT INTO ${S("payroll_runs")} (id, period_month, status, total_amount, completed_at)
+       VALUES ($1, $2, $3, $4, $5)`,
+      [
+        run.id,
+        run.period,
+        run.status,
+        result.totalAmount.toString(),
+        run.status === "completed" ? `${run.period.slice(0, 7)}-27 18:00:00` : null,
+      ],
+    );
+
+    for (const p of result.payslips) {
+      const b: any = (p as any)._breakdown ?? {};
+      const gross = (b.gross ?? p.basic + p.housing + p.transport + p.overtime).toString();
+      await sql.unsafe(
+        `INSERT INTO ${S("payslips")}
+          (id, payroll_run_id, employee_id, basic, housing, transport, overtime, gross,
+           gosi_employee, gosi_employer,
+           gosi_pension_employee, gosi_pension_employer,
+           gosi_occ_hazards_employer, gosi_saned_employer,
+           gosi_contributory_base, gosi_rate_employee, gosi_rate_employer,
+           gosi_system, deductions, eosb_accrued, eosb_years_of_service,
+           net_pay, pdf_url, breakdown)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24)`,
+        [
+          idSeq("payslip"),
+          run.id,
+          p.employeeId,
+          p.basic.toString(),
+          p.housing.toString(),
+          p.transport.toString(),
+          p.overtime.toString(),
+          gross,
+          p.gosiEmployee.toString(),
+          p.gosiEmployer.toString(),
+          (b.gosiPensionEmployee ?? 0).toString(),
+          (b.gosiPensionEmployer ?? 0).toString(),
+          (b.gosiOccupationalHaz ?? 0).toString(),
+          (b.gosiSaned ?? 0).toString(),
+          (b.contributoryBase ?? 0).toString(),
+          (b.gosiRateEmployee ?? 0).toString(),
+          (b.gosiRateEmployer ?? 0).toString(),
+          b.gosiSystem ?? null,
+          p.deductions.toString(),
+          (b.eosbAccrued ?? 0).toString(),
+          (b.eosbYearsOfService ?? 0).toString(),
+          p.netPay.toString(),
+          `/payslips/${run.period.slice(0, 7)}-${p.employeeId.slice(0, 8)}.pdf`,
+          JSON.stringify(b),
+        ],
+      );
       payslipCount++;
     }
+
+    // Insert compliance checks as audit log lines.
+    for (const c of result.checks) {
+      await sql.unsafe(
+        `INSERT INTO ${S("compliance_checks")} (id, payroll_run_id, check_type, status, flagged_issues, created_at)
+         VALUES ($1, $2, $3, $4, $5::jsonb, now())`,
+        [
+          idSeq("chk"),
+          run.id,
+          c.checkType,
+          c.status,
+          JSON.stringify(c.flaggedIssues ?? []),
+        ],
+      ).catch(() => undefined); // tolerate older schemas missing columns
+    }
+
+    // Generate Mudad wage file + persist it.
+    const mudad = generateMudadFile({
+      periodMonth: run.period.slice(0, 7),
+      payslips: result.payslips,
+      employees: employeeContexts,
+      batchReference: `MUD-${run.period.slice(0, 7).replace("-", "")}-01`,
+    });
+    const wageDir = resolve(ROOT, "wage-files");
+    const { mkdirSync, writeFileSync, existsSync: exists } = await import("node:fs");
+    if (!exists(wageDir)) mkdirSync(wageDir, { recursive: true });
+    const csvPath = resolve(wageDir, `${run.period.slice(0, 7)}-wps.csv`);
+    const xmlPath = resolve(wageDir, `${run.period.slice(0, 7)}-wps.xml`);
+    writeFileSync(csvPath, mudadToCsv(mudad), "utf-8");
+    writeFileSync(xmlPath, mudadToXml ? mudadToXml(mudad) : "<!-- xml generation not available -->", "utf-8");
+    mudadFiles.push({
+      period: run.period.slice(0, 7),
+      path: csvPath,
+      total: mudad.totalWages,
+      net: mudad.totalNetPay,
+      rows: mudad.totalEmployees,
+    });
+
+    // Record government sync status for this period.
+    await sql.unsafe(
+      `INSERT INTO ${S("government_sync_status")}
+        (id, authority, period, status, last_reference, synced_at, payload)
+       VALUES ($1, $2, $3, $4, $5, now(), $6)`,
+      [
+        idSeq(`sync-${run.id}-mudad`),
+        "mudad",
+        run.period.slice(0, 7),
+        run.status === "completed" ? "file_validated" : "ready_for_submission",
+        `MUD-${run.period.slice(0, 7).replace("-", "")}-01`,
+        JSON.stringify({ rows: mudad.totalEmployees, totalNet: mudad.totalNetPay, file: `${run.period.slice(0, 7)}-wps.csv` }),
+      ],
+    );
+    await sql.unsafe(
+      `INSERT INTO ${S("government_sync_status")}
+        (id, authority, period, status, last_reference, synced_at, payload)
+       VALUES ($1, $2, $3, $4, $5, now(), $6)`,
+      [
+        idSeq(`sync-${run.id}-gosi`),
+        "gosi",
+        run.period.slice(0, 7),
+        run.status === "completed" ? "reconciliation_ready" : "reconciliation_pending",
+        `GOS-${run.period.slice(0, 7).replace("-", "")}-01`,
+        JSON.stringify({
+          saudiEmployees: EMPLOYEES.filter((e) => e.nat === "saudi").length,
+          expatEmployees: EMPLOYEES.filter((e) => e.nat === "expat").length,
+          totalEmployerGosi: result.payslips.reduce((s: number, p: any) => s + p.gosiEmployer, 0),
+          totalEmployeeGosi: result.payslips.reduce((s: number, p: any) => s + p.gosiEmployee, 0),
+        }),
+      ],
+    );
+    await sql.unsafe(
+      `INSERT INTO ${S("government_sync_status")}
+        (id, authority, period, status, last_reference, synced_at)
+       VALUES ($1, $2, $3, $4, $5, now())`,
+      [
+        idSeq(`sync-${run.id}-qiwa`),
+        "qiwa",
+        run.period.slice(0, 7),
+        "contracts_synced",
+        `QIW-${run.period.slice(0, 7).replace("-", "")}-01`,
+      ],
+    );
+    await sql.unsafe(
+      `INSERT INTO ${S("government_sync_status")}
+        (id, authority, period, status, last_reference, synced_at)
+       VALUES ($1, $2, $3, $4, $5, now())`,
+      [
+        idSeq(`sync-${run.id}-bank`),
+        "bank",
+        run.period.slice(0, 7),
+        run.status === "completed" ? "payment_file_ready" : "pending_signature",
+        `BNK-${run.period.slice(0, 7).replace("-", "")}-01`,
+      ],
+    );
   }
   console.log(`  ✓ Inserted ${payrollRuns.length} runs + ${payslipCount} payslips`);
+  console.log(`  ✓ Generated ${mudadFiles.length} Mudad wage files:`);
+  for (const f of mudadFiles) {
+    console.log(`    · ${f.period}: ${f.rows} rows, gross SAR ${f.total.toLocaleString()}, net SAR ${f.net.toLocaleString()}`);
+    console.log(`      → ${f.path}`);
+  }
+  void calculateGosi; // referenced to ensure the import is kept for in-line verification
+
+  // ─── Nitaqat band calculation ──────────────────────────────────────
+  console.log("\n=== STEP 8b: Nitaqat band + government compliance ===");
+  const saudiCount = EMPLOYEES.filter((e) => e.nat === "saudi").length;
+  const expatCount = EMPLOYEES.filter((e) => e.nat === "expat").length;
+  const totalHC = saudiCount + expatCount;
+  const saudiPct = (saudiCount / totalHC) * 100;
+  // Oil & gas field-services Nitaqat target for this size band is ~30–40%.
+  const target = 30;
+  const ratio = saudiPct / target;
+  const nitaqatBand =
+    ratio >= 2.0 ? "Platinum"
+    : ratio >= 1.5 ? "Green High"
+    : ratio >= 1.0 ? "Green Mid"
+    : ratio >= 0.5 ? "Green Low"
+    : ratio >= 0.0 ? "Yellow"
+    : "Red";
+  console.log(`  ✓ Saudization: ${saudiCount}/${totalHC} (${saudiPct.toFixed(1)}%)  target=${target}%  band=${nitaqatBand}`);
+  console.log(`  ✓ EOSB liability (sum of June accruals): SAR ${EMPLOYEES.reduce((sum, e) => {
+    const tenureYears = (new Date("2026-06-15").getTime() - new Date(e.hire).getTime()) / (1000 * 60 * 60 * 24 * 365.25);
+    const halfMonth = (e.sal[0] + e.sal[1] + e.sal[2]) / 2;
+    return sum + (tenureYears >= 2 ? halfMonth * tenureYears : 0);
+  }, 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}`);
 
   // ─── STEP 9: Documents ───────────────────────────────────────────
   console.log("\n=== STEP 9: Documents ===");
