@@ -51,7 +51,14 @@ vi.mock("@hrms-app/db", () => ({
 vi.mock("next/link", () => ({ default: () => null }));
 vi.mock("~/components/dashboard-shell", () => ({ DashboardShell: () => null }));
 vi.mock("~/components/demo/employee-command-center", () => ({ EmployeeCommandCenter: () => null }));
-vi.mock("lucide-react", () => new Proxy({}, { get: () => () => null }));
+// Stub every named icon. Guard `then` and symbol keys so the mocked module
+// namespace is not mistaken for a thenable (which would hang `await import`).
+vi.mock("lucide-react", () =>
+  new Proxy(
+    {},
+    { get: (_t, prop) => (typeof prop === "string" && prop !== "then" ? () => null : undefined) },
+  ),
+);
 
 import RootPage from "~/app/page";
 import { redirect } from "next/navigation";

@@ -2,6 +2,9 @@ import { defineConfig } from "vitest/config";
 import path from "path";
 
 export default defineConfig({
+  // Match Next.js: use the automatic JSX runtime so components that return JSX
+  // (e.g. server components under test) don't require React in scope.
+  esbuild: { jsx: "automatic" },
   test: {
     environment: "node",
     include: ["src/**/__tests__/**/*.test.ts", "src/**/__tests__/**/*.test.tsx"],
