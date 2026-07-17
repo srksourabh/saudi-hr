@@ -6,13 +6,11 @@ import { useState } from "react";
 import { productBrand } from "@hrms-app/config/brand";
 import { BrandMark } from "~/components/brand/brand-lockup";
 
-// Show the sample-credentials block when NEXT_PUBLIC_DEMO_MODE is "true".
-// Set this env var in Vercel whenever you want prospects to see the
-// four sample accounts and the shared password. Never enable in a
-// real production tenant.
-const DEMO_MODE_ENABLED = process.env.NEXT_PUBLIC_DEMO_MODE === "true";
+// Presentation credentials — shown only when explicitly enabled for demos.
+// These are seeded users in the database.
+const SHOW_PRESENTATION_CREDENTIALS = false;
 
-const SAMPLE_USERS = DEMO_MODE_ENABLED
+const PRESENTATION_USERS = SHOW_PRESENTATION_CREDENTIALS
   ? [
       { role: "HR Manager",         email: "reem.alharbi@rukn-energy.example" },
       { role: "HR Specialist",      email: "aisha.alotaibi@rukn-energy.example" },
@@ -159,7 +157,7 @@ export function LoginForm() {
         </div>
       </form>
 
-      {SAMPLE_USERS.length > 0 && (
+      {PRESENTATION_USERS.length > 0 && (
         <div className="border-t border-slate-200 bg-slate-50/60 px-6 py-4">
           <details className="group">
             <summary className="cursor-pointer text-xs font-semibold uppercase tracking-[0.12em] text-slate-500 hover:text-slate-700">
@@ -171,7 +169,7 @@ export function LoginForm() {
                 <span className="ml-1 rounded bg-slate-900 px-1.5 py-0.5 font-mono text-[11px] text-white">Rukn2026!</span>
               </p>
               <div className="mt-2 grid gap-1">
-                {SAMPLE_USERS.map((s) => (
+                {PRESENTATION_USERS.map((s) => (
                   <button
                     key={s.email}
                     type="button"
