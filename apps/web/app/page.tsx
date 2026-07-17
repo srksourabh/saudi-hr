@@ -53,6 +53,11 @@ export default async function RootPage() {
 
   // Fetch counts from the database on the server side
   let dbCounts: DbCounts | null = null;
+  // The onboarding redirect must run OUTSIDE the try/catch below. Next.js
+  // implements redirect() by throwing a NEXT_REDIRECT signal, which the catch
+  // would otherwise swallow, silently defeating the gate. Record the intent
+  // here and perform the redirect after the block.
+  let needsOnboarding = false;
   if (session.user.tenantId) {
     try {
       const tenant = await adminDb.query.tenants.findFirst({
@@ -62,30 +67,32 @@ export default async function RootPage() {
       if (tenant) {
         // Gate: new companies must complete onboarding before seeing the dashboard
         if (tenant.onboardingCompleted !== "true") {
-          redirect("/settings/company");
-        }
+          needsOnboarding = true;
+        } else {
+          const tenantDb = getTenantDb(tenant.schemaName);
+          const [empCount] = await tenantDb.execute(sql`SELECT COUNT(*)::int as count FROM "employees" WHERE "employment_status" = 'active'`);
+          const [deptCount] = await tenantDb.execute(sql`SELECT COUNT(*)::int as count FROM "departments"`);
+          const [jobCount] = await tenantDb.execute(sql`SELECT COUNT(*)::int as count FROM "job_requisitions" WHERE "status" = 'open'`);
+          const [totalHeadcount] = await tenantDb.execute(sql`SELECT COUNT(*)::int as count FROM "employees"`);
+          const [payslipCount] = await tenantDb.execute(sql`SELECT COUNT(*)::int as count FROM "payslips"`);
 
-        const tenantDb = getTenantDb(tenant.schemaName);
-        const [empCount] = await tenantDb.execute(sql`SELECT COUNT(*)::int as count FROM "employees" WHERE "employment_status" = 'active'`);
-        const [deptCount] = await tenantDb.execute(sql`SELECT COUNT(*)::int as count FROM "departments"`);
-        const [jobCount] = await tenantDb.execute(sql`SELECT COUNT(*)::int as count FROM "job_requisitions" WHERE "status" = 'open'`);
-        const [totalHeadcount] = await tenantDb.execute(sql`SELECT COUNT(*)::int as count FROM "employees"`);
-        const [payslipCount] = await tenantDb.execute(sql`SELECT COUNT(*)::int as count FROM "payslips"`);
-
-        if (totalHeadcount && Number(totalHeadcount.count) > 0) {
-          dbCounts = {
-            activeCount: Number(empCount?.count ?? 0),
-            departmentCount: Number(deptCount?.count ?? 0),
-            openJobsCount: Number(jobCount?.count ?? 0),
-            totalHeadcount: Number(totalHeadcount?.count ?? 0),
-            payslipCount: Number(payslipCount?.count ?? 0),
-          };
+          if (totalHeadcount && Number(totalHeadcount.count) > 0) {
+            dbCounts = {
+              activeCount: Number(empCount?.count ?? 0),
+              departmentCount: Number(deptCount?.count ?? 0),
+              openJobsCount: Number(jobCount?.count ?? 0),
+              totalHeadcount: Number(totalHeadcount?.count ?? 0),
+              payslipCount: Number(payslipCount?.count ?? 0),
+            };
+          }
         }
       }
     } catch (err) {
       console.error("[RootPage] Server-side count fetching error:", err);
     }
   }
+
+  if (needsOnboarding) redirect("/settings/company");
 
   return (
     <DashboardShell user={session.user} regulatoryContext={session.user.regulatoryContext ?? "saudi"} preferredLanguage={session.user.preferredLanguage ?? "en"}>
