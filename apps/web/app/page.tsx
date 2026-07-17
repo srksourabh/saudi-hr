@@ -66,11 +66,11 @@ export default async function RootPage() {
         }
 
         const tenantDb = getTenantDb(tenant.schemaName);
-        const [empCount] = await tenantDb.execute(sql`SELECT COUNT(*)::int as count FROM ${sql.identifier(tenant.schemaName)}."employees" WHERE "employment_status" = 'active'`);
-        const [deptCount] = await tenantDb.execute(sql`SELECT COUNT(*)::int as count FROM ${sql.identifier(tenant.schemaName)}."departments"`);
-        const [jobCount] = await tenantDb.execute(sql`SELECT COUNT(*)::int as count FROM ${sql.identifier(tenant.schemaName)}."job_requisitions" WHERE "status" = 'open'`);
-        const [totalHeadcount] = await tenantDb.execute(sql`SELECT COUNT(*)::int as count FROM ${sql.identifier(tenant.schemaName)}."employees"`);
-        const [payslipCount] = await tenantDb.execute(sql`SELECT COUNT(*)::int as count FROM ${sql.identifier(tenant.schemaName)}."payslips"`);
+        const [empCount] = await tenantDb.execute(sql`SELECT COUNT(*)::int as count FROM "employees" WHERE "employment_status" = 'active'`);
+        const [deptCount] = await tenantDb.execute(sql`SELECT COUNT(*)::int as count FROM "departments"`);
+        const [jobCount] = await tenantDb.execute(sql`SELECT COUNT(*)::int as count FROM "job_requisitions" WHERE "status" = 'open'`);
+        const [totalHeadcount] = await tenantDb.execute(sql`SELECT COUNT(*)::int as count FROM "employees"`);
+        const [payslipCount] = await tenantDb.execute(sql`SELECT COUNT(*)::int as count FROM "payslips"`);
 
         if (totalHeadcount && Number(totalHeadcount.count) > 0) {
           dbCounts = {
