@@ -10,7 +10,7 @@ export async function GET() {
 
   try {
     const tenant = await adminDb.query.tenants.findFirst({
-      where: eq(tenants.id, session.user.tenantId!),
+      where: eq(tenants.id, session.user.tenantId as string),
     });
     if (!tenant) return NextResponse.json({ error: "Tenant not found" }, { status: 404 });
 
@@ -36,7 +36,7 @@ export async function POST(request: Request) {
 
   try {
     const tenant = await adminDb.query.tenants.findFirst({
-      where: eq(tenants.id, session.user.tenantId!),
+      where: eq(tenants.id, session.user.tenantId as string),
     });
     if (!tenant) return NextResponse.json({ error: "Tenant not found" }, { status: 404 });
 

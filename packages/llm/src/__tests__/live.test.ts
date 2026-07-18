@@ -75,9 +75,9 @@ runIf("@hrms-app/llm live smoke test", () => {
           temperature: 0,
         });
         break;
-      } catch (err: any) {
+      } catch (err: unknown) {
         lastErr = err;
-        const msg = String(err?.message ?? "");
+        const msg = String((err as { message?: string }).message ?? "");
         const isTransient = msg.includes("503") || msg.includes("UNAVAILABLE") || msg.includes("rate limit") || msg.includes("429");
         if (!isTransient) throw err;
         await new Promise((r) => setTimeout(r, 1000 * (attempt + 1)));

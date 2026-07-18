@@ -2,7 +2,7 @@ import { z } from "zod";
 import { createTRPCRouter, companyProcedure, requireRole } from "../server";
 import { schema } from "@hrms-app/db";
 import { createDepartmentSchema, updateDepartmentSchema } from "@hrms-app/validators";
-import { eq } from "drizzle-orm";
+import { eq, count } from "drizzle-orm";
 
 export const departmentRouter = createTRPCRouter({
   list: companyProcedure.query(async ({ ctx }) => {
@@ -10,6 +10,13 @@ export const departmentRouter = createTRPCRouter({
       with: { head: true, children: true },
       orderBy: (departments: any, { asc }: any) => asc(departments.name),
     });
+  }),
+
+  count: companyProcedure.query(async ({ ctx }) => {
+    const [result] = await ctx.db
+      .select({ value: count() })
+      .from(schema.tenant.departments);
+    return result?.value ?? 0;
   }),
 
   getById: companyProcedure.input(z.string().uuid()).query(async ({ ctx, input }) => {

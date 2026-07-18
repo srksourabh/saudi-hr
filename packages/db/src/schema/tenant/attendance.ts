@@ -84,7 +84,8 @@ export const shiftAssignments = pgTable(
 );
 
 /**
- * One row per employee per day. Captures punch in/out and the day's status.
+ * One row per employee per day per punch sequence. Captures punch in/out and the day's status.
+ * Multiple punch sequences per day are supported (e.g., field workers punching in/out multiple times).
  * If employee forgot to punch, the field is null and an exception is raised.
  */
 export const attendanceRecords = pgTable(
@@ -95,6 +96,7 @@ export const attendanceRecords = pgTable(
       .notNull()
       .references(() => employees.id, { onDelete: "cascade" }),
     workDate: date("work_date").notNull(),
+    punchSequence: integer("punch_sequence").notNull().default(1),
     shiftId: uuid("shift_id").references(() => shifts.id, { onDelete: "set null" }),
 
     punchInAt: timestamp("punch_in_at"),
@@ -119,9 +121,10 @@ export const attendanceRecords = pgTable(
       .$onUpdate(() => new Date()),
   },
   (table) => ({
-    empDateIdx: index("attendance_records_emp_date_idx").on(
+    empDateSeqIdx: index("attendance_records_emp_date_seq_idx").on(
       table.employeeId,
       table.workDate,
+      table.punchSequence,
     ),
     dateIdx: index("attendance_records_date_idx").on(table.workDate),
   }),

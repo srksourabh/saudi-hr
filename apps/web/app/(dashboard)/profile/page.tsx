@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useMemo } from "react";
+import { useSession } from "next-auth/react";
 import {
   CalendarCheck,
   FileBadge2,
@@ -15,18 +16,18 @@ import {
   Clock,
   Calendar,
 } from "lucide-react";
-import { Card, CardHeader, CardContent, Badge } from "@hrms-app/ui";
+import { Card, CardHeader, CardContent } from "@hrms-app/ui";
 import { api } from "~/trpc/react";
 
 export default function ProfilePage() {
-  const session = api.auth.session.useQuery();
+  const { data: session } = useSession();
   const today = api.attendance.today.useQuery();
   const monthly = api.attendance.myMonthlySummary.useQuery({
     month: new Date().toISOString().slice(0, 7),
   });
 
-  const email = session.data?.user?.email ?? "";
-  const name = session.data?.user?.name ?? "";
+  const email = session?.user?.email ?? "";
+  const name = session?.user?.name ?? "";
 
   // Self-service: resolve the current user's own employee row without
   // bumping into the companyProcedure gate on employee.getById.
@@ -34,12 +35,7 @@ export default function ProfilePage() {
   const employeeId = employee.data?.id ?? null;
 
   // Self-service latest payslip (server-side, single row).
-  const latestPayslip = api.payroll.payslip.myLatest.useQuery();
-
-  const payslip = useMemo(() => {
-    const list = (latestPayslip.data ?? []) as any[];
-    return list.sort((a, b) => (b.createdAt ?? "").localeCompare(a.createdAt ?? ""))[0];
-  }, [latestPayslip.data]);
+  const payslip = api.payroll.payslip.myLatest.useQuery();
 
   // Live attendance history (calendar).
   const history = api.attendance.myHistory.useQuery(undefined, { enabled: !!employeeId });
@@ -77,14 +73,14 @@ export default function ProfilePage() {
         <StatCard
           icon={<TrendingUp className="h-4 w-4 text-emerald-600" />}
           label="Net pay (latest)"
-          value={payslip ? `SAR ${Number(payslip.netPay).toLocaleString()}` : "—"}
-          sub={payslip?.payrollRun?.periodMonth ? `Period ${payslip.payrollRun.periodMonth.slice(0, 7)}` : "No payslip yet"}
+          value={payslip.data ? `SAR ${Number(payslip.data.netPay).toLocaleString()}` : "—"}
+          sub={payslip.data?.payrollRun?.periodMonth ? `Period ${payslip.data.payrollRun.periodMonth.slice(0, 7)}` : "No payslip yet"}
           href="/attendance/me"
         />
         <StatCard
           icon={<Clock className="h-4 w-4 text-emerald-600" />}
           label="Today's status"
-          value={today.data?.record ? (today.data.record.punchOutAt ? "Punched out" : today.data.record.punchInAt ? "Punched in" : "Scheduled") : "—"}
+          value={today.data?.records?.length ? (today.data.records[0].punchOutAt ? "Punched out" : today.data.records[0].punchInAt ? "Punched in" : "Scheduled") : "—"}
           sub={today.data?.assignment?.shift ? `${today.data.assignment.shift.startTime}–${today.data.assignment.shift.endTime}` : "No shift assigned"}
           href="/attendance/me"
         />
@@ -140,7 +136,7 @@ export default function ProfilePage() {
               <CalendarCheck className="h-5 w-5 text-emerald-700" />
               <div className="flex-1">
                 <p className="text-sm font-semibold">Punch in / out</p>
-                <p className="text-xs text-slate-500">Record today's attendance with GPS location</p>
+                <p className="text-xs text-slate-500">Record today&apos;s attendance with GPS location</p>
               </div>
             </Link>
             <Link href="/leave" className="flex items-center gap-3 rounded-2xl bg-slate-50 p-4 transition hover:bg-slate-100">
@@ -154,10 +150,10 @@ export default function ProfilePage() {
               <WalletCards className="h-5 w-5 text-emerald-700" />
               <div className="flex-1">
                 <p className="text-sm font-semibold">
-                  {payslip ? `Latest payslip: SAR ${Number(payslip.netPay).toLocaleString()}` : "No payslip yet"}
+                  {payslip.data ? `Latest payslip: SAR ${Number(payslip.data.netPay).toLocaleString()}` : "No payslip yet"}
                 </p>
                 <p className="text-xs text-slate-500">
-                  {payslip?.payrollRun?.periodMonth ? `Period ${payslip.payrollRun.periodMonth.slice(0, 7)}` : "Payroll not yet generated for this account"}
+                  {payslip.data?.payrollRun?.periodMonth ? `Period ${payslip.data.payrollRun.periodMonth.slice(0, 7)}` : "Payroll not yet generated for this account"}
                 </p>
               </div>
             </Link>
@@ -280,7 +276,7 @@ function CalendarGrid({ records }: { records: any[] }) {
         })}
       </div>
       <div className="flex flex-wrap items-center gap-3 text-[11px] text-slate-600">
-        {(Object.keys(STATUS_COLORS) as Array<keyof typeof STATUS_COLORS>).map((key) => (
+        {(Object.keys(STATUS_COLORS) as (keyof typeof STATUS_COLORS)[]).map((key) => (
           <span key={key} className="inline-flex items-center gap-1">
             <span className={`h-2.5 w-2.5 rounded ${STATUS_COLORS[key]}`} />
             <span className="capitalize">{key.replace("_", " ")}</span>

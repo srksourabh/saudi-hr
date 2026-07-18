@@ -15,7 +15,7 @@ const baseInput = (overrides: Partial<FinalSettlementInput> = {}): FinalSettleme
 
 describe("calculateEsb", () => {
   it("returns 0 for under 2 years of service", () => {
-    const today = new Date().toISOString().split("T")[0]!;
+    const today = new Date().toISOString().split("T")[0] as string;
     const result = calculateEsb(baseInput({
       hireDate:        today,
       terminationDate: today,
@@ -26,8 +26,8 @@ describe("calculateEsb", () => {
   it("calculates half-month per year for first 5 years of service", () => {
     const yearsAgo = new Date();
     yearsAgo.setFullYear(yearsAgo.getFullYear() - 3);
-    const hireDate = yearsAgo.toISOString().split("T")[0]!;
-    const today = new Date().toISOString().split("T")[0]!;
+    const hireDate = yearsAgo.toISOString().split("T")[0] as string;
+    const today = new Date().toISOString().split("T")[0] as string;
     const result = calculateEsb(baseInput({
       hireDate,
       terminationDate: today,
@@ -41,8 +41,8 @@ describe("calculateEsb", () => {
   it("calculates full-month per year after 5 years of service", () => {
     const yearsAgo = new Date();
     yearsAgo.setFullYear(yearsAgo.getFullYear() - 8);
-    const hireDate = yearsAgo.toISOString().split("T")[0]!;
-    const today = new Date().toISOString().split("T")[0]!;
+    const hireDate = yearsAgo.toISOString().split("T")[0] as string;
+    const today = new Date().toISOString().split("T")[0] as string;
     const result = calculateEsb(baseInput({
       hireDate,
       terminationDate: today,

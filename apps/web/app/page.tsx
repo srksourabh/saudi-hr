@@ -15,7 +15,6 @@ import {
   ChevronRight,
   CircleAlert,
   FileCheck2,
-  Grid2X2,
   Landmark,
   ShieldCheck,
   TrendingUp,
@@ -192,9 +191,11 @@ function CommandCenter({ userName, role, dbCounts }: { userName: string; role: A
               {totalHeadcount} employee{totalHeadcount !== 1 ? "s" : ""} across {departmentCount} department{departmentCount !== 1 ? "s" : ""}. Today is {new Date().toLocaleDateString("en-GB", { weekday: "long", day: "2-digit", month: "long", year: "numeric" })}.
             </p>
             <div className="mt-5 flex flex-wrap gap-2">
-              <Link href="/employees/new" className="inline-flex items-center gap-2 rounded-full bg-slate-950 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-emerald-900">
-                <UserPlus className="h-4 w-4" /> Add employee
-              </Link>
+              {can(role, "people:manage") && (
+                <Link href="/employees/new" className="inline-flex items-center gap-2 rounded-full bg-slate-950 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-emerald-900">
+                  <UserPlus className="h-4 w-4" /> Add employee
+                </Link>
+              )}
               {can(role, "payroll:run") && (
                 <Link href="/payroll/new" className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-5 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50">
                   Run payroll <ArrowUpRight className="h-4 w-4" />

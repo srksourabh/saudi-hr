@@ -30,13 +30,12 @@ import {
  */
 export default function SuperAdminPage() {
   const session = api.auth.session.useQuery();
-  const tenantsQuery = api.useUtils().client; // not strictly needed; placeholder
   const list = api.auth.tenantsList.useQuery(undefined, {
     retry: false,
   });
 
   const [search, setSearch] = useState("");
-  const [openTenant, setOpenTenant] = useState<string | null>(null);
+  const [_openTenant, setOpenTenant] = useState<string | null>(null);
 
   if (session.isLoading || list.isLoading) {
     return (

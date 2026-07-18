@@ -177,6 +177,7 @@ export function canAccessRoute(role: string | null | undefined, pathname: string
 }
 
 const employeeProcedures = new Set([
+  "auth.session",
   "user.me",
   "leave.leaveType.list",
   "leave.request.create",

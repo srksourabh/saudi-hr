@@ -1,9 +1,9 @@
 "use client";
 import { useState } from "react";
-import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Button, Input, Card, CardHeader, CardTitle, CardContent, Badge, Table, TableHeader, TableBody, TableRow, TableHead, TableCell, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Tabs, TabsList, TabsTrigger, TabsContent } from "@hrms-app/ui";
 import { api } from "~/trpc/react";
-import { Plus, Search, FileText, Briefcase, Users, Clock, Filter, ChevronDown, ChevronUp } from "lucide-react";
+import { Search, FileText } from "lucide-react";
 const statusColors: Record<string, "default" | "destructive" | "secondary" | "outline"> = {
   applied: "outline",
   screening: "secondary",
@@ -18,6 +18,7 @@ const statusColors: Record<string, "default" | "destructive" | "secondary" | "ou
   withdrawn: "destructive",
 };
 export default function ApplicationsPage() {
+  const router = useRouter();
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("");
   const [jobReqId, setJobReqId] = useState("");
@@ -106,7 +107,6 @@ export default function ApplicationsPage() {
             isLoading={isLoading} 
             page={page} 
             setPage={setPage} 
-            pageSize={pageSize}
             statusFilter={status}
           />
         </TabsContent>
@@ -117,7 +117,6 @@ export default function ApplicationsPage() {
               isLoading={isLoading} 
               page={page} 
               setPage={setPage} 
-              pageSize={pageSize}
               statusFilter={tab.id}
             />
           </TabsContent>
@@ -126,14 +125,14 @@ export default function ApplicationsPage() {
     </div>
   );
 }
-function ApplicationsTable({ data, isLoading, page, setPage, pageSize, statusFilter }: {
+function ApplicationsTable({ data, isLoading, page, setPage, statusFilter }: {
   data: any;
   isLoading: boolean;
   page: number;
   setPage: (p: number | ((prev: number) => number)) => void;
-  pageSize: number;
   statusFilter: string;
 }) {
+  const router = useRouter();
   const filteredItems = data?.items.filter((app: any) => 
     !statusFilter || app.status === statusFilter || 
     (statusFilter === "interviewing" && ["phone_screen", "technical_interview", "final_interview"].includes(app.status)) ||
@@ -166,7 +165,7 @@ function ApplicationsTable({ data, isLoading, page, setPage, pageSize, statusFil
               </TableRow>
             ) : (
               filteredItems.map((app: any) => (
-                <TableRow key={app.id} className="cursor-pointer" onClick={() => window.location.href = `/recruitment/applications/${app.id}`}>
+                <TableRow key={app.id} className="cursor-pointer" onClick={() => router.push(`/recruitment/applications/${app.id}`)}>
                   <TableCell><FileText className="h-4 w-4 text-muted-foreground mx-auto" /></TableCell>
                   <TableCell className="font-medium">{app.candidate?.firstName} {app.candidate?.lastName}</TableCell>
                   <TableCell>{app.jobRequisition?.title}</TableCell>
@@ -179,7 +178,7 @@ function ApplicationsTable({ data, isLoading, page, setPage, pageSize, statusFil
                   <TableCell>{app.currentStage}</TableCell>
                   <TableCell>{app.screenedBy?.fullName ?? "-"}</TableCell>
                   <TableCell className="text-right">
-                    <Button variant="ghost" size="sm" asChild onClick={(e) => { e.stopPropagation(); window.location.href = `/recruitment/applications/${app.id}`; }}>
+                    <Button variant="ghost" size="sm" asChild onClick={(e) => { e.stopPropagation(); router.push(`/recruitment/applications/${app.id}`); }}>
                       View
                     </Button>
                   </TableCell>

@@ -2,9 +2,10 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Button, Card, CardHeader, CardTitle, CardContent, Badge, Table, TableHeader, TableBody, TableRow, TableHead, TableCell, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Tabs, TabsList, TabsTrigger, TabsContent, Input } from "@hrms-app/ui";
 import { api } from "~/trpc/react";
-import { Plus, Search, Shield, UserCheck, Calendar, Clock, AlertTriangle, CheckCircle, XCircle } from "lucide-react";
+import { Plus, Search, Shield, UserCheck, Clock, AlertTriangle, CheckCircle, XCircle } from "lucide-react";
 
 const bgStatusColors: Record<string, "default" | "destructive" | "secondary" | "outline"> = {
   pending: "outline",
@@ -161,9 +162,6 @@ export default function ChecksPage() {
             isLoading={bgLoading} 
             page={page} 
             setPage={setPage} 
-            pageSize={pageSize}
-            statusColors={bgStatusColors}
-            statusIcons={bgStatusIcons}
             type="background"
           />
         </TabsContent>
@@ -174,9 +172,6 @@ export default function ChecksPage() {
             isLoading={refLoading} 
             page={page} 
             setPage={setPage} 
-            pageSize={pageSize}
-            statusColors={refStatusColors}
-            statusIcons={refStatusIcons}
             type="reference"
           />
         </TabsContent>
@@ -185,16 +180,14 @@ export default function ChecksPage() {
   );
 }
 
-function ChecksTable({ data, isLoading, page, setPage, pageSize, statusColors, statusIcons, type }: {
+function ChecksTable({ data, isLoading, page, setPage, type }: {
   data: any;
   isLoading: boolean;
   page: number;
   setPage: (p: number | ((prev: number) => number)) => void;
-  pageSize: number;
-  statusColors: Record<string, "default" | "destructive" | "secondary" | "outline">;
-  statusIcons: Record<string, any>;
   type: "background" | "reference";
 }) {
+  const router = useRouter();
   const StatusIcon = type === "background" ? BgStatusIcon : RefStatusIcon;
   const StatusBadge = type === "background" ? BgStatusBadge : RefStatusBadge;
 
@@ -237,7 +230,7 @@ function ChecksTable({ data, isLoading, page, setPage, pageSize, statusColors, s
               </TableRow>
             ) : (
               data?.items.map((check: any) => (
-                <TableRow key={check.id} className="cursor-pointer" onClick={() => window.location.href = `/recruitment/checks/${type}/${check.id}`}>
+                <TableRow key={check.id} className="cursor-pointer" onClick={() => router.push(`/recruitment/checks/${type}/${check.id}`)}>
                   <TableCell><StatusIcon status={check.status} /></TableCell>
                   <TableCell className="font-medium">
                     {check.candidate?.firstName} {check.candidate?.lastName}
@@ -272,7 +265,7 @@ function ChecksTable({ data, isLoading, page, setPage, pageSize, statusColors, s
                   <TableCell>{check.initiatedAt ? new Date(check.initiatedAt).toLocaleDateString() : "-"}</TableCell>
                   <TableCell>{check.completedAt ? new Date(check.completedAt).toLocaleDateString() : "-"}</TableCell>
                   <TableCell className="text-right">
-                    <Button variant="ghost" size="sm" asChild onClick={(e) => { e.stopPropagation(); window.location.href = `/recruitment/checks/${type}/${check.id}`; }}>
+                    <Button variant="ghost" size="sm" asChild onClick={(e) => { e.stopPropagation(); router.push(`/recruitment/checks/${type}/${check.id}`); }}>
                       View
                     </Button>
                   </TableCell>

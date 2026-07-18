@@ -47,13 +47,6 @@ async function getAccessToken(): Promise<string> {
   return cachedToken;
 }
 
-function getHeaders(): Record<string, string> {
-  return {
-    Authorization: `Bearer ${cachedToken ?? ""}`,
-    "Content-Type": "application/json",
-  };
-}
-
 export async function POST(request: NextRequest) {
   try {
     const token = await getAccessToken();

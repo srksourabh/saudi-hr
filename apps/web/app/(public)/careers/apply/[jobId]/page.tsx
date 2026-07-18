@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams } from "next/navigation";
 import {
   Button,
   Card,
@@ -19,7 +19,6 @@ import { BrandLockup } from "~/components/brand/brand-lockup";
 import { ArrowLeft, CheckCircle2, FileText, Send, Upload } from "lucide-react";
 
 export default function ApplyPage() {
-  const router = useRouter();
   const params = useParams<{ jobId: string }>();
   const jobId = params?.jobId ?? "";
 

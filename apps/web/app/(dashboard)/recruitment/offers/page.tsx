@@ -2,9 +2,10 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Button, Card, CardHeader, CardTitle, CardContent, Badge, Table, TableHeader, TableBody, TableRow, TableHead, TableCell, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Tabs, TabsList, TabsTrigger, TabsContent, Input } from "@hrms-app/ui";
 import { api } from "~/trpc/react";
-import { Plus, Search, DollarSign, FileText, Calendar, CheckCircle, XCircle, AlertTriangle, Clock } from "lucide-react";
+import { Plus, Search, DollarSign, FileText, CheckCircle, XCircle, AlertTriangle, Clock } from "lucide-react";
 
 const statusColors: Record<string, "default" | "destructive" | "secondary" | "outline"> = {
   draft: "outline",
@@ -55,6 +56,7 @@ const formatSalary = (base: number, housing: number, transport: number, other: n
 }
 
 export default function OffersPage() {
+  const router = useRouter();
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("");
   const [page, setPage] = useState(1);
@@ -136,7 +138,6 @@ export default function OffersPage() {
               isLoading={isLoading} 
               page={page} 
               setPage={setPage} 
-              pageSize={pageSize}
               statusFilter={tab.id === "all" ? "" : tab.id}
             />
           </TabsContent>
@@ -146,14 +147,14 @@ export default function OffersPage() {
   );
 }
 
-function OffersTable({ data, isLoading, page, setPage, pageSize, statusFilter }: {
+function OffersTable({ data, isLoading, page, setPage, statusFilter }: {
   data: any;
   isLoading: boolean;
   page: number;
   setPage: (p: number | ((prev: number) => number)) => void;
-  pageSize: number;
   statusFilter: string;
 }) {
+  const router = useRouter();
   const filteredItems = data?.items.filter((i: any) => !statusFilter || i.status === statusFilter) ?? [];
 
   return (
@@ -184,7 +185,7 @@ function OffersTable({ data, isLoading, page, setPage, pageSize, statusFilter }:
               </TableRow>
             ) : (
               filteredItems.map((offer: any) => (
-                <TableRow key={offer.id} className="cursor-pointer" onClick={() => window.location.href = `/recruitment/offers/${offer.id}`}>
+                <TableRow key={offer.id} className="cursor-pointer" onClick={() => router.push(`/recruitment/offers/${offer.id}`)}>
                   <TableCell><OfferStatusIcon status={offer.status} /></TableCell>
                   <TableCell className="font-medium">
                     {offer.candidate?.firstName} {offer.candidate?.lastName}
@@ -202,7 +203,7 @@ function OffersTable({ data, isLoading, page, setPage, pageSize, statusFilter }:
                   <TableCell>{offer.sentAt ? new Date(offer.sentAt).toLocaleDateString() : "-"}</TableCell>
                   <TableCell>{offer.expiresAt ? new Date(offer.expiresAt).toLocaleDateString() : "-"}</TableCell>
                   <TableCell className="text-right">
-                    <Button variant="ghost" size="sm" asChild onClick={(e) => { e.stopPropagation(); window.location.href = `/recruitment/offers/${offer.id}`; }}>
+                    <Button variant="ghost" size="sm" asChild onClick={(e) => { e.stopPropagation(); router.push(`/recruitment/offers/${offer.id}`); }}>
                       View
                     </Button>
                   </TableCell>

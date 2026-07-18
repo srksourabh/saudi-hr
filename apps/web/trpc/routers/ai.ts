@@ -1,23 +1,16 @@
 import { z } from "zod";
-import { TRPCError } from "@trpc/server";
 import { createTRPCRouter, companyProcedure, protectedProcedure } from "../server";
 import { schema } from "@hrms-app/db";
 import {
   aiAssistantSchema, aiAssistantUpdateSchema,
-  aiSuggestionSchema, aiSuggestionUpdateSchema, aiSuggestionQuerySchema,
-  aiChurnPredictionQuerySchema,
-  aiSkillRecommendationQuerySchema,
-  aiCompliancePredictionQuerySchema,
-  aiSalaryBenchmarkQuerySchema,
-  aiAuditLogQuerySchema,
-  aiChatRequestSchema,
+  aiChatRequestSchema, aiSuggestionQuerySchema,
   uuidSchema as idSchema,
 } from "@hrms-app/validators";
-import { and, eq, desc, ilike, sql } from "drizzle-orm";
-import { getLlmClient, type LlmConfig } from "@hrms-app/llm";
+import { and, eq, desc } from "drizzle-orm";
+import { getLlmClient } from "@hrms-app/llm";
 
 type ChatRole = "user" | "assistant" | "system";
-type ChatMessage = { role: ChatRole; content: string };
+interface ChatMessage { role: ChatRole; content: string }
 
 /**
  * Deterministic fallback reply shown when no LLM API key is configured.
@@ -54,6 +47,7 @@ export const aiRouter = createTRPCRouter({
       .query(async ({ ctx }) => {
         return await ctx.db.query.aiAssistants.findMany({
           orderBy: desc(schema.tenant.aiAssistants.createdAt),
+          limit: 50,
         });
       }),
 
@@ -127,8 +121,8 @@ export const aiRouter = createTRPCRouter({
     send: protectedProcedure
       .input(aiChatRequestSchema)
       .mutation(async ({ ctx, input }) => {
-        const role = ctx.session!.user.role;
-        const preferredLanguage = (ctx.session!.user.preferredLanguage ?? "en") as "en" | "ar";
+        const role = (ctx.session as any).user.role;
+        const preferredLanguage = ((ctx.session as any)?.user?.preferredLanguage ?? "en") as "en" | "ar";
 
         // Live tenant context. Wrap in try/catch so a misconfigured DB never
         // blocks the assistant from responding. Use $count() instead of
@@ -168,7 +162,6 @@ export const aiRouter = createTRPCRouter({
           "Keep the response under 350 words unless the caller asks for detail. Use markdown.",
         ].join("\n\n");
 
-        const config: LlmConfig = { provider: (process.env.LLM_PROVIDER as any) ?? "claude" };
         const haveKey = !!(process.env.ANTHROPIC_API_KEY || process.env.GEMINI_API_KEY);
         if (!haveKey) {
           return { reply: stubReply(input.messages, preferredLanguage), source: "stub" as const };

@@ -2,9 +2,10 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Button, Card, CardHeader, CardTitle, CardContent, Badge, Table, TableHeader, TableBody, TableRow, TableHead, TableCell, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Tabs, TabsList, TabsTrigger, TabsContent, Input } from "@hrms-app/ui";
 import { api } from "~/trpc/react";
-import { Plus, Search, Calendar, Clock, CheckCircle, AlertCircle, FileText, Users, Filter } from "lucide-react";
+import { Plus, Search, FileText } from "lucide-react";
 
 const HIJRI_MONTHS_AR = [
   "محرم", "صفر", "ربيع الأول", "ربيع الثاني", "جمادى الأولى", "جمادى الآخرة",
@@ -151,7 +152,6 @@ export default function OnboardingPage() {
               isLoading={isLoading} 
               page={page} 
               setPage={setPage} 
-              pageSize={pageSize}
               statusFilter={tab.id}
             />
           </TabsContent>
@@ -161,14 +161,14 @@ export default function OnboardingPage() {
   );
 }
 
-function OnboardingTable({ data, isLoading, page, setPage, pageSize, statusFilter }: {
+function OnboardingTable({ data, isLoading, page, setPage, statusFilter }: {
   data: any;
   isLoading: boolean;
   page: number;
   setPage: (p: number | ((prev: number) => number)) => void;
-  pageSize: number;
   statusFilter: string;
 }) {
+  const router = useRouter();
   const filteredItems = data?.items.filter((item: any) => 
     !statusFilter || 
     item.status === statusFilter ||
@@ -212,7 +212,7 @@ function OnboardingTable({ data, isLoading, page, setPage, pageSize, statusFilte
               </TableRow>
             ) : (
               filteredItems.map((plan: any) => (
-                <TableRow key={plan.id} className="cursor-pointer" onClick={() => window.location.href = `/recruitment/onboarding/${plan.id}`}>
+                <TableRow key={plan.id} className="cursor-pointer" onClick={() => router.push(`/recruitment/onboarding/${plan.id}`)}>
                   <TableCell><FileText className="h-4 w-4 text-muted-foreground mx-auto" /></TableCell>
                   <TableCell className="font-medium">
                     {plan.employee?.fullName}
@@ -233,7 +233,7 @@ function OnboardingTable({ data, isLoading, page, setPage, pageSize, statusFilte
                     </Badge>
                   </TableCell>
                   <TableCell className="text-right">
-                    <Button variant="ghost" size="sm" asChild onClick={(e) => { e.stopPropagation(); window.location.href = `/recruitment/onboarding/${plan.id}`; }}>
+                    <Button variant="ghost" size="sm" asChild onClick={(e) => { e.stopPropagation(); router.push(`/recruitment/onboarding/${plan.id}`); }}>
                       View
                     </Button>
                   </TableCell>

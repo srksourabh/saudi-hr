@@ -4,8 +4,8 @@ const contentSecurityPolicy = [
   "default-src 'self'",
   "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
   "style-src 'self' 'unsafe-inline'",
-  "img-src 'self' blob: data:",
-  "font-src 'self'",
+  "img-src 'self' blob: data: https:",
+  "font-src 'self' https://frontend-cdn.perplexity.ai",
   "object-src 'none'",
   "base-uri 'self'",
   "form-action 'self'",
@@ -18,7 +18,7 @@ const securityHeaders = [
   { key: "X-Frame-Options", value: "DENY" },
   { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
   { key: "X-XSS-Protection", value: "0" },
-  { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=()" },
+  { key: "Permissions-Policy", value: "camera=(), microphone=()" },
 ];
 
 const nextConfig: NextConfig = {

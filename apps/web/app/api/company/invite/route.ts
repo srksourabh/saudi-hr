@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { hash } from "bcryptjs";
+
 import { auth } from "@hrms-app/auth";
 import { adminDb, getTenantDb, tenants, inviteTokenIndex } from "@hrms-app/db";
 import { employeeInvitations } from "@hrms-app/db/schema/tenant";
@@ -17,7 +17,7 @@ export async function POST(request: Request) {
 
   try {
     const tenant = await adminDb.query.tenants.findFirst({
-      where: eq(tenants.id, session.user.tenantId!),
+      where: eq(tenants.id, session.user.tenantId as string),
     });
     if (!tenant) return NextResponse.json({ error: "Tenant not found" }, { status: 404 });
 
@@ -56,13 +56,17 @@ export async function POST(request: Request) {
       })
       .returning();
 
+    if (!invite) {
+      return NextResponse.json({ error: "Failed to create invite" }, { status: 500 });
+    }
+
     // Mirror into the public invite-token index so the public
     // acceptInvite / getByToken tRPC procedures can resolve the
     // tenant schema without scanning every tenant.
     await adminDb.insert(inviteTokenIndex).values({
       token,
       tenantSchema: tenant.schemaName,
-      invitationId: invite!.id,
+      invitationId: invite.id,
       status: "pending",
       expiresAt,
     });

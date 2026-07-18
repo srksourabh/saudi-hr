@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
-import { and, eq, gte, lte, desc, sql, inArray } from "drizzle-orm";
+import { and, eq, gte, lte, desc, inArray } from "drizzle-orm";
 import {
   createTRPCRouter,
   companyProcedure,
@@ -16,6 +16,8 @@ import {
   punchOutSchema,
   resolveExceptionSchema,
   attendanceQuerySchema,
+  punchInForEmployeeSchema,
+  punchOutForEmployeeSchema,
 } from "@hrms-app/validators";
 
 async function resolveEmployeeId(ctx: any): Promise<string | null> {
@@ -35,6 +37,16 @@ function combineDateTime(date: string, time: string): Date {
 
 function todayISO(): string {
   return new Date().toISOString().slice(0, 10);
+}
+
+export interface TreeNode {
+  id: string;
+  fullName: string;
+  department: string | null;
+  managerId: string | null;
+  employmentStatus: string;
+  children: TreeNode[];
+  lastLocation: { lat: number; lng: number; workLocation: string | null; punchInAt: Date | null } | null;
 }
 
 export const attendanceRouter = createTRPCRouter({
@@ -99,6 +111,7 @@ export const attendanceRouter = createTRPCRouter({
         return await ctx.db.query.shiftAssignments.findMany({
           where,
           with: { employee: true, shift: true },
+          limit: 200,
         });
       }),
 
@@ -125,18 +138,25 @@ export const attendanceRouter = createTRPCRouter({
         });
       }
       const workDate = input.workDate ?? todayISO();
-      const existing = await ctx.db.query.attendanceRecords.findFirst({
+
+      // Find the latest record for this employee+date
+      const latest = await ctx.db.query.attendanceRecords.findFirst({
         where: and(
           eq(schema.tenant.attendanceRecords.employeeId, employeeId),
           eq(schema.tenant.attendanceRecords.workDate, workDate),
         ),
+        orderBy: desc(schema.tenant.attendanceRecords.punchSequence),
       });
-      if (existing?.punchInAt) {
+
+      // If there's a record with no punch-out, can't punch in again
+      if (latest && !latest.punchOutAt) {
         throw new TRPCError({
           code: "CONFLICT",
-          message: "Already punched in for this day",
+          message: "Open punch sequence already exists. Punch out first.",
         });
       }
+
+      const nextSequence = (latest?.punchSequence ?? 0) + 1;
 
       const assignment = await ctx.db.query.shiftAssignments.findFirst({
         where: and(
@@ -165,28 +185,12 @@ export const attendanceRouter = createTRPCRouter({
         status = "remote";
       }
 
-      if (existing) {
-        const [record] = await ctx.db
-          .update(schema.tenant.attendanceRecords)
-          .set({
-            punchInAt: now,
-            lateMinutes,
-            status,
-            scheduledStart,
-            workLocation: input.workLocation ?? existing.workLocation,
-            notes: input.notes ?? existing.notes,
-            shiftId: assignment?.shiftId ?? existing.shiftId,
-          })
-          .where(eq(schema.tenant.attendanceRecords.id, existing.id))
-          .returning();
-        return record;
-      }
-
       const [record] = await ctx.db
         .insert(schema.tenant.attendanceRecords)
         .values({
           employeeId,
           workDate,
+          punchSequence: nextSequence,
           punchInAt: now,
           status,
           lateMinutes,
@@ -210,41 +214,44 @@ export const attendanceRouter = createTRPCRouter({
         });
       }
       const workDate = input.workDate ?? todayISO();
-      const existing = await ctx.db.query.attendanceRecords.findFirst({
+
+      // Find the latest open record (no punch-out) for this employee+date
+      const openRecord = await ctx.db.query.attendanceRecords.findFirst({
         where: and(
           eq(schema.tenant.attendanceRecords.employeeId, employeeId),
           eq(schema.tenant.attendanceRecords.workDate, workDate),
         ),
-        with: { shift: true },
+        orderBy: desc(schema.tenant.attendanceRecords.punchSequence),
       });
-      if (!existing?.punchInAt) {
+
+      if (!openRecord?.punchInAt) {
         throw new TRPCError({
           code: "BAD_REQUEST",
-          message: "Cannot punch out without a punch in for this day",
+          message: "No open punch-in found for this sequence",
         });
       }
-      if (existing.punchOutAt) {
+      if (openRecord.punchOutAt) {
         throw new TRPCError({
           code: "CONFLICT",
-          message: "Already punched out for this day",
+          message: "Already punched out for this sequence",
         });
       }
 
       const now = new Date();
       const workedMinutes = Math.max(
         0,
-        Math.floor((now.getTime() - existing.punchInAt.getTime()) / 60_000),
+        Math.floor((now.getTime() - openRecord.punchInAt.getTime()) / 60_000),
       );
 
       let overtimeMinutes = 0;
       let earlyLeaveMinutes = 0;
-      let status = existing.status;
-      const breakMinutes = existing.shift?.breakMinutes ?? 60;
+      let status = openRecord.status;
+      const breakMinutes = openRecord.shift?.breakMinutes ?? 60;
 
       const netMinutes = Math.max(0, workedMinutes - breakMinutes);
 
-      if (existing.scheduledEnd) {
-        const scheduledEndDate = combineDateTime(workDate, existing.scheduledEnd);
+      if (openRecord.scheduledEnd) {
+        const scheduledEndDate = combineDateTime(workDate, openRecord.scheduledEnd);
         if (now.getTime() > scheduledEndDate.getTime()) {
           overtimeMinutes = Math.floor((now.getTime() - scheduledEndDate.getTime()) / 60_000);
         } else if (now.getTime() < scheduledEndDate.getTime()) {
@@ -266,10 +273,10 @@ export const attendanceRouter = createTRPCRouter({
           overtimeMinutes,
           earlyLeaveMinutes,
           status,
-          workLocation: input.workLocation ?? existing.workLocation,
-          notes: input.notes ?? existing.notes,
+          workLocation: input.workLocation ?? openRecord.workLocation,
+          notes: input.notes ?? openRecord.notes,
         })
-        .where(eq(schema.tenant.attendanceRecords.id, existing.id))
+        .where(eq(schema.tenant.attendanceRecords.id, openRecord.id))
         .returning();
       return record;
     }),
@@ -284,12 +291,13 @@ export const attendanceRouter = createTRPCRouter({
       });
     }
     const workDate = todayISO();
-    const record = await ctx.db.query.attendanceRecords.findFirst({
+    const records = await ctx.db.query.attendanceRecords.findMany({
       where: and(
         eq(schema.tenant.attendanceRecords.employeeId, employeeId),
         eq(schema.tenant.attendanceRecords.workDate, workDate),
       ),
       with: { shift: true, exceptions: true },
+      orderBy: (r: any, { asc }: any) => asc(r.punchSequence),
     });
     const assignment = await ctx.db.query.shiftAssignments.findFirst({
       where: and(
@@ -299,7 +307,7 @@ export const attendanceRouter = createTRPCRouter({
       with: { shift: true },
       orderBy: desc(schema.tenant.shiftAssignments.effectiveFrom),
     });
-    return { record, assignment };
+    return { records, assignment };
   }),
 
   // ── Self-service history for an employee ─────────────────────────────
@@ -540,5 +548,232 @@ export const attendanceRouter = createTRPCRouter({
         .where(eq(schema.tenant.attendanceExceptions.id, input.id))
         .returning();
       return exc;
+    }),
+
+  // ── HR/Admin: punch in for any employee ──────────────────────────────
+  punchInForEmployee: requireRole("super_admin", "hr_manager", "hr_specialist")
+    .input(punchInForEmployeeSchema)
+    .mutation(async ({ ctx, input }) => {
+      const workDate = input.workDate ?? todayISO();
+
+      const latest = await ctx.db.query.attendanceRecords.findFirst({
+        where: and(
+          eq(schema.tenant.attendanceRecords.employeeId, input.employeeId),
+          eq(schema.tenant.attendanceRecords.workDate, workDate),
+        ),
+        orderBy: desc(schema.tenant.attendanceRecords.punchSequence),
+      });
+
+      if (latest && !latest.punchOutAt) {
+        throw new TRPCError({
+          code: "CONFLICT",
+          message: "Open punch sequence exists for this employee. Punch out first.",
+        });
+      }
+
+      const nextSequence = (latest?.punchSequence ?? 0) + 1;
+
+      const assignment = await ctx.db.query.shiftAssignments.findFirst({
+        where: and(
+          eq(schema.tenant.shiftAssignments.employeeId, input.employeeId),
+          lte(schema.tenant.shiftAssignments.effectiveFrom, workDate),
+        ),
+        with: { shift: true },
+        orderBy: desc(schema.tenant.shiftAssignments.effectiveFrom),
+      });
+
+      const now = new Date();
+      let lateMinutes = 0;
+      let status: "present" | "late" | "remote" = "present";
+      let scheduledStart: string | null = null;
+
+      if (assignment?.shift) {
+        scheduledStart = assignment.shift.startTime;
+        const scheduledDateTime = combineDateTime(workDate, assignment.shift.startTime);
+        const grace = assignment.shift.graceMinutes ?? 0;
+        if (now.getTime() > scheduledDateTime.getTime() + grace * 60_000) {
+          lateMinutes = Math.floor((now.getTime() - scheduledDateTime.getTime()) / 60_000);
+          status = "late";
+        }
+      }
+      if (input.workLocation?.toLowerCase().includes("remote")) {
+        status = "remote";
+      }
+
+      const [record] = await ctx.db
+        .insert(schema.tenant.attendanceRecords)
+        .values({
+          employeeId: input.employeeId,
+          workDate,
+          punchSequence: nextSequence,
+          punchInAt: now,
+          status,
+          lateMinutes,
+          scheduledStart,
+          workLocation: input.workLocation,
+          notes: input.notes,
+          shiftId: assignment?.shiftId ?? null,
+        })
+        .returning();
+      return record;
+    }),
+
+  // ── HR/Admin: punch out for any employee ─────────────────────────────
+  punchOutForEmployee: requireRole("super_admin", "hr_manager", "hr_specialist")
+    .input(punchOutForEmployeeSchema)
+    .mutation(async ({ ctx, input }) => {
+      const workDate = input.workDate ?? todayISO();
+
+      let targetSequence = input.punchSequence;
+      if (!targetSequence) {
+        const latest = await ctx.db.query.attendanceRecords.findFirst({
+          where: and(
+            eq(schema.tenant.attendanceRecords.employeeId, input.employeeId),
+            eq(schema.tenant.attendanceRecords.workDate, workDate),
+          ),
+          orderBy: desc(schema.tenant.attendanceRecords.punchSequence),
+        });
+        targetSequence = (latest?.punchSequence ?? 1);
+      }
+
+      const targetSeq: number = targetSequence!;
+
+      const openRecord = await ctx.db.query.attendanceRecords.findFirst({
+        where: and(
+          eq(schema.tenant.attendanceRecords.employeeId, input.employeeId),
+          eq(schema.tenant.attendanceRecords.workDate, workDate),
+          eq(schema.tenant.attendanceRecords.punchSequence, targetSeq),
+        ),
+        with: { shift: true },
+      });
+
+      if (!openRecord?.punchInAt) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "No open punch-in found for this sequence",
+        });
+      }
+      if (openRecord.punchOutAt) {
+        throw new TRPCError({
+          code: "CONFLICT",
+          message: "Already punched out for this sequence",
+        });
+      }
+
+      const now = new Date();
+      const workedMinutes = Math.max(
+        0,
+        Math.floor((now.getTime() - openRecord.punchInAt.getTime()) / 60_000),
+      );
+
+      let overtimeMinutes = 0;
+      let earlyLeaveMinutes = 0;
+      let status = openRecord.status;
+      const breakMinutes = openRecord.shift?.breakMinutes ?? 60;
+
+      const netMinutes = Math.max(0, workedMinutes - breakMinutes);
+
+      if (openRecord.scheduledEnd) {
+        const scheduledEndDate = combineDateTime(workDate, openRecord.scheduledEnd);
+        if (now.getTime() > scheduledEndDate.getTime()) {
+          overtimeMinutes = Math.floor((now.getTime() - scheduledEndDate.getTime()) / 60_000);
+        } else if (now.getTime() < scheduledEndDate.getTime()) {
+          earlyLeaveMinutes = Math.floor(
+            (scheduledEndDate.getTime() - now.getTime()) / 60_000,
+          );
+        }
+      }
+
+      if (netMinutes > 0 && netMinutes < 240 && status !== "late") {
+        status = "half_day";
+      }
+
+      const [record] = await ctx.db
+        .update(schema.tenant.attendanceRecords)
+        .set({
+          punchOutAt: now,
+          workedMinutes,
+          overtimeMinutes,
+          earlyLeaveMinutes,
+          status,
+          workLocation: input.workLocation ?? openRecord.workLocation,
+          notes: input.notes ?? openRecord.notes,
+        })
+        .where(eq(schema.tenant.attendanceRecords.id, openRecord.id))
+        .returning();
+      return record;
+    }),
+
+  // ── Org subtree: all employees under a manager with last known location ─
+  getSubtree: protectedProcedure
+    .input(z.object({ rootEmployeeId: z.string().uuid() }))
+    .query(async ({ ctx, input }) => {
+      const { rootEmployeeId } = input;
+
+      // Recursive CTE to get all employees under rootEmployeeId
+      const subtree = await ctx.db.query.employees.findMany({
+        with: { department: true },
+      });
+
+      // Build tree in memory
+      const nodes: TreeNode[] = [];
+      const childMap = new Map<string, TreeNode[]>();
+
+      for (const emp of subtree) {
+        const node: TreeNode = {
+          id: emp.id,
+          fullName: emp.fullName,
+          department: emp.department?.name ?? null,
+          managerId: emp.managerEmployeeId,
+          employmentStatus: emp.employmentStatus,
+          children: [],
+          lastLocation: null,
+        };
+        nodes.push(node);
+        const children = childMap.get(emp.managerEmployeeId ?? "ROOT") ?? [];
+        children.push(node);
+        childMap.set(emp.managerEmployeeId ?? "ROOT", children);
+      }
+
+      const rootNode = nodes.find((n) => n.id === rootEmployeeId);
+      if (!rootNode) return null;
+
+      // Attach children
+      for (const node of nodes) {
+        node.children = childMap.get(node.id) ?? [];
+      }
+
+      // Get last known location for each employee in subtree
+      const empIds = nodes.map((n) => n.id);
+      if (empIds.length > 0) {
+        const latestRecords = await ctx.db.query.attendanceRecords.findMany({
+          where: inArray(schema.tenant.attendanceRecords.employeeId, empIds),
+          with: {},
+        });
+
+        const latestByEmployee = new Map<string, typeof latestRecords[0]>();
+        for (const rec of latestRecords) {
+          const existing = latestByEmployee.get(rec.employeeId);
+          if (!existing || rec.workDate > existing.workDate ||
+            (rec.workDate === existing.workDate && rec.punchSequence > existing.punchSequence)) {
+            latestByEmployee.set(rec.employeeId, rec);
+          }
+        }
+
+        for (const node of nodes) {
+          const lastRec = latestByEmployee.get(node.id);
+          if (lastRec?.workLocation) {
+            const parts = lastRec.workLocation.split(",");
+            node.lastLocation = {
+              lat: parseFloat(parts[0]?.trim() ?? "0"),
+              lng: parseFloat(parts[1]?.trim() ?? "0"),
+              workLocation: lastRec.workLocation,
+              punchInAt: lastRec.punchInAt,
+            };
+          }
+        }
+      }
+
+      return rootNode;
     }),
 });

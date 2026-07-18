@@ -31,10 +31,8 @@
  */
 
 import type {
-  OvertimeHours,
   OvertimeCalculation,
   OvertimeViolation,
-  OvertimeRates,
 } from "./types";
 
 import {
@@ -47,12 +45,7 @@ import {
 
 const ORDINARY_DAY_HOURS   = 8;
 const DAYS_PER_WEEK        = 6; // Saudi work week (Sun–Thu or Sat–Thu depending on company)
-const WEEKLY_ORINARY_HOURS = ORDINARY_DAY_HOURS * DAYS_PER_WEEK; // 48
-
-/** Night differential: 10pm – 6am, per Article 107 Executive Reg */
-const NIGHT_START_HOUR = 22; // 10pm
-const NIGHT_END_HOUR   = 6;  // 6am
-const NIGHT_PREMIUM     = 0.50; // additional 50% on top of base overtime rate
+const NIGHT_PREMIUM        = 0.50; // additional 50% on top of base overtime rate
 
 // ─── Core Calculation ─────────────────────────────────────────────────────────
 

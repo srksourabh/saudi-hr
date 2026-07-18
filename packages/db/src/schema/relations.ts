@@ -13,6 +13,7 @@ import {
   attendanceRecords,
   attendanceExceptions,
 } from "./tenant/attendance";
+import { guideMaps } from "./tenant/guide-maps";
 import { leaveTypes } from "./tenant/leave_types";
 import { leaveRequests } from "./tenant/leave_requests";
 import { leaveBalances } from "./tenant/leave_balances";
@@ -728,5 +729,12 @@ export const attendanceExceptionsRelations = relations(attendanceExceptions, ({ 
   employee: one(employees, {
     fields: [attendanceExceptions.employeeId],
     references: [employees.id],
+  }),
+}));
+
+export const guideMapsRelations = relations(guideMaps, ({ one }) => ({
+  createdByUser: one(users, {
+    fields: [guideMaps.createdBy],
+    references: [users.id],
   }),
 }));

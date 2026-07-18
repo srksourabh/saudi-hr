@@ -3,9 +3,9 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Button, Input, Card, CardHeader, CardTitle, CardContent, Badge, Table, TableHeader, TableBody, TableRow, TableHead, TableCell, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@hrms-app/ui";
+import { Button, Input, Card, CardHeader, CardContent, Badge, Table, TableHeader, TableBody, TableRow, TableHead, TableCell, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@hrms-app/ui";
 import { api } from "~/trpc/react";
-import { Plus, Search, Briefcase, Users, Clock, MapPin, DollarSign } from "lucide-react";
+import { Plus, Search, MapPin } from "lucide-react";
 
 const statusColors: Record<string, "default" | "destructive" | "secondary" | "outline"> = {
   draft: "outline",

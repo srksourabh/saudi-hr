@@ -24,7 +24,6 @@ import {
   CheckCircle2,
   CircleAlert,
   ClipboardList,
-  Clock,
   KeyRound,
   Laptop,
   LogOut,
@@ -102,9 +101,9 @@ export default function OffboardingDetailPage() {
     initiatedAt?: string;
     lastWorkingDay?: string;
     primaryReason?: string;
-    ktItems?: Array<{ task: string; successor: string; interimOwner?: string; dueDate: string; status: string; notes?: string }>;
-    assetReturns?: Array<{ asset: string; serial?: string; status: string; returnedAt?: string }>;
-    itRevocations?: Array<{ system: string; scheduledFor: string; revokedAt?: string; status: string }>;
+    ktItems?: { task: string; successor: string; interimOwner?: string; dueDate: string; status: string; notes?: string }[];
+    assetReturns?: { asset: string; serial?: string; status: string; returnedAt?: string }[];
+    itRevocations?: { system: string; scheduledFor: string; revokedAt?: string; status: string }[];
     exitInterview?: {
       conductedBy: string;
       date: string;

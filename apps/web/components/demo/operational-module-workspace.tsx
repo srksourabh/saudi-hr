@@ -147,7 +147,7 @@ export function OperationalModuleWorkspace({ module, workflow, userName }: Opera
 // Connector catalog keyed by workspace slug. Production rollout only requires
 // setting the env vars and completing the checklist — the adapters behind each
 // connector swap from deterministic mock to live provider without code change.
-const CONNECTORS_BY_SLUG: Record<string, Array<React.ComponentProps<typeof ProductionConnector>>> = {
+const CONNECTORS_BY_SLUG: Record<string, React.ComponentProps<typeof ProductionConnector>[]> = {
   "government-integrations": [
     {
       id: "qiwa",
@@ -165,7 +165,7 @@ const CONNECTORS_BY_SLUG: Record<string, Array<React.ComponentProps<typeof Produ
       ],
       demoActionLabel: "Sync a contract amendment to Qiwa (mock)",
       demoResult:
-        '{ "reference":"QIW-DEMO-2026-0001", "status":"submitted", "establishment":"1010987654", "etag":"W/\\\"mock\\\"", "receivedAt":"2026-07-13T10:00:00Z" }',
+        '{ "reference":"QIW-DEMO-2026-0001", "status":"submitted", "establishment":"1010987654", "etag":"W/\\"mock\\"", "receivedAt":"2026-07-13T10:00:00Z" }',
       badges: ["MOL", "REST"],
     },
     {
@@ -268,7 +268,7 @@ const CONNECTORS_BY_SLUG: Record<string, Array<React.ComponentProps<typeof Produ
       ],
       demoActionLabel: "Push contract amendment (mock)",
       demoResult:
-        '{ "reference":"QIW-DEMO-2026-0002", "status":"submitted", "etag":"W/\\\"mock\\\"", "receivedAt":"2026-07-13T10:00:00Z" }',
+        '{ "reference":"QIW-DEMO-2026-0002", "status":"submitted", "etag":"W/\\"mock\\"", "receivedAt":"2026-07-13T10:00:00Z" }',
     },
   ],
 };

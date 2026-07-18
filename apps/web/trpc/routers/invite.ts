@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { hash } from "bcryptjs";
-import { createTRPCRouter, publicProcedure, protectedProcedure, requireRole } from "../server";
+import { createTRPCRouter, publicProcedure, requireRole } from "../server";
 import { eq, and, desc } from "drizzle-orm";
 import { adminDb, users, inviteTokenIndex } from "@hrms-app/db";
 import { employees, employeeInvitations } from "@hrms-app/db/schema/tenant";
@@ -11,6 +11,7 @@ export const inviteRouter = createTRPCRouter({
   list: requireRole("super_admin", "hr_manager", "payroll_admin").query(async ({ ctx }) => {
     return ctx.db.query.employeeInvitations.findMany({
       orderBy: [desc(employeeInvitations.createdAt)],
+      limit: 100,
     });
   }),
 
@@ -18,6 +19,7 @@ export const inviteRouter = createTRPCRouter({
     return ctx.db.query.employeeInvitations.findMany({
       where: eq(employeeInvitations.status, "pending"),
       orderBy: [desc(employeeInvitations.createdAt)],
+      limit: 100,
     });
   }),
 

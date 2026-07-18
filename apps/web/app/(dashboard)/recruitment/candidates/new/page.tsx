@@ -1,13 +1,12 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { api } from "~/trpc/react";
 import {
   ArrowLeft,
   Plus,
-  Trash2,
   Briefcase,
   Globe,
   Phone,
@@ -32,7 +31,6 @@ import {
   SelectValue,
 } from "@hrms-app/ui";
 import {
-  Card,
   CardContent,
   CardHeader,
   CardTitle,
@@ -55,7 +53,7 @@ const SOURCE_OPTIONS = [
 
 const CURRENCY_OPTIONS = ["SAR", "USD", "EUR", "AED", "KWD", "BHD", "GBP"];
 
-type FormState = {
+interface FormState {
   firstName: string;
   lastName: string;
   email: string;
@@ -79,7 +77,7 @@ type FormState = {
   tags: string[];
   notes: string;
   gdprConsent: boolean;
-};
+}
 
 const INITIAL: FormState = {
   firstName: "",
@@ -189,18 +187,6 @@ export default function RecruitmentCandidatesNewPage() {
   function set<K extends keyof FormState>(key: K, value: FormState[K]) {
     setForm((f) => ({ ...f, [key]: value }));
     setErrors((e) => ({ ...e, [key]: "" }));
-  }
-
-  function toggleArray<K extends "skills" | "languages" | "preferredLocations" | "tags">(
-    key: K,
-    item: string
-  ) {
-    const arr = form[key] as string[];
-    if (arr.includes(item)) {
-      set(key, arr.filter((x) => x !== item) as any);
-    } else {
-      set(key, [...arr, item] as any);
-    }
   }
 
   function validate(): boolean {

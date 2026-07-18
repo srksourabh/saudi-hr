@@ -114,6 +114,7 @@ export const leaveRouter = createTRPCRouter({
           where,
           with: { employee: true, leaveType: true, approvedBy: true },
           orderBy: desc(schema.tenant.leaveRequests.createdAt),
+          limit: 100,
         });
       }),
 
@@ -166,6 +167,7 @@ export const leaveRouter = createTRPCRouter({
         where: eq(schema.tenant.leaveRequests.employeeId, user.employeeId),
         with: { leaveType: true, approvedBy: true },
         orderBy: desc(schema.tenant.leaveRequests.createdAt),
+        limit: 100,
       });
     }),
   }),
@@ -189,6 +191,7 @@ export const leaveRouter = createTRPCRouter({
         return await ctx.db.query.leaveBalances.findMany({
           where,
           with: { employee: true, leaveType: true },
+          limit: 200,
         });
       }),
 

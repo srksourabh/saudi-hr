@@ -83,13 +83,14 @@ export const documentRouter = createTRPCRouter({
 
   myDocuments: protectedProcedure.query(async ({ ctx }) => {
     const user = await ctx.adminDb.query.users.findFirst({
-      where: (users, { eq }) => eq(users.id, ctx.user.id!),
+      where: (users, { eq }) => eq(users.id, ctx.user.id as string),
     });
     if (!user?.employeeId) return [];
     return await ctx.db.query.documents.findMany({
       where: eq(schema.tenant.documents.employeeId, user.employeeId),
       with: { employee: true },
       orderBy: desc(schema.tenant.documents.createdAt),
+      limit: 100,
     });
   }),
 

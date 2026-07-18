@@ -55,6 +55,28 @@ export const resolveExceptionSchema = z.object({
   resolutionNotes: z.string().max(500).optional(),
 });
 
+export const punchInForEmployeeSchema = z.object({
+  employeeId: uuidSchema,
+  workDate: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/)
+    .optional()
+    .describe("Defaults to today if omitted"),
+  workLocation: z.string().max(100).optional(),
+  notes: z.string().max(500).optional(),
+});
+
+export const punchOutForEmployeeSchema = z.object({
+  employeeId: uuidSchema,
+  workDate: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/)
+    .optional(),
+  workLocation: z.string().max(100).optional(),
+  notes: z.string().max(500).optional(),
+  punchSequence: z.number().int().positive().optional(),
+});
+
 export const attendanceQuerySchema = z.object({
   from: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
   to: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
@@ -65,10 +87,17 @@ export const attendanceQuerySchema = z.object({
     .optional(),
 });
 
+export const employeeLocationSchema = z.object({
+  employeeId: uuidSchema,
+});
+
 export type CreateShiftInput = z.infer<typeof createShiftSchema>;
 export type UpdateShiftInput = z.infer<typeof updateShiftSchema>;
 export type AssignShiftInput = z.infer<typeof assignShiftSchema>;
 export type PunchInInput = z.infer<typeof punchInSchema>;
 export type PunchOutInput = z.infer<typeof punchOutSchema>;
+export type PunchInForEmployeeInput = z.infer<typeof punchInForEmployeeSchema>;
+export type PunchOutForEmployeeInput = z.infer<typeof punchOutForEmployeeSchema>;
 export type ResolveExceptionInput = z.infer<typeof resolveExceptionSchema>;
 export type AttendanceQueryInput = z.infer<typeof attendanceQuerySchema>;
+export type EmployeeLocationInput = z.infer<typeof employeeLocationSchema>;

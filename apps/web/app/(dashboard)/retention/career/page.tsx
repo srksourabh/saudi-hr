@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Button, Input, Card, CardHeader, CardContent, Badge, Table, TableHeader, TableBody, TableRow, TableHead, TableCell, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@hrms-app/ui";
 import { api } from "~/trpc/react";
-import { TrendingUp, Plus, User, Building2, Clock } from "lucide-react";
+import { TrendingUp, Plus } from "lucide-react";
 
 const statusVariants: Record<string, "default" | "outline"> = {
   active: "default",

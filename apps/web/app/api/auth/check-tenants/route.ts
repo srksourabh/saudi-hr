@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { adminDb, tenants, users } from "@hrms-app/db";
-import { eq, desc } from "drizzle-orm";
+import { desc } from "drizzle-orm";
 
 /**
  * Health + diagnostics endpoint. Returns the most recent tenants and the

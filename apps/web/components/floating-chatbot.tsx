@@ -4,12 +4,12 @@ import { useEffect, useRef, useState } from "react";
 import { api } from "~/trpc/react";
 import { MessageCircle, X, Send, Sparkles, Bot, User, Loader2 } from "lucide-react";
 
-type ChatMessage = {
+interface ChatMessage {
   id: string;
   role: "user" | "assistant";
   content: string;
   ts: number;
-};
+}
 
 const USER_MANUAL_PROMPT = `You are Taazur Support, the in-app help assistant for the Taazur HR & payroll platform. You ONLY answer questions about how to use Taazur — never about specific customers, employees, salaries, attendance records, or any data from a customer tenant.
 

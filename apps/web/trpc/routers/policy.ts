@@ -22,6 +22,7 @@ export const policyRouter = createTRPCRouter({
   list: companyProcedure.query(async ({ ctx }) => {
     return ctx.db.query.policyDocuments.findMany({
       orderBy: desc(schema.tenant.policyDocuments.createdAt),
+      limit: 100,
     });
   }),
 

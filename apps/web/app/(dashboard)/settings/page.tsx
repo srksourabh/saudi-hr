@@ -303,7 +303,7 @@ function PolicySection({ category }: { category: PolicyCategory }) {
         <UploadModal
           category={category}
           onClose={() => setShowModal(false)}
-          onSuccess={() => {}}
+          onSuccess={() => { /* noop */ }}
         />
       )}
     </Card>

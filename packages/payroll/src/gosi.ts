@@ -22,7 +22,7 @@
  * Transport, bonuses, allowances ARE NOT included in the GOSI base.
  */
 
-import type { EmployeeContext, GosiResult } from "./types";
+import type { GosiResult } from "./types";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 

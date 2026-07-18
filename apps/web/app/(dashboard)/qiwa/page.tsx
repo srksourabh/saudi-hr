@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import { Button, Card, CardContent, CardHeader, CardTitle, Badge, Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@hrms-app/ui";
 import { api } from "~/trpc/react";
 import { CheckCircle, XCircle, RefreshCw, UserPlus } from "lucide-react";
@@ -31,8 +30,6 @@ const customColors: Record<string, string> = {
 };
 
 export default function QiwaDashboardPage() {
-  const [setActiveTab] = useState("dashboard"); 
-
   const { data: connectionStatus } = api.qiwa.testConnection.useQuery();
   const { data: dashboardData, refetch: refetchDashboard } = api.qiwa.dashboard.useQuery();
 

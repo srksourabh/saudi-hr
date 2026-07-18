@@ -3,7 +3,22 @@ import superjson from "superjson";
 import { ZodError } from "zod";
 import { auth } from "@hrms-app/auth";
 import { canAccessProcedure, isAppRole } from "@hrms-app/auth/rbac";
-import { adminDb, getTenantDb, tenants } from "@hrms-app/db";
+import { adminDb, getTenantDb } from "@hrms-app/db";
+
+const tenantCache = new Map<string, { schemaName: string; expiresAt: number }>();
+const TENANT_CACHE_TTL = 300_000;
+
+async function resolveTenantSchema(tenantId: string): Promise<string | undefined> {
+  const cached = tenantCache.get(tenantId);
+  if (cached && Date.now() < cached.expiresAt) return cached.schemaName;
+  const tenant = await adminDb.query.tenants.findFirst({
+    where: (tenants, { eq }) => eq(tenants.id, tenantId),
+    columns: { schemaName: true },
+  });
+  if (!tenant) return undefined;
+  tenantCache.set(tenantId, { schemaName: tenant.schemaName, expiresAt: Date.now() + TENANT_CACHE_TTL });
+  return tenant.schemaName;
+}
 
 export async function createTRPCContext(opts: { headers: Headers }) {
   const session = await auth();
@@ -11,10 +26,8 @@ export async function createTRPCContext(opts: { headers: Headers }) {
 
   const tenantId = session?.user?.tenantId;
   if (tenantId) {
-    const tenant = await adminDb.query.tenants.findFirst({
-      where: (tenants, { eq }) => eq(tenants.id, tenantId),
-    });
-    if (tenant) tenantDb = getTenantDb(tenant.schemaName);
+    const schemaName = await resolveTenantSchema(tenantId);
+    if (schemaName) tenantDb = getTenantDb(schemaName);
   }
 
   return {

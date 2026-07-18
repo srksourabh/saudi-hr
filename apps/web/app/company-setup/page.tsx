@@ -30,7 +30,7 @@ interface Invite {
   role: string;
 }
 
-type StepData = {
+interface StepData {
   companyProfile: {
     industry: string;
     companySize: string;
@@ -38,7 +38,7 @@ type StepData = {
   };
   departments: Department[];
   invites: Invite[];
-};
+}
 
 export default function CompanySetupPage() {
   const router = useRouter();
@@ -52,20 +52,11 @@ export default function CompanySetupPage() {
   });
 
   // New department row being typed
-  const [newDeptName, setNewDeptName] = useState("");
+  const [_newDeptName, setNewDeptName] = useState("");
 
   // New invite row being typed
   const [newInviteEmail, setNewInviteEmail] = useState("");
   const [newInviteRole, setNewInviteRole] = useState("hr_manager");
-
-  function addDepartment() {
-    if (!newDeptName.trim()) return;
-    setData((d) => ({
-      ...d,
-      departments: [...d.departments, { id: crypto.randomUUID(), name: newDeptName.trim() }],
-    }));
-    setNewDeptName("");
-  }
 
   function removeDepartment(id: string) {
     setData((d) => ({ ...d, departments: d.departments.filter((dept) => dept.id !== id) }));
@@ -333,7 +324,7 @@ export default function CompanySetupPage() {
               <div>
                 <h2 className="text-base font-semibold text-slate-900">Invite your HR team</h2>
                 <p className="mt-0.5 text-xs text-slate-500">
-                  They'll receive an email with a link to join your workspace. You can skip this and
+                  They&apos;ll receive an email with a link to join your workspace. You can skip this and
                   invite later from Settings → Team.
                 </p>
               </div>

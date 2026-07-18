@@ -2,7 +2,7 @@ import { z } from "zod";
 import { createTRPCRouter, companyProcedure, protectedProcedure, requireRole } from "../server";
 import { schema } from "@hrms-app/db";
 import { createEmployeeSchema, updateEmployeeSchema, employeeQuerySchema } from "@hrms-app/validators";
-import { and, eq, like, desc } from "drizzle-orm";
+import { and, eq, like, desc, count } from "drizzle-orm";
 
 export const employeeRouter = createTRPCRouter({
   list: companyProcedure
@@ -81,5 +81,22 @@ export const employeeRouter = createTRPCRouter({
     .mutation(async ({ ctx, input }) => {
       await ctx.db.delete(schema.tenant.employees).where(eq(schema.tenant.employees.id, input));
       return { success: true };
+    }),
+
+  count: companyProcedure
+    .input(employeeQuerySchema.optional().default({}))
+    .query(async ({ ctx, input }) => {
+      const conditions: ReturnType<typeof eq>[] = [];
+      if (input?.status) conditions.push(eq(schema.tenant.employees.employmentStatus, input.status));
+      if (input?.departmentId) conditions.push(eq(schema.tenant.employees.departmentId, input.departmentId));
+      if (input?.search) {
+        conditions.push(like(schema.tenant.employees.fullName, `%${input.search}%`));
+      }
+      const where = conditions.length > 0 ? and(...conditions) : undefined;
+      const [result] = await ctx.db
+        .select({ value: count() })
+        .from(schema.tenant.employees)
+        .where(where);
+      return result?.value ?? 0;
     }),
 });

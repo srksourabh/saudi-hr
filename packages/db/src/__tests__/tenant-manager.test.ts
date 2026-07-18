@@ -31,7 +31,7 @@ runIf("getTenantDb (PRD Section 13.2)", () => {
     // closeAllPools closes the cached tenant pools; we also drop the schemas
     // via a one-off connection.
     await closeAllPools();
-    const sql = postgres(process.env.DATABASE_URL!, { max: 1 });
+    const sql = postgres(process.env.DATABASE_URL as string, { max: 1 });
     try {
       await sql.unsafe(`DROP SCHEMA IF EXISTS "${SCHEMA_A}" CASCADE`);
       await sql.unsafe(`DROP SCHEMA IF EXISTS "${SCHEMA_B}" CASCADE`);
@@ -66,7 +66,7 @@ runIf("getTenantDb (PRD Section 13.2)", () => {
     const ownRows = await dbA.execute(
       `SELECT id, full_name FROM employees WHERE id = '${empId}'`,
     );
-    expect(Array.isArray(ownRows) ? ownRows : (ownRows as any).rows ?? []).toEqual(
+    expect(Array.isArray(ownRows) ? ownRows : (ownRows as { rows: unknown[] }).rows ?? []).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
           // postgres-js returns columns based on the SQL — match by string contents
@@ -79,7 +79,7 @@ runIf("getTenantDb (PRD Section 13.2)", () => {
     const otherRows = await dbB.execute(
       `SELECT id FROM employees WHERE id = '${empId}'`,
     );
-    const rows = Array.isArray(otherRows) ? otherRows : (otherRows as any).rows ?? [];
+    const rows = Array.isArray(otherRows) ? otherRows : (otherRows as { rows: unknown[] }).rows ?? [];
     expect(rows).toHaveLength(0);
   });
 

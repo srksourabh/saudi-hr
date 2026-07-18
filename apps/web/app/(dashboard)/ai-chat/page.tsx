@@ -17,14 +17,14 @@ const TOPICS = [
 
 type Topic = (typeof TOPICS)[number]["value"];
 
-type Message = {
+interface Message {
   id: string;
   role: "user" | "assistant";
   content: string;
   source?: "llm" | "stub";
   topic?: Topic;
   ts: number;
-};
+}
 
 const SUGGESTED: { topic: Topic; text: string }[] = [
   { topic: "saudi_statutory", text: "How many days of annual leave is a Saudi employee entitled to?" },

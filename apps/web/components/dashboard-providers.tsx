@@ -3,6 +3,7 @@
 import type { Session } from "next-auth";
 import { SessionProvider } from "next-auth/react";
 import { TRPCReactProvider } from "~/trpc/react";
+import { WebVitalsReporter } from "~/components/web-vitals-reporter";
 
 export function DashboardProviders({
   children,
@@ -13,7 +14,10 @@ export function DashboardProviders({
 }) {
   return (
     <SessionProvider session={session}>
-      <TRPCReactProvider>{children}</TRPCReactProvider>
+      <TRPCReactProvider>
+        <WebVitalsReporter />
+        {children}
+      </TRPCReactProvider>
     </SessionProvider>
   );
 }

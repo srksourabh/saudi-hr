@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import {
   Building2,
@@ -33,7 +32,6 @@ interface Invite {
 }
 
 export default function CompanySettingsPage() {
-  const { data: session } = useSession();
   const router = useRouter();
 
   const [activeTab, setActiveTab] = useState<"profile" | "departments" | "team">("profile");

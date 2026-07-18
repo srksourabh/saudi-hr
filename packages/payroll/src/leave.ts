@@ -24,7 +24,7 @@
  *   leave.compute("annual", { start: "2026-08-01", end: "2026-08-10" }); // 10 days
  */
 
-import { getActiveConfig, getLeaveEntitlement } from "./regulatory-config";
+import { getLeaveEntitlement } from "./regulatory-config";
 import type { NationalityCategory } from "./types";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -119,7 +119,7 @@ export class SaudiLeaveEngine {
 
   constructor(
     employee: SaudiLeaveEngine["employee"],
-    asOfDate: string = new Date().toISOString().split("T")[0]!
+    asOfDate: string = new Date().toISOString().split("T")[0] as string
   ) {
     this.employee = employee;
     this.asOfDate = asOfDate;
@@ -256,7 +256,7 @@ export class SaudiLeaveEngine {
     usedDays: Partial<Record<LeaveType, { used: number; pending: number }>> = {}
   ): LeaveBalance {
     const entitlements = this.entitlements(usedDays);
-    const annual = entitlements.find((e) => e.type === "annual")!;
+    const annual = entitlements.find((e) => e.type === "annual")!; // eslint-disable-line @typescript-eslint/no-non-null-assertion
     const dailyWage = this.dailyWage();
 
     return {
@@ -283,7 +283,7 @@ export class SaudiLeaveEngine {
     if (validation.requiresHrReview) requiresHrReview = true;
 
     const dailyWage = this.dailyWage();
-    let paidDays = period.workingDays;
+    const paidDays = period.workingDays;
     let unpaidDays = 0;
     let leaveAllowance = 0;
     let grossPay = 0;
@@ -419,7 +419,6 @@ export class SaudiLeaveEngine {
         const nursingWeeks = this.cfg.maternity.nursingWeeks;
         const nursingMinutes = this.cfg.maternity.nursingBreakMinutes;
         // Compute as hourly proportion
-        const dailyBreakHours = (nursingMinutes * 2) / 60; // 2 breaks per day
         grossPay = dailyWage * (period.calendarDays / 30) * (nursingMinutes * 2 / 60);
         warnings.push(
           `Nursing breaks: ${nursingMinutes * 2} minutes/day for ${nursingWeeks} weeks. ` +
@@ -506,7 +505,7 @@ export class SaudiLeaveEngine {
 
     // Annual leave: check carry-over rules
     if (request.type === "annual") {
-      const balance = this.balance().entitlements.find((e) => e.type === "annual")!;
+      const balance = this.balance().entitlements.find((e) => e.type === "annual")!; // eslint-disable-line @typescript-eslint/no-non-null-assertion
       if (balance.daysRemaining < 0) {
         errors.push(
           `Insufficient annual leave balance. Available: ${balance.daysRemaining + (balance.daysUsed + balance.daysPending)} days.`

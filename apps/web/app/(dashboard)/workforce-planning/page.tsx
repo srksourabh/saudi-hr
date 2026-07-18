@@ -30,14 +30,14 @@ import {
   Users,
 } from "lucide-react";
 
-type ScenarioRow = {
+interface ScenarioRow {
   department: string;
   currentHeadcount: number;
   plannedHires: number;
   plannedExits: number;
   justification: string;
   budgetLine: string;
-};
+}
 
 export default function WorkforcePlanningPage() {
   const departments = api.department.list.useQuery();
@@ -56,7 +56,6 @@ export default function WorkforcePlanningPage() {
     const empList: any[] = employees.data?.items ?? [];
     const deptList: any[] = departments.data?.items ?? [];
     const jobList: any[] = openJobs.data?.items ?? [];
-    const horizonMonths = Number(horizon) || 6;
     return deptList.map((d: any) => {
       const headcount = empList.filter((e: any) => e.departmentId === d.id).length;
       const plannedHires = jobList.filter((j: any) => j.departmentId === d.id).length;

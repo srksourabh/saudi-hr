@@ -1,7 +1,7 @@
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { getTenantDb, adminDb } from "@hrms-app/db";
-import { employees, leaveBalances, leaveTypes } from "@hrms-app/db";
+import { employees, leaveBalances } from "@hrms-app/db";
 import { eq } from "drizzle-orm";
 import { runMonthlyAccrual } from "@hrms-app/leave";
 import type { LeaveTypeContext, EmployeeContext, LeaveBalanceContext } from "@hrms-app/leave";

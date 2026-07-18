@@ -3,9 +3,9 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Button, Input, Card, CardHeader, CardTitle, CardContent, Badge, Table, TableHeader, TableBody, TableRow, TableHead, TableCell, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@hrms-app/ui";
+import { Button, Input, Card, CardHeader, CardContent, Badge, Table, TableHeader, TableBody, TableRow, TableHead, TableCell, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@hrms-app/ui";
 import { api } from "~/trpc/react";
-import { BookOpen, Plus, Search, Filter } from "lucide-react";
+import { Plus, Search } from "lucide-react";
 
 const categoryColors: Record<string, "default" | "destructive" | "secondary" | "outline"> = {
   technical: "default",

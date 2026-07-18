@@ -1,22 +1,13 @@
 "use client";
 import { useState } from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Button, Input, Card, CardHeader, CardTitle, CardContent, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Textarea, Label } from "@hrms-app/ui";
 import { api } from "~/trpc/react";
-import { Plus, Briefcase, Users, MapPin, DollarSign, ArrowLeft, Save } from "lucide-react";
+import { ArrowLeft, Save } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { createJobRequisitionSchema, jobTypeEnum } from "@hrms-app/validators";
 import type { z } from "zod";
-const statusColors = {
-  draft: "outline",
-  open: "default",
-  paused: "secondary",
-  closed: "destructive",
-  filled: "default",
-  cancelled: "destructive",
-} as const;
 export default function NewJobPage() {
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);

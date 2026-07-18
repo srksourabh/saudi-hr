@@ -1,11 +1,12 @@
 import { z } from "zod";
-import { createTRPCRouter, companyProcedure, requireRole } from "../server";
+import { createTRPCRouter, companyProcedure } from "../server";
 import { schema } from "@hrms-app/db";
 import { TRPCError } from "@trpc/server";
-import { and, eq, desc } from "drizzle-orm";
+import { eq, desc } from "drizzle-orm";
 
 const qiwaEnvironment = z.enum(["production", "sandbox"]);
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const qiwaApiConfigSchema = z.object({
   clientId: z.string(),
   clientSecret: z.string(),
@@ -343,7 +344,8 @@ export const qiwaRouter = createTRPCRouter({
       }
 
       const contractType = "permanent" as const;
-      const contractData: QiwaContract = {
+      // contractData is prepared for future use when updating employee records
+      const _contractData: QiwaContract = {
         qiwaEmployeeId: result.qiwaEmployeeId ?? "",
         contractType,
         jobTitle: employee.fullName,
@@ -361,6 +363,7 @@ export const qiwaRouter = createTRPCRouter({
         noticePeriodDays: 60,
         isSaudizationPriority: false,
       };
+      void _contractData;
 
       await ctx.db
         .insert(schema.tenant.qiwaContracts)

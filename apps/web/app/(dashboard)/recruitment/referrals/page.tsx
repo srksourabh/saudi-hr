@@ -2,9 +2,10 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Button, Card, CardHeader, CardTitle, CardContent, Badge, Table, TableHeader, TableBody, TableRow, TableHead, TableCell, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Input } from "@hrms-app/ui";
 import { api } from "~/trpc/react";
-import { Plus, Search, Users, Gift, DollarSign, Clock } from "lucide-react";
+import { Plus, Search, Users, DollarSign } from "lucide-react";
 
 const statusColors: Record<string, "default" | "destructive" | "secondary" | "outline"> = {
   submitted: "outline",
@@ -16,6 +17,7 @@ const statusColors: Record<string, "default" | "destructive" | "secondary" | "ou
 };
 
 export default function ReferralsPage() {
+  const router = useRouter();
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("");
   const [page, setPage] = useState(1);
@@ -82,7 +84,7 @@ export default function ReferralsPage() {
         </TabsList>
 
         <TabsContent value="all" className="mt-4">
-          <ReferralsTable data={data} isLoading={isLoading} page={page} setPage={setPage} pageSize={pageSize} />
+          <ReferralsTable data={data} isLoading={isLoading} page={page} setPage={setPage} />
         </TabsContent>
 
         <TabsContent value="mine" className="mt-4">
@@ -93,13 +95,13 @@ export default function ReferralsPage() {
   );
 }
 
-function ReferralsTable({ data, isLoading, page, setPage, pageSize }: {
+function ReferralsTable({ data, isLoading, page, setPage }: {
   data: any;
   isLoading: boolean;
   page: number;
   setPage: (p: number | ((prev: number) => number)) => void;
-  pageSize: number;
 }) {
+  const router = useRouter();
   return (
     <Card>
       <CardContent className="p-0">
@@ -127,7 +129,7 @@ function ReferralsTable({ data, isLoading, page, setPage, pageSize }: {
               </TableRow>
             ) : (
               data?.items.map((ref: any) => (
-                <TableRow key={ref.id} className="cursor-pointer" onClick={() => window.location.href = `/recruitment/referrals/${ref.id}`}>
+                <TableRow key={ref.id} className="cursor-pointer" onClick={() => router.push(`/recruitment/referrals/${ref.id}`)}>
                   <TableCell><Users className="h-4 w-4 text-muted-foreground mx-auto" /></TableCell>
                   <TableCell className="font-medium">{ref.candidate?.firstName} {ref.candidate?.lastName}</TableCell>
                   <TableCell>{ref.referrer?.fullName}</TableCell>
@@ -147,7 +149,7 @@ function ReferralsTable({ data, isLoading, page, setPage, pageSize }: {
                   </TableCell>
                   <TableCell>{new Date(ref.submittedAt).toLocaleDateString()}</TableCell>
                   <TableCell className="text-right">
-                    <Button variant="ghost" size="sm" asChild onClick={(e) => { e.stopPropagation(); window.location.href = `/recruitment/referrals/${ref.id}`; }}>
+                    <Button variant="ghost" size="sm" asChild onClick={(e) => { e.stopPropagation(); router.push(`/recruitment/referrals/${ref.id}`); }}>
                       View
                     </Button>
                   </TableCell>
@@ -177,6 +179,7 @@ function ReferralsTable({ data, isLoading, page, setPage, pageSize }: {
 }
 
 function MyReferralsTable({ data, isLoading }: { data: any; isLoading: boolean }) {
+  const router = useRouter();
   return (
     <Card>
       <CardContent className="p-0">
@@ -203,7 +206,7 @@ function MyReferralsTable({ data, isLoading }: { data: any; isLoading: boolean }
               </TableRow>
             ) : (
               data.map((ref: any) => (
-                <TableRow key={ref.id} className="cursor-pointer" onClick={() => window.location.href = `/recruitment/referrals/${ref.id}`}>
+                <TableRow key={ref.id} className="cursor-pointer" onClick={() => router.push(`/recruitment/referrals/${ref.id}`)}>
                   <TableCell><Users className="h-4 w-4 text-muted-foreground mx-auto" /></TableCell>
                   <TableCell className="font-medium">{ref.candidate?.firstName} {ref.candidate?.lastName}</TableCell>
                   <TableCell>{ref.jobRequisition?.title ?? "-"}</TableCell>
@@ -222,7 +225,7 @@ function MyReferralsTable({ data, isLoading }: { data: any; isLoading: boolean }
                   </TableCell>
                   <TableCell>{new Date(ref.submittedAt).toLocaleDateString()}</TableCell>
                   <TableCell className="text-right">
-                    <Button variant="ghost" size="sm" asChild onClick={(e) => { e.stopPropagation(); window.location.href = `/recruitment/referrals/${ref.id}`; }}>
+                    <Button variant="ghost" size="sm" asChild onClick={(e) => { e.stopPropagation(); router.push(`/recruitment/referrals/${ref.id}`); }}>
                       View
                     </Button>
                   </TableCell>

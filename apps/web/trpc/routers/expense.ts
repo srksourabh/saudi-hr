@@ -2,7 +2,7 @@ import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { createTRPCRouter, protectedProcedure, companyProcedure } from "../server";
 import { schema } from "@hrms-app/db";
-import { and, eq, desc, sql, inArray } from "drizzle-orm";
+import { and, eq, desc, gte } from "drizzle-orm";
 import {
   createExpenseSchema,
   updateExpenseSchema,
@@ -33,8 +33,8 @@ export const expenseRouter = createTRPCRouter({
   list: protectedProcedure
     .input(expenseQuerySchema.optional().default({}))
     .query(async ({ ctx, input }) => {
-      const role = ctx.session!.user.role;
-      const userEmployeeId = ctx.session!.user.employeeId as string | undefined;
+      const role = (ctx.session as any).user.role;
+      const userEmployeeId = (ctx.session as any).user.employeeId as string | undefined;
 
       // Manager view: own expenses + ones waiting on them.
       if (input?.pendingFor) {
@@ -79,8 +79,8 @@ export const expenseRouter = createTRPCRouter({
     }),
 
   getById: protectedProcedure.input(z.string().uuid()).query(async ({ ctx, input }) => {
-    const role = ctx.session!.user.role;
-    const userEmployeeId = ctx.session!.user.employeeId as string | undefined;
+      const role = (ctx.session!.user as any).role;
+      const userEmployeeId = (ctx.session!.user as any).employeeId as string | undefined;
     const expense = await ctx.db.query.expenses.findFirst({
       where: eq(schema.tenant.expenses.id, input),
       with: {
@@ -282,33 +282,34 @@ export const expenseRouter = createTRPCRouter({
       return { mine: 0, pendingMine: 0, pendingForApproval: 0, approvedThisMonth: 0, totalThisMonth: 0 };
     }
 
-    // Plain Drizzle query (more portable than raw SQL):
-    const myExpenses = await ctx.db.query.expenses.findMany({
-      where: eq(schema.tenant.expenses.employeeId, userEmployeeId),
-    });
-    type Expense = (typeof myExpenses)[number];
-    const mine = myExpenses.length;
-    const pendingMine = myExpenses.filter((e: Expense) => e.status === "pending").length;
-
-    let pendingForApproval = 0;
-    if (role === "department_manager" || role === "hr_manager" || role === "super_admin") {
-      const approverExpenses = await ctx.db.query.expenses.findMany({
-        where: and(
-          eq(schema.tenant.expenses.approverEmployeeId, userEmployeeId),
-          eq(schema.tenant.expenses.status, "pending"),
-        ),
-      });
-      pendingForApproval = approverExpenses.length;
-    }
+    const baseWhere = eq(schema.tenant.expenses.employeeId, userEmployeeId);
 
     const now = new Date();
     const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-    const approvedThisMonth = myExpenses.filter(
-      (e: Expense) => e.status === "approved" && e.approvedAt && e.approvedAt >= monthStart,
-    ).length;
-    const totalThisMonth = myExpenses.filter(
-      (e: Expense) => e.expenseDate && e.expenseDate >= monthStart.toISOString().slice(0, 10),
-    ).length;
+
+    const [mine, pendingMine, approvedThisMonth, totalThisMonth] = await Promise.all([
+      ctx.db.$count(schema.tenant.expenses, baseWhere),
+      ctx.db.$count(schema.tenant.expenses, and(baseWhere, eq(schema.tenant.expenses.status, "pending"))),
+      ctx.db.$count(
+        schema.tenant.expenses,
+        and(baseWhere, eq(schema.tenant.expenses.status, "approved"), gte(schema.tenant.expenses.approvedAt, monthStart)),
+      ),
+      ctx.db.$count(
+        schema.tenant.expenses,
+        and(baseWhere, gte(schema.tenant.expenses.expenseDate, monthStart.toISOString().slice(0, 10))),
+      ),
+    ]);
+
+    let pendingForApproval = 0;
+    if (role === "department_manager" || role === "hr_manager" || role === "super_admin") {
+      pendingForApproval = await ctx.db.$count(
+        schema.tenant.expenses,
+        and(
+          eq(schema.tenant.expenses.approverEmployeeId, userEmployeeId),
+          eq(schema.tenant.expenses.status, "pending"),
+        ),
+      );
+    }
 
     return { mine, pendingMine, pendingForApproval, approvedThisMonth, totalThisMonth };
   }),

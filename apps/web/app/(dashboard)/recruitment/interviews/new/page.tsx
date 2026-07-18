@@ -18,7 +18,6 @@ import { Button } from "@hrms-app/ui";
 import { Input } from "@hrms-app/ui";
 import { Label } from "@hrms-app/ui";
 import {
-  Card,
   CardContent,
   CardHeader,
   CardTitle,
@@ -34,7 +33,7 @@ import {
 import { SaudiPalmette } from "~/components/saudi/saudi-backdrop";
 import { interviewTypeEnum } from "@hrms-app/validators";
 
-type InterviewForm = {
+interface InterviewForm {
   applicationId: string;
   type: string;
   scheduledAt: string;
@@ -42,7 +41,7 @@ type InterviewForm = {
   location: string;
   meetingUrl: string;
   interviewerIds: string[];
-};
+}
 
 const INITIAL: InterviewForm = {
   applicationId: "",

@@ -126,13 +126,13 @@ export class DisciplineEngine {
 
   constructor(
     employee: DisciplineEngine["employee"],
-    asOfDate: string = new Date().toISOString().split("T")[0]!
+    asOfDate: string = new Date().toISOString().split("T")[0] as string
   ) {
     this.employee = employee;
     this.asOfDate = asOfDate;
     const cfg = getActiveConfig("saudi", asOfDate);
     if (!cfg) throw new Error(`No Saudi regulatory config found for ${asOfDate}`);
-    this.disciplineConfig = cfg!.discipline;
+    this.disciplineConfig = cfg.discipline;
   }
 
   // ─── Offence Catalogue ─────────────────────────────────────────────────────
@@ -486,10 +486,10 @@ export class DisciplineEngine {
       "dismissal_without_notice",
     ];
     const idx = ladder.indexOf(level);
-    return ladder[Math.min(idx + 1, ladder.length - 1)]!;
+    return ladder[Math.min(idx + 1, ladder.length - 1)] as SanctionLevel;
   }
 
-  private legalBasisFor(level: SanctionLevel, category: OffenceCategory): string {
+  private legalBasisFor(level: SanctionLevel, _category: OffenceCategory): string {
     switch (level) {
       case "verbal_warning":    return "Article 80 / internal disciplinary policy";
       case "written_warning":   return "Article 80 — written notice of misconduct";

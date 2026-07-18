@@ -2,7 +2,6 @@
 
 import { useState, useMemo } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { api } from "~/trpc/react";
 import {
   ArrowUpRight,
@@ -36,14 +35,14 @@ const CATEGORY_LABEL: Record<string, string> = {
   other: "Other",
 };
 
-type FormState = {
+interface FormState {
   category: "travel" | "meals" | "accommodation" | "supplies" | "training" | "client_entertainment" | "field_operations" | "other";
   description: string;
   amount: string;
   currency: string;
   expenseDate: string;
   receiptUrl: string;
-};
+}
 
 const emptyForm: FormState = {
   category: "travel",
@@ -55,7 +54,6 @@ const emptyForm: FormState = {
 };
 
 export default function ExpensesPage() {
-  const router = useRouter();
   const utils = api.useUtils();
   const session = api.auth.session.useQuery();
   const role = session.data?.user?.role ?? "employee";

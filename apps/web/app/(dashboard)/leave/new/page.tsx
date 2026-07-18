@@ -2,17 +2,31 @@
 
 import { api } from "~/trpc/react";
 import { useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
 import { Button, Card, CardHeader, CardTitle, CardContent, Input, DualDate } from "@hrms-app/ui";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 export default function NewLeaveRequestPage() {
   const router = useRouter();
   const utils = api.useUtils();
-  const { data: employees } = api.employee.list.useQuery({ pageSize: 200 });
+  const { data: session } = useSession();
+  const isEmployee = session?.user?.role === "employee";
+  const { data: employees } = isEmployee
+    ? { data: undefined }
+    : api.employee.list.useQuery({ pageSize: 200 });
   const { data: leaveTypes } = api.leave.leaveType.list.useQuery();
+  const { data: currentEmployee } = isEmployee
+    ? api.employee.me.useQuery()
+    : { data: undefined };
 
   const [employeeId, setEmployeeId] = useState("");
   const [leaveTypeId, setLeaveTypeId] = useState("");
+
+  useEffect(() => {
+    if (isEmployee && currentEmployee?.id) {
+      setEmployeeId(currentEmployee.id);
+    }
+  }, [isEmployee, currentEmployee?.id]);
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [error, setError] = useState("");
@@ -45,7 +59,7 @@ export default function NewLeaveRequestPage() {
     <div className="mx-auto max-w-xl space-y-6">
       <div>
         <h1 className="text-3xl font-bold">New Leave Request</h1>
-        <p className="text-muted-foreground">Create a leave request for an employee</p>
+        <p className="text-muted-foreground">{isEmployee ? "Request time off" : "Create a leave request for an employee"}</p>
       </div>
       <Card>
         <CardHeader>
@@ -53,21 +67,30 @@ export default function NewLeaveRequestPage() {
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Employee</label>
-              <select
-                value={employeeId}
-                onChange={(e) => setEmployeeId(e.target.value)}
-                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-              >
-                <option value="">Select employee</option>
-                {employees?.map((emp: any) => (
-                  <option key={emp.id} value={emp.id}>
-                    {emp.fullName}
-                  </option>
-                ))}
-              </select>
-            </div>
+            {isEmployee ? (
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Employee</label>
+                <div className="flex h-10 w-full items-center rounded-md border border-input bg-muted px-3 text-sm text-muted-foreground">
+                  {currentEmployee?.fullName ?? "Loading..."}
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Employee</label>
+                <select
+                  value={employeeId}
+                  onChange={(e) => setEmployeeId(e.target.value)}
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                >
+                  <option value="">Select employee</option>
+                  {employees?.map((emp: any) => (
+                    <option key={emp.id} value={emp.id}>
+                      {emp.fullName}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
             <div className="space-y-2">
               <label className="text-sm font-medium">Leave Type</label>
               <select

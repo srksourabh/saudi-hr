@@ -86,7 +86,7 @@ async function loginAs(page: any, role: keyof typeof ROLE_BUTTONS) {
   await page.goto(`${BASE_URL}/login`, { waitUntil: "domcontentloaded" });
   await page.getByRole("button", { name: new RegExp(ROLE_BUTTONS[role], "i") }).click();
   await page.waitForURL(/\/$/, { timeout: 15000 });
-  await page.waitForLoadState("networkidle").catch(() => {});
+  await page.waitForLoadState("networkidle").catch(() => { /* noop */ });
 }
 
 async function shot(page: any, file: string) {
@@ -104,12 +104,12 @@ try {
     const context = await browser.newContext({ viewport: VIEWPORTS.desktop });
     const page = await context.newPage();
     await page.goto(`${BASE_URL}/login`, { waitUntil: "domcontentloaded" });
-    await page.waitForLoadState("networkidle").catch(() => {});
+    await page.waitForLoadState("networkidle").catch(() => { /* noop */ });
     await shot(page, "00-public-login.png");
 
     await page.setViewportSize(VIEWPORTS.mobile);
     await page.reload({ waitUntil: "domcontentloaded" });
-    await page.waitForLoadState("networkidle").catch(() => {});
+    await page.waitForLoadState("networkidle").catch(() => { /* noop */ });
     await shot(page, "00-public-login-mobile.png");
     await context.close();
   }
@@ -122,41 +122,41 @@ try {
     await shot(page, "01-admin-command-center.png");
 
     await page.goto(`${BASE_URL}/modules`, { waitUntil: "domcontentloaded" });
-    await page.waitForLoadState("networkidle").catch(() => {});
+    await page.waitForLoadState("networkidle").catch(() => { /* noop */ });
     await shot(page, "02-admin-modules-catalog.png");
 
     for (const slug of MODULES) {
       await page.goto(`${BASE_URL}/modules/${slug}`, { waitUntil: "domcontentloaded" });
-      await page.waitForLoadState("networkidle").catch(() => {});
+      await page.waitForLoadState("networkidle").catch(() => { /* noop */ });
       await shot(page, `03-admin-module-${slug}.png`);
     }
 
     for (const route of ADMIN_DETAIL_ROUTES) {
       await page.goto(`${BASE_URL}${route}`, { waitUntil: "domcontentloaded" });
-      await page.waitForLoadState("networkidle").catch(() => {});
+      await page.waitForLoadState("networkidle").catch(() => { /* noop */ });
       await shot(page, `04-admin-page-${slugify(route)}.png`);
     }
 
     // Onboarding wizard (7 steps)
     await page.goto(`${BASE_URL}/modules/company-onboarding`, { waitUntil: "domcontentloaded" });
-    await page.waitForLoadState("networkidle").catch(() => {});
+    await page.waitForLoadState("networkidle").catch(() => { /* noop */ });
     await shot(page, "05-onboarding-step-1-company.png");
     for (let i = 1; i < 7; i++) {
       const next = page.locator('button:has-text("Continue")').first();
       if (await next.isVisible().catch(() => false)) {
         await next.click();
-        await page.waitForLoadState("networkidle").catch(() => {});
+        await page.waitForLoadState("networkidle").catch(() => { /* noop */ });
         await shot(page, `05-onboarding-step-${i + 1}.png`);
       }
     }
 
     await page.goto(`${BASE_URL}/profile`, { waitUntil: "domcontentloaded" });
-    await page.waitForLoadState("networkidle").catch(() => {});
+    await page.waitForLoadState("networkidle").catch(() => { /* noop */ });
     await shot(page, "06-admin-profile.png");
 
     await page.setViewportSize(VIEWPORTS.mobile);
     await page.goto(`${BASE_URL}/`, { waitUntil: "domcontentloaded" });
-    await page.waitForLoadState("networkidle").catch(() => {});
+    await page.waitForLoadState("networkidle").catch(() => { /* noop */ });
     await shot(page, "01-admin-command-center-mobile.png");
     await context.close();
   }
@@ -169,7 +169,7 @@ try {
     await shot(page, "07-hr-specialist-landing.png");
     for (const slug of ["people-organization", "payroll-settlement", "time-leave-attendance", "documents-certificates"]) {
       await page.goto(`${BASE_URL}/modules/${slug}`, { waitUntil: "domcontentloaded" });
-      await page.waitForLoadState("networkidle").catch(() => {});
+      await page.waitForLoadState("networkidle").catch(() => { /* noop */ });
       await shot(page, `08-hr-specialist-${slug}.png`);
     }
     await context.close();
@@ -183,7 +183,7 @@ try {
     await shot(page, "09-department-manager-landing.png");
     for (const slug of ["people-organization", "time-leave-attendance", "performance-goals", "engagement-retention"]) {
       await page.goto(`${BASE_URL}/modules/${slug}`, { waitUntil: "domcontentloaded" });
-      await page.waitForLoadState("networkidle").catch(() => {});
+      await page.waitForLoadState("networkidle").catch(() => { /* noop */ });
       await shot(page, `10-department-manager-${slug}.png`);
     }
     await context.close();
@@ -197,22 +197,22 @@ try {
     await shot(page, "11-employee-landing.png");
 
     await page.goto(`${BASE_URL}/profile`, { waitUntil: "domcontentloaded" });
-    await page.waitForLoadState("networkidle").catch(() => {});
+    await page.waitForLoadState("networkidle").catch(() => { /* noop */ });
     await shot(page, "12-employee-profile.png");
 
     for (const slug of ["time-leave-attendance", "travel-expenses", "documents-certificates", "learning-skills"]) {
       await page.goto(`${BASE_URL}/modules/${slug}`, { waitUntil: "domcontentloaded" });
-      await page.waitForLoadState("networkidle").catch(() => {});
+      await page.waitForLoadState("networkidle").catch(() => { /* noop */ });
       await shot(page, `13-employee-${slug}.png`);
     }
 
     await page.goto(`${BASE_URL}/payroll`, { waitUntil: "domcontentloaded" });
-    await page.waitForLoadState("networkidle").catch(() => {});
+    await page.waitForLoadState("networkidle").catch(() => { /* noop */ });
     await shot(page, "14-employee-payroll-denied.png");
 
     await page.setViewportSize(VIEWPORTS.mobile);
     await page.goto(`${BASE_URL}/`, { waitUntil: "domcontentloaded" });
-    await page.waitForLoadState("networkidle").catch(() => {});
+    await page.waitForLoadState("networkidle").catch(() => { /* noop */ });
     await shot(page, "11-employee-landing-mobile.png");
     await context.close();
   }

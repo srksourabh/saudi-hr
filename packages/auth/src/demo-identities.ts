@@ -66,7 +66,7 @@ export type DemoIdentityKey = keyof typeof demoIdentities;
 export function resolveDemoIdentity(
   email: string,
   password: string,
-  demoModeEnabled: boolean = false,
+  demoModeEnabled = false,
 ): DemoIdentity | null {
   if (!demoModeEnabled) return null;
   return (

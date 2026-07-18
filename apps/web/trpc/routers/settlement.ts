@@ -32,6 +32,7 @@ const exitInterviewSchema = z.object({
   concerns: z.string().optional(),
 });
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const itRevocationSchema = z.object({
   system: z.string(),
   scheduledFor: z.string(),
@@ -76,6 +77,7 @@ export const settlementRouter = createTRPCRouter({
         where,
         with: { employee: true },
         orderBy: desc(schema.tenant.finalSettlements.createdAt),
+        limit: 100,
       });
     }),
 

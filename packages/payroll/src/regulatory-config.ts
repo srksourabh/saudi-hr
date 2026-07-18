@@ -119,9 +119,9 @@ export interface DisciplineConfig {
 
 export interface EOSBConfig {
   /** Monthly salary fractions per year for employer termination */
-  terminationFractions: Array<{ minYears: number; maxYears: number; fraction: number }>;
+  terminationFractions: { minYears: number; maxYears: number; fraction: number }[];
   /** Resignation penalty fractions */
-  resignationFractions: Array<{ minYears: number; fraction: number }>;
+  resignationFractions: { minYears: number; fraction: number }[];
   /** Days probation period */
   probationDays: number;
 }
@@ -238,7 +238,7 @@ const STORE: RegulatoryConfig[] = [...SAUDI_BASELINE_CONFIGS];
  */
 export function getActiveConfig(
   jurisdiction: string,
-  asOfDate: string = new Date().toISOString().split("T")[0]!
+  asOfDate: string = new Date().toISOString().split("T")[0] as string
 ): RegulatoryConfig | null {
   const date = new Date(asOfDate);
   return (

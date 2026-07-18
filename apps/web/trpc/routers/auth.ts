@@ -49,7 +49,7 @@ export const authRouter = createTRPCRouter({
    * Mirrors the JWT claims so client code never has to call next-auth
    * directly from a client component.
    */
-  session: protectedProcedure.query(async ({ ctx }) => {
+  session: protectedProcedure.query(async () => {
     const session = await auth();
     return session;
   }),
@@ -61,7 +61,7 @@ export const authRouter = createTRPCRouter({
    * counts without exposing customer data.
    */
   tenantsList: protectedProcedure.query(async ({ ctx }) => {
-    const role = ctx.session!.user.role;
+    const role = (ctx.session as any).user.role;
     if (role !== "super_admin") {
       throw new TRPCError({
         code: "FORBIDDEN",

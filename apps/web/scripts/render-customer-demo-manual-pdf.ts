@@ -35,7 +35,7 @@ await page.evaluate(async () => {
 });
 console.log("All images loaded or timed out");
 
-await page.waitForLoadState("networkidle").catch(() => {});
+await page.waitForLoadState("networkidle").catch(() => { /* noop */ });
 
 // Inject CSS to constrain any oversized screenshots and ensure they fit
 await page.addStyleTag({

@@ -233,7 +233,7 @@ export const recruitmentRouter = createTRPCRouter({
 
 if (ctx.user.role === "employee") {
           const user = await ctx.adminDb.query.users.findFirst({
-            where: (users, { eq }) => eq(users.id, ctx.user.id!),
+            where: (users, { eq }) => eq(users.id, ctx.user.id as string),
           });
           if (user?.employeeId) {
             conditions.push(eq(schema.tenant.applications.referrerEmployeeId, user.employeeId));
@@ -322,7 +322,7 @@ if (ctx.user.role === "employee") {
 
 myApplications: protectedProcedure.query(async ({ ctx }) => {
       const user = await ctx.adminDb.query.users.findFirst({
-        where: (users, { eq }) => eq(users.id, ctx.user.id!),
+        where: (users, { eq }) => eq(users.id, ctx.user.id as string),
       });
       if (!user?.employeeId) return [];
 
@@ -414,7 +414,7 @@ myApplications: protectedProcedure.query(async ({ ctx }) => {
 
 myInterviews: protectedProcedure.query(async ({ ctx }) => {
       const user = await ctx.adminDb.query.users.findFirst({
-        where: (users, { eq }) => eq(users.id, ctx.user.id!),
+        where: (users, { eq }) => eq(users.id, ctx.user.id as string),
       });
       if (!user?.employeeId) return [];
 

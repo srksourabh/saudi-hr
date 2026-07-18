@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { Button, Card, CardContent, CardHeader, CardTitle } from "@hrms-app/ui";
 import { api } from "~/trpc/react";
-import { LogOut, Plus, CalendarClock, User, CheckCircle2 } from "lucide-react";
+import { LogOut, Plus, User } from "lucide-react";
 
 export default function OffboardingListPage() {
   const settlements = api.settlement.list.useQuery({});

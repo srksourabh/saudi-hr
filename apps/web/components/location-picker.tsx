@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { MapPin, Loader2, AlertCircle } from "lucide-react";
 import "leaflet/dist/leaflet.css";
 
-type Coords = { lat: number; lng: number };
+interface Coords { lat: number; lng: number }
 
 const DEFAULT_CENTER: Coords = { lat: 24.7136, lng: 46.6753 };
 
@@ -49,12 +49,11 @@ export function LocationPicker({
       const rl = await import("react-leaflet");
       const L = (await import("leaflet")).default;
       // Fix Leaflet icon paths inside Next.js (CDN shim).
-      // @ts-ignore - private prop on icon prototype
       delete (L.Icon.Default.prototype as any)._getIconUrl;
       L.Icon.Default.mergeOptions({
-        iconRetinaUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
-        iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
-        shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
+        iconRetinaUrl: "/icons/leaflet/marker-icon-2x.png",
+        iconUrl: "/icons/leaflet/marker-icon.png",
+        shadowUrl: "/icons/leaflet/marker-shadow.png",
       });
       if (!cancelled) {
         setLeafletMod({ ...rl, L });

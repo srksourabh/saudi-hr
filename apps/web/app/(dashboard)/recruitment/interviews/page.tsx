@@ -2,9 +2,10 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Button, Card, CardHeader, CardTitle, CardContent, Badge, Table, TableHeader, TableBody, TableRow, TableHead, TableCell, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Tabs, TabsList, TabsTrigger, TabsContent, Input } from "@hrms-app/ui";
 import { api } from "~/trpc/react";
-import { Plus, Search, Calendar, Clock, Users, Filter, Video, Monitor, MapPin, Phone } from "lucide-react";
+import { Plus, Search, Calendar, Clock, Users, Video, Monitor, MapPin, Phone } from "lucide-react";
 
 const typeIcons: Record<string, any> = {
   phone_screen: Phone,
@@ -35,6 +36,7 @@ function StatusBadge({ status }: { status: string }) {
 }
 
 export default function InterviewsPage() {
+  const router = useRouter();
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("");
   const [type, setType] = useState("");
@@ -131,7 +133,6 @@ export default function InterviewsPage() {
               isLoading={isLoading} 
               page={page} 
               setPage={setPage} 
-              pageSize={pageSize}
               statusFilter={tab.id === "all" ? "" : tab.id}
             />
           </TabsContent>
@@ -141,14 +142,14 @@ export default function InterviewsPage() {
   );
 }
 
-function InterviewsTable({ data, isLoading, page, setPage, pageSize, statusFilter }: {
+function InterviewsTable({ data, isLoading, page, setPage, statusFilter }: {
   data: any;
   isLoading: boolean;
   page: number;
   setPage: (p: number | ((prev: number) => number)) => void;
-  pageSize: number;
   statusFilter: string;
 }) {
+  const router = useRouter();
   const filteredItems = data?.items.filter((i: any) => !statusFilter || i.status === statusFilter) ?? [];
 
   return (
@@ -179,7 +180,7 @@ function InterviewsTable({ data, isLoading, page, setPage, pageSize, statusFilte
               </TableRow>
             ) : (
               filteredItems.map((interview: any) => (
-                <TableRow key={interview.id} className="cursor-pointer" onClick={() => window.location.href = `/recruitment/interviews/${interview.id}`}>
+                <TableRow key={interview.id} className="cursor-pointer" onClick={() => router.push(`/recruitment/interviews/${interview.id}`)}>
                   <TableCell><Calendar className="h-4 w-4 text-muted-foreground mx-auto" /></TableCell>
                   <TableCell className="font-medium">{interview.application?.candidate?.firstName} {interview.application?.candidate?.lastName}</TableCell>
                   <TableCell>{interview.application?.jobRequisition?.title}</TableCell>
@@ -194,7 +195,7 @@ function InterviewsTable({ data, isLoading, page, setPage, pageSize, statusFilte
                     <StatusBadge status={interview.status} />
                   </TableCell>
                   <TableCell className="text-right">
-                    <Button variant="ghost" size="sm" asChild onClick={(e) => { e.stopPropagation(); window.location.href = `/recruitment/interviews/${interview.id}`; }}>
+                    <Button variant="ghost" size="sm" asChild onClick={(e) => { e.stopPropagation(); router.push(`/recruitment/interviews/${interview.id}`); }}>
                       View
                     </Button>
                   </TableCell>

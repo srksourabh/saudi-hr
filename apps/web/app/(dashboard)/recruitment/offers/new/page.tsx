@@ -15,7 +15,6 @@ import { Button } from "@hrms-app/ui";
 import { Input } from "@hrms-app/ui";
 import { Label } from "@hrms-app/ui";
 import {
-  Card,
   CardContent,
   CardHeader,
   CardTitle,
@@ -29,10 +28,8 @@ import {
   SelectValue,
 } from "@hrms-app/ui";
 import { SaudiPalmette } from "~/components/saudi/saudi-backdrop";
-import type { createOfferSchema } from "@hrms-app/validators";
-import { offerStatusEnum } from "@hrms-app/validators";
 
-type OfferForm = {
+interface OfferForm {
   applicationId: string;
   candidateId: string;
   jobRequisitionId: string;
@@ -45,7 +42,7 @@ type OfferForm = {
   probationMonths: string;
   offerLetterUrl: string;
   expiresAt: string;
-};
+}
 
 const INITIAL: OfferForm = {
   applicationId: "",
@@ -131,12 +128,6 @@ export default function RecruitmentOffersNewPage() {
     e.preventDefault();
     setGlobalError("");
     if (!validate()) return;
-
-    const totalComp =
-      Number(form.baseSalary) +
-      Number(form.housingAllowance || 0) +
-      Number(form.transportAllowance || 0) +
-      Number(form.otherAllowances || 0);
 
     create.mutate({
       applicationId: form.applicationId,

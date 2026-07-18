@@ -2,9 +2,10 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Button, Input, Card, CardHeader, CardTitle, CardContent, Badge, Table, TableHeader, TableBody, TableRow, TableHead, TableCell, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@hrms-app/ui";
 import { api } from "~/trpc/react";
-import { Plus, Search, User, Mail, Phone, Filter } from "lucide-react";
+import { Plus, Search, User, Mail, Phone } from "lucide-react";
 
 const statusColors: Record<string, "default" | "destructive" | "secondary" | "outline"> = {
   new: "outline",
@@ -17,6 +18,7 @@ const statusColors: Record<string, "default" | "destructive" | "secondary" | "ou
 };
 
 export default function CandidatesPage() {
+  const router = useRouter();
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("");
   const [source, setSource] = useState("");
@@ -118,7 +120,7 @@ export default function CandidatesPage() {
                 </TableRow>
               ) : (
                 data?.items.map((candidate: any) => (
-                  <TableRow key={candidate.id} className="cursor-pointer" onClick={() => window.location.href = `/recruitment/candidates/${candidate.id}`}>
+                  <TableRow key={candidate.id} className="cursor-pointer" onClick={() => router.push(`/recruitment/candidates/${candidate.id}`)}>
                     <TableCell><User className="h-4 w-4 text-muted-foreground" /></TableCell>
                     <TableCell className="font-medium">{candidate.firstName} {candidate.lastName}</TableCell>
                     <TableCell className="space-y-1">
@@ -142,7 +144,7 @@ export default function CandidatesPage() {
                     <TableCell>{candidate.currentTitle ?? "-"}</TableCell>
                     <TableCell>{candidate.yearsExperience ? `${candidate.yearsExperience} yrs` : "-"}</TableCell>
                     <TableCell className="text-right">
-                      <Button variant="ghost" size="sm" asChild onClick={(e) => { e.stopPropagation(); window.location.href = `/recruitment/candidates/${candidate.id}`; }}>
+                      <Button variant="ghost" size="sm" asChild onClick={(e) => { e.stopPropagation(); router.push(`/recruitment/candidates/${candidate.id}`); }}>
                         View
                       </Button>
                     </TableCell>

@@ -59,20 +59,21 @@ export default function MyAttendancePage() {
     },
   });
 
-  const record = today?.record;
+  const records = today?.records ?? [];
   const shift = today?.assignment?.shift;
-  const punchedIn = !!record?.punchInAt;
-  const punchedOut = !!record?.punchOutAt;
+  const latestRecord = records.find((r: any) => !r.punchOutAt) ?? records[0];
+  const punchedIn = !!latestRecord?.punchInAt;
+  const punchedOut = !!latestRecord?.punchOutAt;
   const todayLocation = useMemo<LocationPickerValue | null>(() => {
-    if (record?.workLocation) {
+    if (latestRecord?.workLocation) {
       return {
-        lat: record.workLocation.split(",")[0]?.trim() ? Number(record.workLocation.split(",")[0]) : 0,
-        lng: record.workLocation.split(",")[1]?.trim() ? Number(record.workLocation.split(",")[1]) : 0,
-        siteName: record.workLocation,
+        lat: latestRecord.workLocation.split(",")[0]?.trim() ? Number(latestRecord.workLocation.split(",")[0]) : 0,
+        lng: latestRecord.workLocation.split(",")[1]?.trim() ? Number(latestRecord.workLocation.split(",")[1]) : 0,
+        siteName: latestRecord.workLocation,
       };
     }
     return null;
-  }, [record?.workLocation]);
+  }, [latestRecord?.workLocation]);
 
   const monthLabel = useMemo(() => {
     const [y, m] = month.split("-").map(Number);
@@ -110,10 +111,10 @@ export default function MyAttendancePage() {
                     </div>
                   )}
                 </div>
-                {record && (
-                  <Badge className={statusBadge[record.status]?.className ?? statusBadge.present!.className}>
-                    {statusBadge[record.status]?.label ?? record.status}
-                    {record.lateMinutes > 0 ? ` · ${record.lateMinutes}m late` : ""}
+                {latestRecord && (
+                  <Badge className={statusBadge[latestRecord.status]?.className ?? statusBadge.present!.className}>
+                    {statusBadge[latestRecord.status]?.label ?? latestRecord.status}
+                    {latestRecord.lateMinutes > 0 ? ` · ${latestRecord.lateMinutes}m late` : ""}
                   </Badge>
                 )}
               </div>
@@ -121,35 +122,35 @@ export default function MyAttendancePage() {
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <TimeTile
                   label="Punch in"
-                  value={formatTime(record?.punchInAt ?? null)}
+                  value={formatTime(latestRecord?.punchInAt ?? null)}
                   icon={<LogIn className="h-4 w-4" />}
                   active={punchedIn}
                 />
                 <TimeTile
                   label="Punch out"
-                  value={formatTime(record?.punchOutAt ?? null)}
+                  value={formatTime(latestRecord?.punchOutAt ?? null)}
                   icon={<LogOut className="h-4 w-4" />}
                   active={punchedOut}
                 />
                 <TimeTile
                   label="Worked today"
-                  value={formatMinutes(record?.workedMinutes ?? 0)}
+                  value={formatMinutes(latestRecord?.workedMinutes ?? 0)}
                   icon={<Clock className="h-4 w-4" />}
                 />
               </div>
 
-              {record?.workLocation && (
+              {latestRecord?.workLocation && (
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <MapPin className="h-4 w-4" /> {record.workLocation}
+                  <MapPin className="h-4 w-4" /> {latestRecord.workLocation}
                 </div>
               )}
 
-              {record?.exceptions && record.exceptions.length > 0 && (
+              {latestRecord?.exceptions && latestRecord.exceptions.length > 0 && (
                 <div className="rounded-md border border-amber-300 bg-amber-50 p-3 text-sm flex items-start gap-2">
                   <AlertTriangle className="h-4 w-4 mt-0.5 text-amber-700 shrink-0" />
                   <div className="text-amber-900">
-                    {record.exceptions.length} exception(s) raised for today:{" "}
-                    {record.exceptions.map((e: any) => e.exceptionType.replace(/_/g, " ")).join(", ")}
+                    {latestRecord.exceptions.length} exception(s) raised for today:{" "}
+                    {latestRecord.exceptions.map((e: any) => e.exceptionType.replace(/_/g, " ")).join(", ")}
                   </div>
                 </div>
               )}
@@ -185,7 +186,7 @@ export default function MyAttendancePage() {
                   disabled={!punchedIn || punchedOut || punchOutMutation.isPending || !location}
                   onClick={() =>
                     punchOutMutation.mutate({
-                      workLocation: location?.siteName ?? record?.workLocation ?? `${location?.lat?.toFixed(4)}, ${location?.lng?.toFixed(4)}`,
+                      workLocation: location?.siteName ?? latestRecord?.workLocation ?? `${location?.lat?.toFixed(4)}, ${location?.lng?.toFixed(4)}`,
                       notes: location ? `lat=${location.lat},lng=${location.lng}${location.accuracy ? `,acc=${Math.round(location.accuracy)}m` : ""}` : undefined,
                     })
                   }

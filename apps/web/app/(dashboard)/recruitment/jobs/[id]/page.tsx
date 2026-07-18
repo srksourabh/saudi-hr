@@ -5,20 +5,6 @@ import { useRouter } from "next/navigation";
 import { Button, Card, CardHeader, CardTitle, CardContent, Badge, Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@hrms-app/ui";
 import { api } from "~/trpc/react";
 import { Briefcase, ArrowLeft, MapPin, DollarSign, Users, Clock } from "lucide-react";
-const statusColors: Record<string, "default" | "destructive" | "secondary" | "outline"> = {
-  draft: "outline",
-  open: "default",
-  closed: "secondary",
-  on_hold: "outline",
-};
-const statusLabels: Record<string, string> = {
-  draft: "Draft",
-  open: "Open",
-  paused: "Paused",
-  closed: "Closed",
-  filled: "Filled",
-  cancelled: "Cancelled",
-};
 export default function JobDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const router = useRouter();
   const { id } = use(params);

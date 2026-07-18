@@ -8,7 +8,7 @@ import { ArrowLeft, BarChart3, Loader2, CheckCircle2, AlertCircle } from "lucide
 import { Button } from "@hrms-app/ui";
 import { Input } from "@hrms-app/ui";
 import { Label } from "@hrms-app/ui";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@hrms-app/ui";
+import { CardContent, CardHeader, CardTitle, CardDescription } from "@hrms-app/ui";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@hrms-app/ui";
 import { SaudiPalmette } from "~/components/saudi/saudi-backdrop";
 

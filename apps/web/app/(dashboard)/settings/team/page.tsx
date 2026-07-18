@@ -35,8 +35,6 @@ import {
   Loader2,
   ShieldCheck,
   Users,
-  Building2,
-  Link2,
 } from "lucide-react";
 
 const ROLE_LABELS: Record<string, string> = {
@@ -44,13 +42,6 @@ const ROLE_LABELS: Record<string, string> = {
   department_manager: "Department Manager",
   payroll_admin: "Payroll Admin",
   employee: "Employee",
-};
-
-const STATUS_COLORS: Record<string, "default" | "secondary" | "destructive" | "outline" | "success"> = {
-  pending: "secondary",
-  accepted: "success",
-  expired: "destructive",
-  revoked: "outline",
 };
 
 function formatDate(d: Date | string | null): string {

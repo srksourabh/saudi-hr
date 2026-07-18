@@ -22,28 +22,28 @@ export interface CompanyOnboardingState {
     saudizationTarget: number;
   };
   locations: {
-    branches: Array<{
+    branches: {
       id: string;
       name: string;
       city: string;
       isHeadquarters: boolean;
       workPattern: string;
-    }>;
+    }[];
   };
   organization: {
-    departments: Array<{
+    departments: {
       id: string;
       name: string;
       costCenter: string;
       managerName: string;
       employeeCount: number;
-    }>;
-    managers: Array<{
+    }[];
+    managers: {
       id: string;
       name: string;
       title: string;
       departmentId: string;
-    }>;
+    }[];
     employeeCount: number;
   };
   payroll: {
@@ -55,12 +55,12 @@ export interface CompanyOnboardingState {
     transportAllowance: number;
   };
   sampleData: {
-    projects: Array<{
+    projects: {
       id: string;
       name: string;
       managerName: string;
       status: "active" | "planning";
-    }>;
+    }[];
     includePayrollHistory: boolean;
     payrollHistoryMonths: number;
     includeAttendance: boolean;

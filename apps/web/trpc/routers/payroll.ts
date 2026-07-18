@@ -157,6 +157,7 @@ export const payrollRouter = createTRPCRouter({
           where,
           with: { employee: true, payrollRun: true },
           orderBy: desc(schema.tenant.payslips.createdAt),
+          limit: 200,
         });
       }),
 

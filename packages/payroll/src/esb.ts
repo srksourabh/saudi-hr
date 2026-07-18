@@ -37,7 +37,6 @@
 import type {
   FinalSettlementInput,
   FinalSettlementResult,
-  SeparationReason,
 } from "./types";
 
 // Backward-compatibility alias so existing callers and tests don't break
@@ -52,7 +51,7 @@ const DAYS_PER_YEAR_APPROX  = 365.25;
  * Saudi Labour Law — EOSB fractions by tenure bracket.
  * Key: minimum completed years of service.
  */
-const EOSB_TENURE_TABLE: Array<{ minYears: number; fraction: number }> = [
+const EOSB_TENURE_TABLE: { minYears: number; fraction: number }[] = [
   { minYears: 10, fraction: 1.0 },   // 10+ years → full monthly salary
   { minYears: 5,  fraction: 2 / 3 }, // 5-9 years → two-thirds
   { minYears: 2,  fraction: 1 / 3 }, // 2-4 years → one-third
@@ -63,7 +62,7 @@ const EOSB_TENURE_TABLE: Array<{ minYears: number; fraction: number }> = [
  * Resignation penalty fractions (applied to the full termination EOSB amount).
  * Key: minimum completed years of service.
  */
-const RESIGNATION_PENALTY_TABLE: Array<{ minYears: number; fraction: number }> = [
+const RESIGNATION_PENALTY_TABLE: { minYears: number; fraction: number }[] = [
   { minYears: 10, fraction: 1.0  },  // 10+ years → no reduction
   { minYears: 5,  fraction: 2 / 3 }, // 5-9 years → 2/3 of EOSB payable
   { minYears: 2,  fraction: 1 / 3 }, // 2-4 years → 1/3 of EOSB payable
@@ -80,7 +79,7 @@ export function calculateFinalSettlement(input: FinalSettlementInput): FinalSett
   const halfMonthSalary   = totalMonthlySalary / 2;
 
   // ── Tenure calculation (years and days) ───────────────────────────────
-  const { years, days, totalDays } = calculateTenure(hireDate, terminationDate);
+  const { years, days } = calculateTenure(hireDate, terminationDate);
 
   const warnings: string[] = [];
   let   requiresHrReview = false;
@@ -258,7 +257,7 @@ function applyTenureBracket(
   return amount;
 }
 
-function lookupFraction(years: number, table: Array<{ minYears: number; fraction: number }>): number {
+function lookupFraction(years: number, table: { minYears: number; fraction: number }[]): number {
   for (const row of table) {
     if (years >= row.minYears) return row.fraction;
   }

@@ -1,12 +1,12 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { Button, Input, Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@hrms-app/ui";
 import { api } from "~/trpc/react";
-import { SaudiBackdrop, SaudiPalmette } from "~/components/saudi/saudi-backdrop";
-import { BrandLockup, BrandMark } from "~/components/brand/brand-lockup";
-import { Loader2, CheckCircle2, XCircle, Building2, ShieldCheck } from "lucide-react";
+import { SaudiBackdrop } from "~/components/saudi/saudi-backdrop";
+import { BrandLockup } from "~/components/brand/brand-lockup";
+import { Loader2, CheckCircle2, XCircle, ShieldCheck } from "lucide-react";
 
 export default function AcceptInvitePage() {
   const params = useParams();

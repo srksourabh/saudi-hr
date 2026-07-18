@@ -24,7 +24,7 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { randomUUID } from "node:crypto";
 import postgres from "postgres";
-import { getTenantDb, createTenantSchema } from "../tenant-manager";
+import { createTenantSchema } from "../tenant-manager";
 
 const HAS_DB = !!process.env.DATABASE_URL;
 
@@ -42,7 +42,8 @@ runIf("multi-tenant schema isolation (PRD Section 13.2)", () => {
   afterAll(async () => {
     // Drop the test schemas to keep the DB clean. Use a fresh
     // connection so we don't need to share the pooled one.
-    const sql = postgres(process.env.DATABASE_URL!, { max: 1 });
+    const dbUrl = process.env.DATABASE_URL as string;
+    const sql = postgres(dbUrl, { max: 1 });
     try {
       await sql.unsafe(`DROP SCHEMA IF EXISTS "${TEST_SCHEMA_A}" CASCADE`);
       await sql.unsafe(`DROP SCHEMA IF EXISTS "${TEST_SCHEMA_B}" CASCADE`);
@@ -52,7 +53,8 @@ runIf("multi-tenant schema isolation (PRD Section 13.2)", () => {
   }, 30_000);
 
   it("creates two distinct tenant schemas on the same database", async () => {
-    const sql = postgres(process.env.DATABASE_URL!, { max: 1 });
+    const dbUrl = process.env.DATABASE_URL as string;
+    const sql = postgres(dbUrl, { max: 1 });
     try {
       const rows = await sql<{ schema_name: string }[]>`
         SELECT schema_name FROM information_schema.schemata
@@ -68,14 +70,11 @@ runIf("multi-tenant schema isolation (PRD Section 13.2)", () => {
   });
 
   it("inserts into tenant A are not visible from tenant B", async () => {
-    const dbA = getTenantDb(TEST_SCHEMA_A);
-    const dbB = getTenantDb(TEST_SCHEMA_B);
-
-    // Use raw SQL to insert because the typed Drizzle layer would
-    // require we re-import a per-schema table. The point of this
-    // test is the search_path isolation, not the Drizzle mapping.
-    const sqlA = postgres(process.env.DATABASE_URL!, { max: 1 });
-    const sqlB = postgres(process.env.DATABASE_URL!, { max: 1 });
+    // Note: getTenantDb was used historically here; the test now uses raw SQL
+    // to isolate search_path without needing the Drizzle layer.
+    const dbUrl = process.env.DATABASE_URL as string;
+    const sqlA = postgres(dbUrl, { max: 1 });
+    const sqlB = postgres(dbUrl, { max: 1 });
     try {
       await sqlA.unsafe(`SET search_path TO "${TEST_SCHEMA_A}"`);
       const empId = randomUUID();
@@ -114,8 +113,9 @@ runIf("multi-tenant schema isolation (PRD Section 13.2)", () => {
     // constraint. The fact that it succeeds in both proves the
     // schemas are physically separate.
     const sharedId = randomUUID();
-    const sqlA = postgres(process.env.DATABASE_URL!, { max: 1 });
-    const sqlB = postgres(process.env.DATABASE_URL!, { max: 1 });
+    const dbUrl = process.env.DATABASE_URL as string;
+    const sqlA = postgres(dbUrl, { max: 1 });
+    const sqlB = postgres(dbUrl, { max: 1 });
     try {
       await sqlA.unsafe(`SET search_path TO "${TEST_SCHEMA_A}"`);
       await sqlA.unsafe(

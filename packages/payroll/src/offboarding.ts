@@ -150,7 +150,7 @@ export class TerminationWorkflow {
   constructor(
     employee: TerminationWorkflow["employee"],
     initiation: TerminationInitiation,
-    asOfDate: string = new Date().toISOString().split("T")[0]!
+    asOfDate: string = new Date().toISOString().split("T")[0] as string
   ) {
     this.employee = employee;
     this.initiation = initiation;
@@ -213,8 +213,8 @@ export class TerminationWorkflow {
    */
   checkGrounds(
     evidence: string[] = [],
-    investigationComplete: boolean = false,
-    employeeHadRightToDefence: boolean = false
+    investigationComplete = false,
+    employeeHadRightToDefence = false
   ): GroundsCheck {
     const { reason, allegedGrossMisconduct } = this.initiation;
 
@@ -500,8 +500,8 @@ export class TerminationWorkflow {
    */
   checklist(
     evidence: string[] = [],
-    investigationComplete: boolean = false,
-    employeeHadRightToDefence: boolean = false,
+    investigationComplete = false,
+    employeeHadRightToDefence = false,
     currentSaudiPercent?: number,
     totalEmployees?: number,
     saudiCount?: number
@@ -569,7 +569,7 @@ export class TerminationWorkflow {
   private addDays(date: string, days: number): string {
     const d = new Date(date);
     d.setDate(d.getDate() + days);
-    return d.toISOString().split("T")[0]!;
+    return d.toISOString().split("T")[0] as string;
   }
 
   private daysBetween(start: string, end: string): number {
