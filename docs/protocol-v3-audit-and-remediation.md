@@ -146,16 +146,14 @@ Each item is a confirmed S1. Ordered by blast radius.
 - [x] G1 iqama expiry tiers 90/60/30/15/7; expired-iqama payroll block (excluded + flagged). G2 settlement deadline (7/14 days) in the settlement response.
 - [ ] G2 scheduled reminder jobs; G1 domain-event notification delivery; G3 Qiwa failed-sync retry/persist + reconciliation; G4 official Mudad WPS + GOSI export formats. **Deferred** — need the BullMQ queue and live gov specs/credentials.
 
-### P2 — maturity and non-functional
-
-- HR document generation (contract, salary certificate, final-settlement letter) with Arabic shaping / font embedding and "Arabic prevails" clause. *(DOC-001..004.)*
-- Self-service EOSB simulator for employees. *(ESS-006.)*
-- List UX: sortable columns, real pagination (rows beyond 50 are silently dropped today), bilingual/normalised Arabic search. *(LIST-001/003/004.)*
-- Gov integration hardening: real Mudad WPS spec validation, official GOSI export format, queue+retry+persist for failed Qiwa syncs, a reconciliation view (Qiwa vs Mudad vs GOSI), outbound idempotency keys. *(INT-002/003/005/006/007.)*
-- Validation depth: `.strict()` on schemas, length/number caps, cross-field date-order and future-date guards, double-submit idempotency, optimistic-lock on concurrent edit. *(VAL-004/006/008/009/010.)*
-- Localization: render root RTL when Arabic is chosen (not only after a client toggle); persist the language choice; add a custom 404; pin UI timestamps to Asia/Riyadh. *(LOC-001/005, RES-001/005.)*
-- PDPL: data-subject self-export, rectification audit, consent/lawful-basis field, backup/restore procedure. *(PDPL-001/002/005/006.)*
-- Accessibility: associate form labels with inputs, keyboard-focusable table rows, WCAG AA contrast pass. *(UX-001/005, UX-002.)*
+### Workstream H — maturity and non-functional (P2) — ◑ PARTIAL (branch `fix/workstream-h-docs-ux-pdpl`)
+- [x] H2. Self-service EOSB simulator (`settlement.simulateOwn`, own data only). *(ESS-006.)*
+- [x] H4. Validation depth: numeric overflow caps + future-hire-date guard. *(VAL-004/008.)* Follow-up: `.strict()` (needs per-form testing), double-submit idempotency, optimistic-lock on concurrent edit.
+- [x] H5 (partial). Custom 404 page. *(RES-001.)* Follow-up: root RTL when Arabic chosen, persist language, pin UI timestamps to Asia/Riyadh.
+- [x] H6 (partial). PDPL data-subject self-export (`employee.exportMyData`, audited). *(PDPL-001.)* Rectification is already audited (B3). Follow-up: consent/lawful-basis field (needs schema), backup/restore procedure.
+- [ ] H1. **Deferred** — HR document generation (contract, salary certificate, settlement letter) with Arabic shaping/font embedding + "Arabic prevails". Large; needs a PDF library (pdf-lib + fontkit + arabic-reshaper + bidi) and visual verification. *(DOC-001..004.)*
+- [ ] H3. **Deferred** — list UX: sortable columns, real pagination (rows beyond 50 silently dropped today), bilingual/normalised Arabic search. UI-heavy across many pages; needs the running app to verify. *(LIST-001/003/004.)*
+- [ ] H7. **Deferred** — accessibility: label-for associations, keyboard-focusable rows, WCAG AA contrast. Needs the running app / a11y tooling to verify. *(UX-001/002/005.)*
 
 ---
 
