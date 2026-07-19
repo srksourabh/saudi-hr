@@ -30,3 +30,20 @@ describe("createEmployeeSchema national ID / iqama format (VAL-005)", () => {
     expect(r.success).toBe(true);
   });
 });
+
+describe("createEmployeeSchema value bounds (VAL-004/VAL-008)", () => {
+  it("accepts a large-but-in-range salary without overflow", () => {
+    const r = createEmployeeSchema.safeParse({ ...base, salaryBasic: 999_999_999 });
+    expect(r.success).toBe(true);
+  });
+  it("rejects a hire date far in the future", () => {
+    const r = createEmployeeSchema.safeParse({ ...base, hireDate: "2099-01-01" });
+    expect(r.success).toBe(false);
+  });
+  it("accepts a near-future hire date (pre-boarding)", () => {
+    const soon = new Date();
+    soon.setUTCMonth(soon.getUTCMonth() + 1);
+    const r = createEmployeeSchema.safeParse({ ...base, hireDate: soon.toISOString().slice(0, 10) });
+    expect(r.success).toBe(true);
+  });
+});

@@ -40,13 +40,27 @@ const employeeBaseSchema = z.object({
   hireDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Hire date must be YYYY-MM-DD").describe("Date of hire"),
   gosiRegistrationDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Date must be YYYY-MM-DD").optional().describe("GOSI registration date"),
   gosiSystem: z.enum(["old", "new"]).optional().describe("GOSI system type"),
-  salaryBasic: z.number().positive().describe("Basic salary"),
-  salaryHousing: z.number().min(0).default(0).describe("Housing allowance"),
-  salaryTransport: z.number().min(0).default(0).describe("Transport allowance"),
+  // Upper bounds fit within numeric(12,2) so an extreme value can't overflow the
+  // column (VAL-004); GOSI base is separately capped in the engine.
+  salaryBasic: z.number().positive().max(9_999_999_999, "Salary is out of range").describe("Basic salary"),
+  salaryHousing: z.number().min(0).max(9_999_999_999).default(0).describe("Housing allowance"),
+  salaryTransport: z.number().min(0).max(9_999_999_999).default(0).describe("Transport allowance"),
 });
+
+/** Reject a hire date more than a year in the future (typo guard, VAL-008). */
+function futureHireDateGuard(hireDate: string | undefined, ctx: z.RefinementCtx): void {
+  if (!hireDate) return;
+  const hire = new Date(hireDate);
+  const oneYearAhead = new Date();
+  oneYearAhead.setUTCFullYear(oneYearAhead.getUTCFullYear() + 1);
+  if (hire > oneYearAhead) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["hireDate"], message: "Hire date is too far in the future." });
+  }
+}
 
 export const createEmployeeSchema = employeeBaseSchema.superRefine((data, ctx) => {
   validateNationalId(data.iqamaNumberEnc, data.nationality, ctx);
+  futureHireDateGuard(data.hireDate, ctx);
 });
 
 export const updateEmployeeSchema = employeeBaseSchema.partial().superRefine((data, ctx) => {
