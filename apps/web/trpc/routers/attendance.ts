@@ -6,6 +6,7 @@ import {
   companyProcedure,
   protectedProcedure,
   requireRole,
+  requireCapability,
 } from "../server";
 import { schema } from "@hrms-app/db";
 import {
@@ -706,10 +707,16 @@ export const attendanceRouter = createTRPCRouter({
     }),
 
   // ── Org subtree: all employees under a manager with last known location ─
-  getSubtree: protectedProcedure
+  getSubtree: requireCapability("attendance:view_company")
     .input(z.object({ rootEmployeeId: z.string().uuid() }))
     .query(async ({ ctx, input }) => {
-      const { rootEmployeeId } = input;
+      // Department managers may only view their own reporting subtree, not an
+      // arbitrary root — they cannot walk another manager's team or the whole
+      // org tree of GPS locations (SEC-011). Company-wide roles may root anywhere.
+      const rootEmployeeId =
+        ctx.user.role === "department_manager"
+          ? ctx.user.employeeId ?? ""
+          : input.rootEmployeeId;
 
       // Recursive CTE to get all employees under rootEmployeeId
       const subtree = await ctx.db.query.employees.findMany({

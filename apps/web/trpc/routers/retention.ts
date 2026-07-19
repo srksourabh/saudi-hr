@@ -1,8 +1,18 @@
 import { z } from "zod";
-import { createTRPCRouter, protectedProcedure, requireRole } from "../server";
+import { TRPCError } from "@trpc/server";
+import { createTRPCRouter, protectedProcedure, requireRole, requireCapability } from "../server";
 import { schema } from "@hrms-app/db";
 import { goalStatusEnum, createGoalSchema, updateGoalSchema, goalQuerySchema, createGoalKeyResultSchema, updateGoalKeyResultSchema, createReviewCycleSchema, updateReviewCycleSchema, reviewCycleQuerySchema, createReviewSchema, updateReviewSchema, reviewQuerySchema, createReviewSectionSchema, updateReviewSectionSchema, createReviewResponseSchema, updateReviewResponseSchema, createSkillSchema, updateSkillSchema, skillQuerySchema, createEmployeeSkillSchema, updateEmployeeSkillSchema, employeeSkillQuerySchema, createSkillGapSchema, updateSkillGapSchema, createLearningProgramSchema, updateLearningProgramSchema, learningProgramQuerySchema, createLearningEnrollmentSchema, updateLearningEnrollmentSchema, learningEnrollmentQuerySchema, successionStatusEnum, createCareerRoleSchema, updateCareerRoleSchema, careerRoleQuerySchema, createCareerPathSchema, updateCareerPathSchema, createEmployeeCareerPathSchema, updateEmployeeCareerPathSchema, createSuccessionPlanSchema, updateSuccessionPlanSchema, createSuccessionCandidateSchema, updateSuccessionCandidateSchema, stayInterviewStatusEnum, createEngagementSurveySchema, updateEngagementSurveySchema, engagementSurveyQuerySchema, createSurveyResponseSchema, updateSurveyResponseSchema, createStayInterviewSchema, updateStayInterviewSchema, createRecognitionSchema, createRewardSchema, updateRewardSchema, rewardQuerySchema, createRewardRedemptionSchema, createTotalRewardsStatementSchema, totalRewardsQuerySchema, createCompensationPlanSchema, updateCompensationPlanSchema, createCompensationAdjustmentSchema, updateCompensationAdjustmentSchema, compensationAdjustmentQuerySchema, createTalentReviewSchema, updateTalentReviewSchema, createTalentReviewParticipantSchema, updateTalentReviewParticipantSchema, idSchema } from "@hrms-app/validators";
 import { and, eq, desc } from "drizzle-orm";
+
+// Retention reads expose performance reviews, talent/succession ratings, stay
+// interviews and survey responses — gate to `performance:view_team` (HR +
+// department_manager), not every staff role (SEC-006).
+const perfView = requireCapability("performance:view_team");
+// Compensation reads (plans, adjustments, total-rewards) are financial — gate
+// to `payroll:view_company`, which (unlike performance) excludes department_manager.
+const compView = requireCapability("payroll:view_company");
+
 export const retentionRouter = createTRPCRouter({
   goal: createTRPCRouter({
     // Self-service: the current employee's own goals (for the profile page).
@@ -14,7 +24,7 @@ export const retentionRouter = createTRPCRouter({
         limit: 10,
       });
     }),
-    list: protectedProcedure
+    list: perfView
       .input(goalQuerySchema.optional().default({}))
       .query(async ({ ctx, input }) => {
         const conditions = [];
@@ -42,7 +52,7 @@ export const retentionRouter = createTRPCRouter({
         ]);
         return { items, total, page, pageSize, totalPages: Math.ceil(total / pageSize) };
       }),
-    getById: protectedProcedure
+    getById: perfView
       .input(idSchema)
       .query(async ({ ctx, input }) => {
         return await ctx.db.query.goals.findFirst({
@@ -100,7 +110,7 @@ export const retentionRouter = createTRPCRouter({
       }),
   }),
   goalKeyResult: createTRPCRouter({
-    list: protectedProcedure
+    list: perfView
       .input(z.object({
         goalId: z.string().uuid().optional(),
         page: z.coerce.number().int().positive().default(1),
@@ -124,7 +134,7 @@ export const retentionRouter = createTRPCRouter({
         ]);
         return { items, total, page, pageSize, totalPages: Math.ceil(total / pageSize) };
       }),
-    getById: protectedProcedure
+    getById: perfView
       .input(idSchema)
       .query(async ({ ctx, input }) => {
         return await ctx.db.query.goalKeyResults.findFirst({
@@ -156,7 +166,7 @@ export const retentionRouter = createTRPCRouter({
       }),
   }),
   reviewCycle: createTRPCRouter({
-    list: protectedProcedure
+    list: perfView
       .input(reviewCycleQuerySchema.optional().default({}))
       .query(async ({ ctx, input }) => {
         const conditions = [];
@@ -177,7 +187,7 @@ export const retentionRouter = createTRPCRouter({
         ]);
         return { items, total, page, pageSize, totalPages: Math.ceil(total / pageSize) };
       }),
-    getById: protectedProcedure
+    getById: perfView
       .input(idSchema)
       .query(async ({ ctx, input }) => {
         return await ctx.db.query.reviewCycles.findFirst({
@@ -209,7 +219,7 @@ export const retentionRouter = createTRPCRouter({
       }),
   }),
   review: createTRPCRouter({
-    list: protectedProcedure
+    list: perfView
       .input(reviewQuerySchema.optional().default({}))
       .query(async ({ ctx, input }) => {
         const conditions = [];
@@ -236,7 +246,7 @@ export const retentionRouter = createTRPCRouter({
         ]);
         return { items, total, page, pageSize, totalPages: Math.ceil(total / pageSize) };
       }),
-    getById: protectedProcedure
+    getById: perfView
       .input(idSchema)
       .query(async ({ ctx, input }) => {
         return await ctx.db.query.reviews.findFirst({
@@ -273,7 +283,7 @@ export const retentionRouter = createTRPCRouter({
       }),
   }),
   reviewSection: createTRPCRouter({
-    list: protectedProcedure
+    list: perfView
       .input(z.object({
         reviewCycleId: z.string().uuid().optional(),
         page: z.coerce.number().int().positive().default(1),
@@ -297,7 +307,7 @@ export const retentionRouter = createTRPCRouter({
         ]);
         return { items, total, page, pageSize, totalPages: Math.ceil(total / pageSize) };
       }),
-    getById: protectedProcedure
+    getById: perfView
       .input(idSchema)
       .query(async ({ ctx, input }) => {
         return await ctx.db.query.reviewSections.findFirst({
@@ -329,7 +339,7 @@ export const retentionRouter = createTRPCRouter({
       }),
   }),
   reviewResponse: createTRPCRouter({
-    list: protectedProcedure
+    list: perfView
       .input(z.object({
         reviewId: z.string().uuid().optional(),
         sectionId: z.string().uuid().optional(),
@@ -355,7 +365,7 @@ export const retentionRouter = createTRPCRouter({
         ]);
         return { items, total, page, pageSize, totalPages: Math.ceil(total / pageSize) };
       }),
-    getById: protectedProcedure
+    getById: perfView
       .input(idSchema)
       .query(async ({ ctx, input }) => {
         return await ctx.db.query.reviewResponses.findFirst({
@@ -387,7 +397,7 @@ export const retentionRouter = createTRPCRouter({
       }),
   }),
   skill: createTRPCRouter({
-    list: protectedProcedure
+    list: perfView
       .input(skillQuerySchema.optional().default({}))
       .query(async ({ ctx, input }) => {
         const conditions = [];
@@ -408,7 +418,7 @@ export const retentionRouter = createTRPCRouter({
         ]);
         return { items, total, page, pageSize, totalPages: Math.ceil(total / pageSize) };
       }),
-    getById: protectedProcedure
+    getById: perfView
       .input(idSchema)
       .query(async ({ ctx, input }) => {
         return await ctx.db.query.skills.findFirst({
@@ -440,7 +450,7 @@ export const retentionRouter = createTRPCRouter({
       }),
   }),
   employeeSkill: createTRPCRouter({
-    list: protectedProcedure
+    list: perfView
       .input(employeeSkillQuerySchema.optional().default({}))
       .query(async ({ ctx, input }) => {
         const conditions = [];
@@ -462,7 +472,7 @@ export const retentionRouter = createTRPCRouter({
         ]);
         return { items, total, page, pageSize, totalPages: Math.ceil(total / pageSize) };
       }),
-    getById: protectedProcedure
+    getById: perfView
       .input(idSchema)
       .query(async ({ ctx, input }) => {
         return await ctx.db.query.employeeSkills.findFirst({
@@ -494,7 +504,7 @@ export const retentionRouter = createTRPCRouter({
       }),
   }),
   skillGap: createTRPCRouter({
-    list: protectedProcedure
+    list: perfView
       .input(z.object({
         employeeId: z.string().uuid().optional(),
         skillId: z.string().uuid().optional(),
@@ -520,7 +530,7 @@ export const retentionRouter = createTRPCRouter({
         ]);
         return { items, total, page, pageSize, totalPages: Math.ceil(total / pageSize) };
       }),
-    getById: protectedProcedure
+    getById: perfView
       .input(idSchema)
       .query(async ({ ctx, input }) => {
         return await ctx.db.query.skillGaps.findFirst({
@@ -552,7 +562,7 @@ export const retentionRouter = createTRPCRouter({
       }),
   }),
   learningProgram: createTRPCRouter({
-    list: protectedProcedure
+    list: perfView
       .input(learningProgramQuerySchema.optional().default({}))
       .query(async ({ ctx, input }) => {
         const conditions = [];
@@ -573,7 +583,7 @@ export const retentionRouter = createTRPCRouter({
         ]);
         return { items, total, page, pageSize, totalPages: Math.ceil(total / pageSize) };
       }),
-    getById: protectedProcedure
+    getById: perfView
       .input(idSchema)
       .query(async ({ ctx, input }) => {
         return await ctx.db.query.learningPrograms.findFirst({
@@ -605,7 +615,7 @@ export const retentionRouter = createTRPCRouter({
       }),
   }),
   learningEnrollment: createTRPCRouter({
-    list: protectedProcedure
+    list: perfView
       .input(learningEnrollmentQuerySchema.optional().default({}))
       .query(async ({ ctx, input }) => {
         const conditions = [];
@@ -627,7 +637,7 @@ export const retentionRouter = createTRPCRouter({
         ]);
         return { items, total, page, pageSize, totalPages: Math.ceil(total / pageSize) };
       }),
-    getById: protectedProcedure
+    getById: perfView
       .input(idSchema)
       .query(async ({ ctx, input }) => {
         return await ctx.db.query.learningEnrollments.findFirst({
@@ -659,7 +669,7 @@ export const retentionRouter = createTRPCRouter({
       }),
   }),
   careerRole: createTRPCRouter({
-    list: protectedProcedure
+    list: perfView
       .input(careerRoleQuerySchema.optional().default({}))
       .query(async ({ ctx, input }) => {
         const conditions = [];
@@ -680,7 +690,7 @@ export const retentionRouter = createTRPCRouter({
         ]);
         return { items, total, page, pageSize, totalPages: Math.ceil(total / pageSize) };
       }),
-    getById: protectedProcedure
+    getById: perfView
       .input(idSchema)
       .query(async ({ ctx, input }) => {
         return await ctx.db.query.careerRoles.findFirst({
@@ -712,7 +722,7 @@ export const retentionRouter = createTRPCRouter({
       }),
   }),
   careerPath: createTRPCRouter({
-    list: protectedProcedure
+    list: perfView
       .input(z.object({
         fromRoleId: z.string().uuid().optional(),
         toRoleId: z.string().uuid().optional(),
@@ -738,7 +748,7 @@ export const retentionRouter = createTRPCRouter({
         ]);
         return { items, total, page, pageSize, totalPages: Math.ceil(total / pageSize) };
       }),
-    getById: protectedProcedure
+    getById: perfView
       .input(idSchema)
       .query(async ({ ctx, input }) => {
         return await ctx.db.query.careerPaths.findFirst({
@@ -770,7 +780,7 @@ export const retentionRouter = createTRPCRouter({
       }),
   }),
   employeeCareerPath: createTRPCRouter({
-    list: protectedProcedure
+    list: perfView
       .input(z.object({
         employeeId: z.string().uuid().optional(),
         careerPathId: z.string().uuid().optional(),
@@ -796,7 +806,7 @@ export const retentionRouter = createTRPCRouter({
         ]);
         return { items, total, page, pageSize, totalPages: Math.ceil(total / pageSize) };
       }),
-    getById: protectedProcedure
+    getById: perfView
       .input(idSchema)
       .query(async ({ ctx, input }) => {
         return await ctx.db.query.employeeCareerPaths.findFirst({
@@ -828,7 +838,7 @@ export const retentionRouter = createTRPCRouter({
       }),
   }),
   successionPlan: createTRPCRouter({
-    list: protectedProcedure
+    list: perfView
       .input(z.object({
         roleId: z.string().uuid().optional(),
         departmentId: z.string().uuid().optional(),
@@ -856,7 +866,7 @@ export const retentionRouter = createTRPCRouter({
         ]);
         return { items, total, page, pageSize, totalPages: Math.ceil(total / pageSize) };
       }),
-    getById: protectedProcedure
+    getById: perfView
       .input(idSchema)
       .query(async ({ ctx, input }) => {
         return await ctx.db.query.successionPlans.findFirst({
@@ -888,7 +898,7 @@ export const retentionRouter = createTRPCRouter({
       }),
   }),
   successionCandidate: createTRPCRouter({
-    list: protectedProcedure
+    list: perfView
       .input(z.object({
         successionPlanId: z.string().uuid().optional(),
         employeeId: z.string().uuid().optional(),
@@ -914,7 +924,7 @@ export const retentionRouter = createTRPCRouter({
         ]);
         return { items, total, page, pageSize, totalPages: Math.ceil(total / pageSize) };
       }),
-    getById: protectedProcedure
+    getById: perfView
       .input(idSchema)
       .query(async ({ ctx, input }) => {
         return await ctx.db.query.successionCandidates.findFirst({
@@ -946,7 +956,7 @@ export const retentionRouter = createTRPCRouter({
       }),
   }),
   engagementSurvey: createTRPCRouter({
-    list: protectedProcedure
+    list: perfView
       .input(engagementSurveyQuerySchema.optional().default({}))
       .query(async ({ ctx, input }) => {
         const conditions = [];
@@ -966,7 +976,7 @@ export const retentionRouter = createTRPCRouter({
         ]);
         return { items, total, page, pageSize, totalPages: Math.ceil(total / pageSize) };
       }),
-    getById: protectedProcedure
+    getById: perfView
       .input(idSchema)
       .query(async ({ ctx, input }) => {
         return await ctx.db.query.engagementSurveys.findFirst({
@@ -1018,7 +1028,7 @@ export const retentionRouter = createTRPCRouter({
       }),
   }),
   surveyResponse: createTRPCRouter({
-    list: protectedProcedure
+    list: perfView
       .input(z.object({
         surveyId: z.string().uuid().optional(),
         employeeId: z.string().uuid().optional(),
@@ -1044,7 +1054,7 @@ export const retentionRouter = createTRPCRouter({
         ]);
         return { items, total, page, pageSize, totalPages: Math.ceil(total / pageSize) };
       }),
-    getById: protectedProcedure
+    getById: perfView
       .input(idSchema)
       .query(async ({ ctx, input }) => {
         return await ctx.db.query.surveyResponses.findFirst({
@@ -1052,13 +1062,16 @@ export const retentionRouter = createTRPCRouter({
           with: { survey: true, employee: true },
         });
       }),
-    create: protectedProcedure
+    // Survey-response management is HR-only (SEC-010) — was bare
+    // protectedProcedure, which let any staff role create with a spoofed
+    // employeeId or update/overwrite any response by id.
+    create: requireRole("super_admin", "hr_manager")
       .input(createSurveyResponseSchema)
       .mutation(async ({ ctx, input }) => {
         const [item] = await ctx.db.insert(schema.tenant.surveyResponses).values(input).returning();
         return item;
       }),
-    update: protectedProcedure
+    update: requireRole("super_admin", "hr_manager")
       .input(z.object({ id: idSchema, data: updateSurveyResponseSchema }))
       .mutation(async ({ ctx, input }) => {
         const [item] = await ctx.db
@@ -1076,7 +1089,7 @@ export const retentionRouter = createTRPCRouter({
       }),
   }),
   stayInterview: createTRPCRouter({
-    list: protectedProcedure
+    list: perfView
       .input(z.object({
         employeeId: z.string().uuid().optional(),
         interviewerId: z.string().uuid().optional(),
@@ -1104,7 +1117,7 @@ export const retentionRouter = createTRPCRouter({
         ]);
         return { items, total, page, pageSize, totalPages: Math.ceil(total / pageSize) };
       }),
-    getById: protectedProcedure
+    getById: perfView
       .input(idSchema)
       .query(async ({ ctx, input }) => {
         return await ctx.db.query.stayInterviews.findFirst({
@@ -1146,7 +1159,7 @@ export const retentionRouter = createTRPCRouter({
       }),
   }),
   recognition: createTRPCRouter({
-    list: protectedProcedure
+    list: perfView
       .input(z.object({
         fromEmployeeId: z.string().uuid().optional(),
         toEmployeeId: z.string().uuid().optional(),
@@ -1172,7 +1185,7 @@ export const retentionRouter = createTRPCRouter({
         ]);
         return { items, total, page, pageSize, totalPages: Math.ceil(total / pageSize) };
       }),
-    getById: protectedProcedure
+    getById: perfView
       .input(idSchema)
       .query(async ({ ctx, input }) => {
         return await ctx.db.query.recognitions.findFirst({
@@ -1180,13 +1193,22 @@ export const retentionRouter = createTRPCRouter({
           with: { fromEmployee: true, toEmployee: true },
         });
       }),
+    // The giver is always the caller — never trust a client-supplied
+    // fromEmployeeId (SEC-010).
     create: protectedProcedure
       .input(createRecognitionSchema)
       .mutation(async ({ ctx, input }) => {
-        const [item] = await ctx.db.insert(schema.tenant.recognitions).values(input).returning();
+        if (!ctx.user.employeeId) {
+          throw new TRPCError({ code: "BAD_REQUEST", message: "Your login is not linked to an employee record" });
+        }
+        const [item] = await ctx.db
+          .insert(schema.tenant.recognitions)
+          .values({ ...input, fromEmployeeId: ctx.user.employeeId })
+          .returning();
         return item;
       }),
-    update: protectedProcedure
+    // Editing an existing recognition is an HR action (was update-any-by-id).
+    update: requireRole("super_admin", "hr_manager")
       .input(z.object({ id: idSchema, data: createRecognitionSchema.partial() }))
       .mutation(async ({ ctx, input }) => {
         const [item] = await ctx.db
@@ -1204,7 +1226,7 @@ export const retentionRouter = createTRPCRouter({
       }),
   }),
   reward: createTRPCRouter({
-    list: protectedProcedure
+    list: perfView
       .input(rewardQuerySchema.optional().default({}))
       .query(async ({ ctx, input }) => {
         const conditions = [];
@@ -1225,7 +1247,7 @@ export const retentionRouter = createTRPCRouter({
         ]);
         return { items, total, page, pageSize, totalPages: Math.ceil(total / pageSize) };
       }),
-    getById: protectedProcedure
+    getById: perfView
       .input(idSchema)
       .query(async ({ ctx, input }) => {
         return await ctx.db.query.rewards.findFirst({
@@ -1257,7 +1279,7 @@ export const retentionRouter = createTRPCRouter({
       }),
   }),
   rewardRedemption: createTRPCRouter({
-    list: protectedProcedure
+    list: perfView
       .input(z.object({
         rewardId: z.string().uuid().optional(),
         employeeId: z.string().uuid().optional(),
@@ -1283,7 +1305,7 @@ export const retentionRouter = createTRPCRouter({
         ]);
         return { items, total, page, pageSize, totalPages: Math.ceil(total / pageSize) };
       }),
-    getById: protectedProcedure
+    getById: perfView
       .input(idSchema)
       .query(async ({ ctx, input }) => {
         return await ctx.db.query.rewardRedemptions.findFirst({
@@ -1305,7 +1327,7 @@ export const retentionRouter = createTRPCRouter({
       }),
   }),
   totalRewardsStatement: createTRPCRouter({
-    list: protectedProcedure
+    list: compView
       .input(totalRewardsQuerySchema.optional().default({}))
       .query(async ({ ctx, input }) => {
         const conditions = [];
@@ -1325,7 +1347,7 @@ export const retentionRouter = createTRPCRouter({
         ]);
         return { items, total, page, pageSize, totalPages: Math.ceil(total / pageSize) };
       }),
-    getById: protectedProcedure
+    getById: compView
       .input(idSchema)
       .query(async ({ ctx, input }) => {
         return await ctx.db.query.totalRewardsStatements.findFirst({
@@ -1347,7 +1369,7 @@ export const retentionRouter = createTRPCRouter({
       }),
   }),
   compensationPlan: createTRPCRouter({
-    list: protectedProcedure
+    list: compView
       .input(z.object({
         type: z.string().optional(),
         status: z.string().optional(),
@@ -1373,7 +1395,7 @@ export const retentionRouter = createTRPCRouter({
         ]);
         return { items, total, page, pageSize, totalPages: Math.ceil(total / pageSize) };
       }),
-    getById: protectedProcedure
+    getById: compView
       .input(idSchema)
       .query(async ({ ctx, input }) => {
         return await ctx.db.query.compensationPlans.findFirst({
@@ -1405,7 +1427,7 @@ export const retentionRouter = createTRPCRouter({
       }),
   }),
   compensationAdjustment: createTRPCRouter({
-    list: protectedProcedure
+    list: compView
       .input(compensationAdjustmentQuerySchema.optional().default({}))
       .query(async ({ ctx, input }) => {
         const conditions = [];
@@ -1427,7 +1449,7 @@ export const retentionRouter = createTRPCRouter({
         ]);
         return { items, total, page, pageSize, totalPages: Math.ceil(total / pageSize) };
       }),
-    getById: protectedProcedure
+    getById: compView
       .input(idSchema)
       .query(async ({ ctx, input }) => {
         return await ctx.db.query.compensationAdjustments.findFirst({
@@ -1459,7 +1481,7 @@ export const retentionRouter = createTRPCRouter({
       }),
   }),
   talentReview: createTRPCRouter({
-    list: protectedProcedure
+    list: perfView
       .input(z.object({
         status: z.string().optional(),
         page: z.coerce.number().int().positive().default(1),
@@ -1483,7 +1505,7 @@ export const retentionRouter = createTRPCRouter({
         ]);
         return { items, total, page, pageSize, totalPages: Math.ceil(total / pageSize) };
       }),
-    getById: protectedProcedure
+    getById: perfView
       .input(idSchema)
       .query(async ({ ctx, input }) => {
         return await ctx.db.query.talentReviews.findFirst({
@@ -1515,7 +1537,7 @@ export const retentionRouter = createTRPCRouter({
       }),
   }),
   talentReviewParticipant: createTRPCRouter({
-    list: protectedProcedure
+    list: perfView
       .input(z.object({
         talentReviewId: z.string().uuid().optional(),
         employeeId: z.string().uuid().optional(),
@@ -1541,7 +1563,7 @@ export const retentionRouter = createTRPCRouter({
         ]);
         return { items, total, page, pageSize, totalPages: Math.ceil(total / pageSize) };
       }),
-    getById: protectedProcedure
+    getById: perfView
       .input(idSchema)
       .query(async ({ ctx, input }) => {
         return await ctx.db.query.talentReviewParticipants.findFirst({

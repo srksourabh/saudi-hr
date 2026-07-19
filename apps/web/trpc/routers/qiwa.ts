@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { createTRPCRouter, companyProcedure, requireRole, PAYROLL_VIEW_ROLES } from "../server";
+import { createTRPCRouter, requireRole, PAYROLL_VIEW_ROLES } from "../server";
 import { schema } from "@hrms-app/db";
 import { TRPCError } from "@trpc/server";
 import { eq, desc } from "drizzle-orm";
@@ -215,8 +215,13 @@ function takeDatePart(iso: string): string {
   return part ?? iso;
 }
 
+// Government-filing + integration actions: restricted to the roles holding
+// integrations:manage / payroll authority (SEC-009). A recruiter or
+// department_manager must never be able to create/terminate a Qiwa contract.
+const QIWA_MANAGE_ROLES = ["super_admin", "hr_manager", "payroll_admin"] as const;
+
 export const qiwaRouter = createTRPCRouter({
-  sync: companyProcedure
+  sync: requireRole(...QIWA_MANAGE_ROLES)
     .input(
       z.object({
         employeeId: z.string().uuid(),
@@ -435,7 +440,7 @@ export const qiwaRouter = createTRPCRouter({
     });
   }),
 
-  testConnection: companyProcedure.query(async () => {
+  testConnection: requireRole(...QIWA_MANAGE_ROLES).query(async () => {
     const config = getQiwaConfig();
     if (!config) {
       return { connected: false, error: "Qiwa API credentials not configured" };
@@ -454,7 +459,7 @@ export const qiwaRouter = createTRPCRouter({
     }
   }),
 
-  dashboard: companyProcedure.query(async ({ ctx }) => {
+  dashboard: requireRole(...QIWA_MANAGE_ROLES).query(async ({ ctx }) => {
     const [total, submitted, accepted, rejected, terminated] = await Promise.all([
       ctx.db.query.qiwaContracts.count(),
       ctx.db.query.qiwaContracts.count({ where: eq(schema.tenant.qiwaContracts.status, "submitted") }),

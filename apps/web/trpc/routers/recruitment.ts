@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { createTRPCRouter, protectedProcedure, requireRole } from "../server";
+import { createTRPCRouter, protectedProcedure, requireRole, requireCapability } from "../server";
 import { schema } from "@hrms-app/db";
 import {
   createJobRequisitionSchema,
@@ -33,11 +33,14 @@ import {
 } from "@hrms-app/validators";
 import { and, eq, desc, ilike, or, gte, lte, inArray } from "drizzle-orm";
 
-
+// Recruitment reads expose candidate PII, background/reference-check results and
+// offer compensation. Gate them to the roles holding `recruitment:view`
+// (recruiter, HR, department_manager) — not every staff role (SEC-006).
+const recruitmentView = requireCapability("recruitment:view");
 
 export const recruitmentRouter = createTRPCRouter({
   jobRequisition: createTRPCRouter({
-    list: protectedProcedure
+    list: recruitmentView
       .input(jobRequisitionQuerySchema.optional().default({}))
       .query(async ({ ctx, input }) => {
         const conditions = [];
@@ -67,7 +70,7 @@ export const recruitmentRouter = createTRPCRouter({
         return { items, total, page, pageSize, totalPages: Math.ceil(total / pageSize) };
       }),
 
-    getById: protectedProcedure
+    getById: recruitmentView
       .input(z.string().uuid())
       .query(async ({ ctx, input }) => {
         return await ctx.db.query.jobRequisitions.findFirst({
@@ -138,7 +141,7 @@ export const recruitmentRouter = createTRPCRouter({
   }),
 
   candidate: createTRPCRouter({
-    list: protectedProcedure
+    list: recruitmentView
       .input(candidateQuerySchema.optional().default({}))
       .query(async ({ ctx, input }) => {
         const conditions = [];
@@ -170,7 +173,7 @@ export const recruitmentRouter = createTRPCRouter({
         return { items, total, page, pageSize, totalPages: Math.ceil(total / pageSize) };
       }),
 
-    getById: protectedProcedure
+    getById: recruitmentView
       .input(z.string().uuid())
       .query(async ({ ctx, input }) => {
         return await ctx.db.query.candidates.findFirst({
@@ -223,7 +226,7 @@ export const recruitmentRouter = createTRPCRouter({
   }),
 
   application: createTRPCRouter({
-    list: protectedProcedure
+    list: recruitmentView
       .input(applicationQuerySchema.optional().default({}))
       .query(async ({ ctx, input }) => {
         const conditions = [];
@@ -265,7 +268,7 @@ if (ctx.user.role === "employee") {
         return { items, total, page, pageSize, totalPages: Math.ceil(total / pageSize) };
       }),
 
-    getById: protectedProcedure
+    getById: recruitmentView
       .input(z.string().uuid())
       .query(async ({ ctx, input }) => {
         return await ctx.db.query.applications.findFirst({
@@ -340,7 +343,7 @@ myApplications: protectedProcedure.query(async ({ ctx }) => {
   }),
 
   interview: createTRPCRouter({
-    list: protectedProcedure
+    list: recruitmentView
       .input(interviewQuerySchema.optional().default({}))
       .query(async ({ ctx, input }) => {
         const conditions = [];
@@ -370,7 +373,7 @@ myApplications: protectedProcedure.query(async ({ ctx }) => {
         return { items, total, page, pageSize, totalPages: Math.ceil(total / pageSize) };
       }),
 
-    getById: protectedProcedure
+    getById: recruitmentView
       .input(z.string().uuid())
       .query(async ({ ctx, input }) => {
         return await ctx.db.query.interviews.findFirst({
@@ -427,7 +430,7 @@ myInterviews: protectedProcedure.query(async ({ ctx }) => {
   }),
 
   offer: createTRPCRouter({
-    list: protectedProcedure
+    list: recruitmentView
       .input(offerQuerySchema.optional().default({}))
       .query(async ({ ctx, input }) => {
         const conditions = [];
@@ -460,7 +463,7 @@ myInterviews: protectedProcedure.query(async ({ ctx }) => {
         return { items, total, page, pageSize, totalPages: Math.ceil(total / pageSize) };
       }),
 
-    getById: protectedProcedure
+    getById: recruitmentView
       .input(z.string().uuid())
       .query(async ({ ctx, input }) => {
         return await ctx.db.query.offers.findFirst({
@@ -511,7 +514,9 @@ myInterviews: protectedProcedure.query(async ({ ctx }) => {
         return offer;
       }),
 
-    accept: protectedProcedure
+    // Recording an offer outcome is an HR action (SEC-010) — was on bare
+    // protectedProcedure, letting any staff role accept/decline any offer by id.
+    accept: requireRole("super_admin", "hr_manager")
       .input(z.object({ id: z.string().uuid() }))
       .mutation(async ({ ctx, input }) => {
         const [offer] = await ctx.db
@@ -522,7 +527,7 @@ myInterviews: protectedProcedure.query(async ({ ctx }) => {
         return offer;
       }),
 
-    decline: protectedProcedure
+    decline: requireRole("super_admin", "hr_manager")
       .input(z.object({ id: z.string().uuid(), reason: z.string().optional() }))
       .mutation(async ({ ctx, input }) => {
         const [offer] = await ctx.db
@@ -535,7 +540,7 @@ myInterviews: protectedProcedure.query(async ({ ctx }) => {
   }),
 
   onboardingPlan: createTRPCRouter({
-    list: protectedProcedure
+    list: recruitmentView
       .input(onboardingPlanQuerySchema.optional().default({}))
       .query(async ({ ctx, input }) => {
         const conditions = [];
@@ -565,7 +570,7 @@ myInterviews: protectedProcedure.query(async ({ ctx }) => {
         return { items, total, page, pageSize, totalPages: Math.ceil(total / pageSize) };
       }),
 
-    getById: protectedProcedure
+    getById: recruitmentView
       .input(z.string().uuid())
       .query(async ({ ctx, input }) => {
         return await ctx.db.query.onboardingPlans.findFirst({
@@ -609,7 +614,7 @@ myInterviews: protectedProcedure.query(async ({ ctx }) => {
   }),
 
   referral: createTRPCRouter({
-    list: protectedProcedure
+    list: recruitmentView
       .input(referralQuerySchema.optional().default({}))
       .query(async ({ ctx, input }) => {
         const conditions = [];
@@ -636,7 +641,7 @@ myInterviews: protectedProcedure.query(async ({ ctx }) => {
         return { items, total, page, pageSize, totalPages: Math.ceil(total / pageSize) };
       }),
 
-    getById: protectedProcedure
+    getById: recruitmentView
       .input(z.string().uuid())
       .query(async ({ ctx, input }) => {
         return await ctx.db.query.referrals.findFirst({
@@ -683,7 +688,7 @@ myReferrals: protectedProcedure.query(async ({ ctx }) => {
   }),
 
   backgroundCheck: createTRPCRouter({
-    list: protectedProcedure
+    list: recruitmentView
       .input(backgroundCheckQuerySchema.optional().default({}))
       .query(async ({ ctx, input }) => {
         const conditions = [];
@@ -709,7 +714,7 @@ myReferrals: protectedProcedure.query(async ({ ctx }) => {
         return { items, total, page, pageSize, totalPages: Math.ceil(total / pageSize) };
       }),
 
-    getById: protectedProcedure
+    getById: recruitmentView
       .input(z.string().uuid())
       .query(async ({ ctx, input }) => {
         return await ctx.db.query.backgroundChecks.findFirst({
@@ -746,7 +751,7 @@ myReferrals: protectedProcedure.query(async ({ ctx }) => {
   }),
 
   referenceCheck: createTRPCRouter({
-    list: protectedProcedure
+    list: recruitmentView
       .input(referenceCheckQuerySchema.optional().default({}))
       .query(async ({ ctx, input }) => {
         const conditions = [];
@@ -772,7 +777,7 @@ myReferrals: protectedProcedure.query(async ({ ctx }) => {
         return { items, total, page, pageSize, totalPages: Math.ceil(total / pageSize) };
       }),
 
-    getById: protectedProcedure
+    getById: recruitmentView
       .input(z.string().uuid())
       .query(async ({ ctx, input }) => {
         return await ctx.db.query.referenceChecks.findFirst({

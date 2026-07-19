@@ -67,8 +67,7 @@ export default function SuperAdminPage() {
   const filtered = tenants.filter((t) =>
     !search.trim() ||
     t.name.toLowerCase().includes(search.toLowerCase()) ||
-    (t.crNumber ?? "").toLowerCase().includes(search.toLowerCase()) ||
-    (t.schemaName ?? "").toLowerCase().includes(search.toLowerCase()),
+    (t.crNumber ?? "").toLowerCase().includes(search.toLowerCase()),
   );
 
   const stats = {
@@ -144,7 +143,6 @@ export default function SuperAdminPage() {
               <tr>
                 <th className="px-4 py-3 text-left">Company</th>
                 <th className="px-4 py-3 text-left">CR</th>
-                <th className="px-4 py-3 text-left">Schema</th>
                 <th className="px-4 py-3 text-left">Plan</th>
                 <th className="px-4 py-3 text-left">Created</th>
                 <th className="px-4 py-3 text-right">Actions</th>
@@ -160,7 +158,6 @@ export default function SuperAdminPage() {
                     </div>
                   </td>
                   <td className="px-4 py-3 font-mono text-xs text-slate-700">{t.crNumber}</td>
-                  <td className="px-4 py-3 font-mono text-xs text-slate-500">{t.schemaName}</td>
                   <td className="px-4 py-3">
                     <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold capitalize ${
                       t.planTier === "enterprise" ? "bg-emerald-100 text-emerald-800"

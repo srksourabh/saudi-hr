@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { createTRPCRouter, companyProcedure, protectedProcedure, requireRole } from "../server";
+import { createTRPCRouter, protectedProcedure, requireRole, requireCapability } from "../server";
 import { schema } from "@hrms-app/db";
 import { createDocumentSchema, updateDocumentSchema, documentQuerySchema } from "@hrms-app/validators";
 import { and, eq, desc, lte, isNotNull } from "drizzle-orm";
@@ -71,7 +71,7 @@ export const documentRouter = createTRPCRouter({
       return { html, type: input.type };
     }),
 
-  list: companyProcedure
+  list: requireCapability("documents:view_company")
     .input(documentQuerySchema.optional().default({}))
     .query(async ({ ctx, input }) => {
       const conditions: ReturnType<typeof eq>[] = [];
@@ -90,7 +90,7 @@ export const documentRouter = createTRPCRouter({
       });
     }),
 
-  getById: companyProcedure.input(z.string().uuid()).query(async ({ ctx, input }) => {
+  getById: requireCapability("documents:view_company").input(z.string().uuid()).query(async ({ ctx, input }) => {
     return await ctx.db.query.documents.findFirst({
       where: eq(schema.tenant.documents.id, input),
       with: { employee: true },

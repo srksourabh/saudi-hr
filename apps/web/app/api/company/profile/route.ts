@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { auth } from "@hrms-app/auth";
 import { adminDb, tenants } from "@hrms-app/db";
 import { eq } from "drizzle-orm";
+import { forbidIfNotRole, COMPANY_ADMIN_ROLES } from "../../../../lib/route-auth";
 
 export async function GET() {
   const session = await auth();
@@ -27,6 +28,8 @@ export async function GET() {
 export async function PATCH(request: Request) {
   const session = await auth();
   if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const forbidden = forbidIfNotRole(session, COMPANY_ADMIN_ROLES);
+  if (forbidden) return forbidden;
 
   const body = await request.json();
   const { industry, companySize, website } = body;

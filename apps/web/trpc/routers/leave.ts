@@ -160,8 +160,15 @@ export const leaveRouter = createTRPCRouter({
     create: protectedProcedure
       .input(createLeaveRequestSchema)
       .mutation(async ({ ctx, input }) => {
-        let employeeId = input.employeeId;
-        if (ctx.user.role === "employee") {
+        // Only HR roles may file leave on behalf of another employee. Every
+        // other role (employee, recruiter, payroll_admin, department_manager)
+        // is bound to their own session employee — a client-supplied
+        // employeeId is never trusted for them (SEC-012).
+        const LEAVE_ONBEHALF_ROLES = ["super_admin", "hr_manager", "hr_specialist"];
+        let employeeId: string;
+        if (LEAVE_ONBEHALF_ROLES.includes(ctx.user.role) && input.employeeId) {
+          employeeId = input.employeeId;
+        } else {
           const linkedEmployeeId = ctx.user.employeeId || (
             await ctx.adminDb.query.users.findFirst({
               where: (users, { eq }) => eq(users.id, ctx.user.id!),

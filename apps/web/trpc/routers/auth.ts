@@ -61,11 +61,19 @@ export const authRouter = createTRPCRouter({
    * counts without exposing customer data.
    */
   tenantsList: protectedProcedure.query(async ({ ctx }) => {
-    const role = (ctx.session as any).user.role;
-    if (role !== "super_admin") {
+    // Cross-tenant registry access is a PLATFORM-operator action, not a tenant
+    // one. `super_admin` is a per-tenant role (minted at every signup), so it
+    // must NOT gate this. Restrict to an explicit, env-configured allowlist of
+    // platform-operator emails — fail-closed when unset (SEC-002).
+    const email = ((ctx.session as any).user.email as string | undefined)?.toLowerCase();
+    const allowedOperators = (process.env.PLATFORM_ADMIN_EMAILS ?? "")
+      .split(",")
+      .map((e) => e.trim().toLowerCase())
+      .filter(Boolean);
+    if (!email || !allowedOperators.includes(email)) {
       throw new TRPCError({
         code: "FORBIDDEN",
-        message: "Only platform super_admin can list tenants",
+        message: "Platform operator access is required to list tenants",
       });
     }
     const { tenants, users } = await import("@hrms-app/db");
@@ -86,7 +94,6 @@ export const authRouter = createTRPCRouter({
         nitaqatActivity: t.nitaqatActivity,
         planTier: t.planTier,
         regulatoryContext: t.regulatoryContext,
-        schemaName: t.schemaName,
         createdAt: t.createdAt,
       })),
       users: recentUsers.map((u: any) => ({

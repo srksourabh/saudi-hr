@@ -3,6 +3,7 @@ import { auth } from "@hrms-app/auth";
 import { adminDb, getTenantDb, tenants } from "@hrms-app/db";
 import { departments } from "@hrms-app/db/schema/tenant";
 import { eq } from "drizzle-orm";
+import { forbidIfNotRole, COMPANY_ADMIN_ROLES } from "../../../../lib/route-auth";
 
 export async function GET() {
   const session = await auth();
@@ -29,6 +30,8 @@ export async function GET() {
 export async function POST(request: Request) {
   const session = await auth();
   if (!session?.user?.tenantId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const forbidden = forbidIfNotRole(session, COMPANY_ADMIN_ROLES);
+  if (forbidden) return forbidden;
 
   const body = await request.json();
   const { name } = body;

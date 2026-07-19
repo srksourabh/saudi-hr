@@ -2,7 +2,7 @@ import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { createTRPCRouter, protectedProcedure, companyProcedure } from "../server";
 import { schema } from "@hrms-app/db";
-import { and, eq, desc, gte } from "drizzle-orm";
+import { and, or, eq, desc, gte } from "drizzle-orm";
 import {
   createExpenseSchema,
   updateExpenseSchema,
@@ -23,6 +23,11 @@ import {
  *   - Managers can list and act on expenses where they are the approver
  *   - HR / super_admin can mark approved expenses as paid
  */
+// Roles that legitimately see every expense in the tenant (HR + finance).
+// department_manager and recruiter are intentionally excluded — they are
+// scoped to their own + their approval queue (SEC-004).
+const EXPENSE_COMPANY_ROLES = ["super_admin", "hr_manager", "hr_specialist", "payroll_admin"];
+
 export const expenseRouter = createTRPCRouter({
   /**
    * List expenses visible to the caller.
@@ -36,11 +41,13 @@ export const expenseRouter = createTRPCRouter({
       const role = (ctx.session as any).user.role;
       const userEmployeeId = (ctx.session as any).user.employeeId as string | undefined;
 
-      // Manager view: own expenses + ones waiting on them.
+      // Approver inbox: the caller's own approval queue. The approver id is the
+      // SESSION employee, never a client-supplied id (SEC-004 — was an IDOR).
       if (input?.pendingFor) {
+        if (!userEmployeeId) return [];
         return await ctx.db.query.expenses.findMany({
           where: and(
-            eq(schema.tenant.expenses.approverEmployeeId, input.pendingFor),
+            eq(schema.tenant.expenses.approverEmployeeId, userEmployeeId),
             eq(schema.tenant.expenses.status, "pending"),
           ),
           with: { employee: { with: { department: true } } },
@@ -64,7 +71,22 @@ export const expenseRouter = createTRPCRouter({
         });
       }
 
-      // HR / super_admin: tenant-wide list.
+      // Roles without company-wide expense sight (department_manager, recruiter)
+      // see only their own expenses + those awaiting their approval (SEC-004).
+      if (!EXPENSE_COMPANY_ROLES.includes(role) && userEmployeeId) {
+        return await ctx.db.query.expenses.findMany({
+          where: or(
+            eq(schema.tenant.expenses.employeeId, userEmployeeId),
+            eq(schema.tenant.expenses.approverEmployeeId, userEmployeeId),
+          ),
+          with: { employee: { with: { department: true } } },
+          orderBy: desc(schema.tenant.expenses.createdAt),
+          limit: input?.pageSize ?? 50,
+          offset: input?.page ? (input.page - 1) * (input.pageSize ?? 50) : 0,
+        });
+      }
+
+      // HR / finance / super_admin: tenant-wide list.
       const conditions: any[] = [];
       if (input?.status) conditions.push(eq(schema.tenant.expenses.status, input.status));
       if (input?.category) conditions.push(eq(schema.tenant.expenses.category, input.category));

@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { createTRPCRouter, companyProcedure, protectedProcedure } from "../server";
+import { createTRPCRouter, companyProcedure, protectedProcedure, requireCapability } from "../server";
 import { schema } from "@hrms-app/db";
 import {
   aiAssistantSchema, aiAssistantUpdateSchema,
@@ -59,14 +59,16 @@ export const aiRouter = createTRPCRouter({
         });
       }),
 
-    create: companyProcedure
+    // AI assistant configuration is a settings action — was `companyProcedure`,
+    // which let any staff role create/modify/delete it (SEC-006).
+    create: requireCapability("settings:manage")
       .input(aiAssistantSchema)
       .mutation(async ({ ctx, input }) => {
         const [result] = await ctx.db.insert(schema.tenant.aiAssistants).values(input).returning();
         return result;
       }),
 
-    update: companyProcedure
+    update: requireCapability("settings:manage")
       .input(z.object({ id: idSchema, data: aiAssistantUpdateSchema }))
       .mutation(async ({ ctx, input }) => {
         const [result] = await ctx.db.update(schema.tenant.aiAssistants)
@@ -76,7 +78,7 @@ export const aiRouter = createTRPCRouter({
         return result;
       }),
 
-    delete: companyProcedure
+    delete: requireCapability("settings:manage")
       .input(z.object({ id: idSchema }))
       .mutation(async ({ ctx, input }) => {
         await ctx.db.delete(schema.tenant.aiAssistants)
@@ -85,7 +87,8 @@ export const aiRouter = createTRPCRouter({
   }),
 
   suggestion: createTRPCRouter({
-    list: companyProcedure
+    // Per-employee AI suggestions (churn risk, etc.) — gate to performance:view_team.
+    list: requireCapability("performance:view_team")
       .input(aiSuggestionQuerySchema.optional().default({}))
       .query(async ({ ctx, input }) => {
         const conditions = [];

@@ -41,6 +41,11 @@ async function tenantExec(schema: string, stmt: string): Promise<void> {
 }
 
 export async function POST(req: Request) {
+  // Demo-only tooling — must not be reachable in production (SEC-005).
+  if (process.env.NODE_ENV === "production") {
+    return NextResponse.json({ ok: false, error: "not found" }, { status: 404 });
+  }
+
   const provided =
     req.headers.get("x-migration-token") ??
     new URL(req.url).searchParams.get("token");

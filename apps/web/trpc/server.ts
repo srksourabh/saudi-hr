@@ -2,7 +2,7 @@ import { initTRPC, TRPCError } from "@trpc/server";
 import superjson from "superjson";
 import { ZodError } from "zod";
 import { auth } from "@hrms-app/auth";
-import { canAccessProcedure, isAppRole } from "@hrms-app/auth/rbac";
+import { canAccessProcedure, isAppRole, can, type Capability } from "@hrms-app/auth/rbac";
 import { adminDb, getTenantDb } from "@hrms-app/db";
 
 const tenantCache = new Map<string, { schemaName: string; expiresAt: number }>();
@@ -89,6 +89,25 @@ export const companyProcedure = protectedProcedure.use(({ ctx, next }) => {
  * recruiter, who must not see salary data (RBAC-004, access matrix).
  */
 export const PAYROLL_VIEW_ROLES = ["super_admin", "hr_manager", "hr_specialist", "payroll_admin"] as const;
+
+/**
+ * Capability-gated procedure. Unlike `protectedProcedure` (which authorises any
+ * staff role) this consults the SAME capability model the UI uses (`can()` from
+ * rbac.ts), so the backend and the navigation agree on who may see a resource.
+ * Fail-closed: unknown roles and roles lacking the capability are rejected.
+ * Use this for sensitive reads (PII, salary, performance, candidate data).
+ */
+export function requireCapability(capability: Capability) {
+  return protectedProcedure.use(({ ctx, next }) => {
+    if (!can(ctx.user.role, capability)) {
+      throw new TRPCError({
+        code: "FORBIDDEN",
+        message: "You do not have permission to access this resource",
+      });
+    }
+    return next({ ctx });
+  });
+}
 
 export function requireRole(...roles: string[]) {
   return t.procedure.use(({ ctx, next }) => {

@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { createTRPCRouter, companyProcedure, protectedProcedure, requireRole } from "../server";
+import { createTRPCRouter, protectedProcedure, requireRole, requireCapability } from "../server";
 import { schema } from "@hrms-app/db";
 import { createFinalSettlementSchema, separationReasonSchema } from "@hrms-app/validators";
 import { calculateFinalSettlement, qualifiesForArt87FullAward } from "@hrms-app/payroll";
@@ -69,7 +69,7 @@ function writePayload(existing: { exitReason: string | null }, payload: any) {
 }
 
 export const settlementRouter = createTRPCRouter({
-  list: companyProcedure
+  list: requireCapability("payroll:view_company")
     .input(
       z
         .object({
@@ -232,7 +232,7 @@ export const settlementRouter = createTRPCRouter({
       };
     }),
 
-  getByEmployee: companyProcedure.input(z.string().uuid()).query(async ({ ctx, input }) => {
+  getByEmployee: requireCapability("payroll:view_company").input(z.string().uuid()).query(async ({ ctx, input }) => {
     return await ctx.db.query.finalSettlements.findFirst({
       where: eq(schema.tenant.finalSettlements.employeeId, input),
       with: { employee: true },
@@ -346,7 +346,7 @@ export const settlementRouter = createTRPCRouter({
         return { ok: true };
       }),
 
-    getPayload: companyProcedure.input(z.object({ settlementId: z.string().uuid() })).query(async ({ ctx, input }) => {
+    getPayload: requireCapability("payroll:view_company").input(z.object({ settlementId: z.string().uuid() })).query(async ({ ctx, input }) => {
       const existing = await ctx.db.query.finalSettlements.findFirst({
         where: eq(schema.tenant.finalSettlements.id, input.settlementId),
         with: { employee: true },
