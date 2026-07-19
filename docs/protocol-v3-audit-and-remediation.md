@@ -151,9 +151,9 @@ Each item is a confirmed S1. Ordered by blast radius.
 - [x] H4. Validation depth: numeric overflow caps + future-hire-date guard. *(VAL-004/008.)* Follow-up: `.strict()` (needs per-form testing), double-submit idempotency, optimistic-lock on concurrent edit.
 - [x] H5 (partial). Custom 404 page. *(RES-001.)* Follow-up: root RTL when Arabic chosen, persist language, pin UI timestamps to Asia/Riyadh.
 - [x] H6 (partial). PDPL data-subject self-export (`employee.exportMyData`, audited). *(PDPL-001.)* Rectification is already audited (B3). Follow-up: consent/lawful-basis field (needs schema), backup/restore procedure.
-- [ ] H1. **Deferred** — HR document generation (contract, salary certificate, settlement letter) with Arabic shaping/font embedding + "Arabic prevails". Large; needs a PDF library (pdf-lib + fontkit + arabic-reshaper + bidi) and visual verification. *(DOC-001..004.)*
-- [ ] H3. **Deferred** — list UX: sortable columns, real pagination (rows beyond 50 silently dropped today), bilingual/normalised Arabic search. UI-heavy across many pages; needs the running app to verify. *(LIST-001/003/004.)*
-- [ ] H7. **Deferred** — accessibility: label-for associations, keyboard-focusable rows, WCAG AA contrast. Needs the running app / a11y tooling to verify. *(UX-001/002/005.)*
+- [x] H1. Bilingual HR document generation as self-contained HTML (Arabic rendered natively by the browser — no font-embedding toolchain): salary certificate, experience letter, final-settlement statement; Arabic-prevails clause; line items reconcile; `document.generateLetter` procedure; 3 tests. *(DOC-001/002/003.)* Follow-up: employment-contract template, settlement wired to the engine output, print/download UI.
+- [x] H3 (partial). Sortable `employee.list` (whitelisted columns + direction). *(LIST-003.)* Follow-up: UI pager wiring (rows beyond the page size still not shown), Arabic-name search normalisation. *(LIST-001/004.)*
+- [x] H7 (partial). Keyboard-accessible employee-list rows (role/tabIndex/Enter-Space/focus ring/aria-label). *(UX-001.)* Follow-up: form label-for associations across pages, WCAG AA contrast audit. *(UX-002/005.)*
 
 ---
 
