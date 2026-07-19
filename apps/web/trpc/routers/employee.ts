@@ -72,6 +72,18 @@ export const employeeRouter = createTRPCRouter({
   create: requireRole("super_admin", "hr_manager", "hr_specialist")
     .input(createEmployeeSchema)
     .mutation(async ({ ctx, input }) => {
+      // Reject a duplicate national ID / iqama (EMP-006).
+      if (input.iqamaNumberEnc) {
+        const dup = await ctx.db.query.employees.findFirst({
+          where: eq(schema.tenant.employees.iqamaNumberEnc, input.iqamaNumberEnc),
+        });
+        if (dup) {
+          throw new TRPCError({
+            code: "CONFLICT",
+            message: "An employee with this national ID / iqama already exists.",
+          });
+        }
+      }
       const [employee] = await ctx.db.insert(schema.tenant.employees).values(input).returning();
       await writeAudit(ctx, {
         action: "employee.create",
@@ -135,20 +147,32 @@ export const employeeRouter = createTRPCRouter({
       return employee;
     }),
 
+  // Soft-delete only (EMP-004/EMP-005): the record and all payroll/leave
+  // history are preserved. The employee is marked terminated (excluded from
+  // active payroll) rather than hard-deleted, so financial/audit history is
+  // never lost. Hard deletion is intentionally not exposed.
   delete: requireRole("super_admin")
     .input(z.string().uuid())
     .mutation(async ({ ctx, input }) => {
       const current = await ctx.db.query.employees.findFirst({
         where: eq(schema.tenant.employees.id, input),
       });
-      await ctx.db.delete(schema.tenant.employees).where(eq(schema.tenant.employees.id, input));
+      if (!current) throw new TRPCError({ code: "NOT_FOUND", message: "Employee not found." });
+      const today = new Date().toISOString().slice(0, 10);
+      await ctx.db
+        .update(schema.tenant.employees)
+        .set({ employmentStatus: "terminated", terminationDate: today })
+        .where(eq(schema.tenant.employees.id, input));
       await writeAudit(ctx, {
-        action: "employee.delete",
+        action: "employee.soft_delete",
         entityType: "employee",
         entityId: input,
-        oldValue: current ? { fullName: (current as Record<string, unknown>).fullName } : null,
+        oldValue: {
+          fullName: (current as Record<string, unknown>).fullName,
+          employmentStatus: (current as Record<string, unknown>).employmentStatus,
+        },
       });
-      return { success: true };
+      return { success: true, softDeleted: true };
     }),
 
   count: companyProcedure
