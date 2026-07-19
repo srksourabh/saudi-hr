@@ -21,7 +21,7 @@ BEGIN
       EXECUTE format(
         'CREATE OR REPLACE FUNCTION %I.prevent_audit_mutation() RETURNS trigger '
         'LANGUAGE plpgsql AS $f$ BEGIN '
-        'RAISE EXCEPTION ''audit_logs is append-only; % is not permitted'', TG_OP; '
+        'RAISE EXCEPTION ''audit_logs is append-only; %% is not permitted'', TG_OP; '
         'END; $f$;', s);
 
       EXECUTE format('DROP TRIGGER IF EXISTS audit_logs_no_update ON %I.audit_logs;', s);
