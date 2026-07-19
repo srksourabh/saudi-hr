@@ -68,18 +68,23 @@ export function orchestratePayrollRun(input: OrchestratorInput): OrchestratorRes
     // ── GOSI calculation ────────────────────────────────────────────────
     // nationality mapping: "saudi" | "expat" from schema → "saudi" | "gcc" | "expat"
     const nationality = emp.gccStatus ? "gcc" : emp.nationality;
+    // Proration factor for the period (1 for a full month). Declared before
+    // GOSI so a mid-month joiner/leaver's contribution is prorated too.
+    const proration = computeProrationFactor(periodDate, emp.hireDate, emp.lastWorkingDay ?? null);
     const gosi = calculateGosi({
       nationality:      nationality as "saudi" | "gcc" | "expat",
       gosiRegistrationDate: emp.gosiRegistrationDate,
-      salaryBasic:     emp.salaryBasic,
+      salaryBasic:     emp.salaryBasic,   // full monthly base; prorated via factor below
       salaryHousing:   emp.salaryHousing,
       effectiveDate:   periodDate,
+      prorationFactor: proration,
     });
 
-    // ── Core salary components ──────────────────────────────────────────
-    const basic          = emp.salaryBasic;
-    const housing        = emp.salaryHousing;
-    const transport      = emp.salaryTransport;
+    // ── Core salary components (prorated for a partial month) ────────────
+    // Article-88 day-count basis: worked days / days in the period month.
+    const basic          = roundToHalal(emp.salaryBasic * proration);
+    const housing        = roundToHalal(emp.salaryHousing * proration);
+    const transport      = roundToHalal(emp.salaryTransport * proration);
     const overtimeAmount = overtime[emp.id] ?? 0;
 
     // ── Statutory deduction caps (Art 92/93) ─────────────────────────────
@@ -103,9 +108,9 @@ export function orchestratePayrollRun(input: OrchestratorInput): OrchestratorRes
     const eosb = calculateFinalSettlement({
       hireDate:           emp.hireDate,
       terminationDate:   periodDate,
-      basicSalary:       basic,
-      housingAllowance:  housing,
-      transportAllowance: transport,
+      basicSalary:       emp.salaryBasic,      // full monthly wage, not prorated
+      housingAllowance:  emp.salaryHousing,
+      transportAllowance: emp.salaryTransport,
       separationReason:  "termination", // assume employer-side for accrual
       completedProbation: true,
     });
@@ -172,4 +177,49 @@ export function orchestratePayrollRun(input: OrchestratorInput): OrchestratorRes
 
 function roundToHalal(value: number): number {
   return Math.round(value * 100) / 100;
+}
+
+/**
+ * Fraction of the period month the employee actually worked, using the
+ * worked-days / days-in-month basis (Article 88 day count).
+ *   - Joiner mid-month: from the hire day to month-end.
+ *   - Leaver mid-month: from month-start to the last working day.
+ *   - Joined and left in the same month: the inclusive span.
+ * Returns 1 for a full month, 0 if the employee was not employed in the period.
+ */
+export function computeProrationFactor(
+  periodDate: string,
+  hireDate: string,
+  lastWorkingDay: string | null,
+): number {
+  const period = new Date(periodDate);
+  const year = period.getUTCFullYear();
+  const month = period.getUTCMonth(); // 0-based
+  const daysInMonth = new Date(Date.UTC(year, month + 1, 0)).getUTCDate();
+
+  const dayOf = (iso: string): number => {
+    const d = new Date(iso);
+    return Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate());
+  };
+  const monthStart = Date.UTC(year, month, 1);
+  const monthEnd   = Date.UTC(year, month, daysInMonth);
+
+  // First worked day of the month
+  let firstDay = 1;
+  const hireMs = dayOf(hireDate);
+  if (hireMs > monthEnd) return 0;                    // not yet joined
+  if (hireMs >= monthStart) firstDay = new Date(hireDate).getUTCDate();
+
+  // Last worked day of the month
+  let lastDay = daysInMonth;
+  if (lastWorkingDay) {
+    const lwMs = dayOf(lastWorkingDay);
+    if (lwMs < monthStart) return 0;                  // already left
+    if (lwMs <= monthEnd) lastDay = new Date(lastWorkingDay).getUTCDate();
+  }
+
+  const worked = lastDay - firstDay + 1;
+  if (worked <= 0) return 0;
+  if (worked >= daysInMonth) return 1;
+  return worked / daysInMonth;
 }

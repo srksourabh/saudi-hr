@@ -16,6 +16,8 @@ export interface EmployeeContext {
   salaryHousing:       number;
   salaryTransport:     number;
   hireDate:            string;
+  /** Last working day if the employee leaves mid-period (triggers leaver proration). */
+  lastWorkingDay?:     string | null;
   employmentStatus:     string;
   bankIbanEnc:         string | null;
   gosiRegistrationDate: string | null;

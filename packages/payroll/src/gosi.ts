@@ -86,6 +86,12 @@ export interface GosiInput {
   salaryHousing:       number;
   /** Effective date of the payroll period (used for rate-tier lookup). */
   effectiveDate?:      string;
+  /**
+   * Fraction of the month the employee was registered (0-1]. Contributions
+   * are computed on the full monthly capped base, then prorated by this factor
+   * for mid-month joiners/leavers. Defaults to 1 (full month).
+   */
+  prorationFactor?:    number;
 }
 
 // ─── Rate Resolution ─────────────────────────────────────────────────────────
@@ -147,19 +153,22 @@ function resolveGosiRates(input: GosiInput): GosiRateSet | null {
  */
 export function calculateGosi(input: GosiInput): GosiResult {
   const base = Math.min(input.salaryBasic + input.salaryHousing, GOSI_MONTHLY_CAP);
+  // Mid-month proration: contributions computed on the full monthly capped
+  // base, then scaled by days registered in the month.
+  const f = input.prorationFactor ?? 1;
 
   // 1. Occupational hazards — ALL workers (rate: 2% employer, 0% employee)
-  const occHazEmployer = r(base * OCCUPATIONAL_HAZARDS_EMPLOYER_RATE);
+  const occHazEmployer = r(base * OCCUPATIONAL_HAZARDS_EMPLOYER_RATE * f);
 
   // 2. GOSI Pension — Saudi/GCC only (null for expat)
   const pension = resolveGosiRates(input);
-  const pensionEmployee = pension ? r(base * pension.employee) : 0;
-  const pensionEmployer = pension ? r(base * pension.employer)  : 0;
+  const pensionEmployee = pension ? r(base * pension.employee * f) : 0;
+  const pensionEmployer = pension ? r(base * pension.employer * f)  : 0;
 
   // 3. SANED — Saudi employees only (0.75% each side)
   const isSaudi = input.nationality === "saudi";
-  const sanedEmployee = isSaudi ? r(base * SANED_EMPLOYEE_RATE) : 0;
-  const sanedEmployer = isSaudi ? r(base * SANED_EMPLOYER_RATE) : 0;
+  const sanedEmployee = isSaudi ? r(base * SANED_EMPLOYEE_RATE * f) : 0;
+  const sanedEmployer = isSaudi ? r(base * SANED_EMPLOYER_RATE * f) : 0;
 
   return {
     pension: {

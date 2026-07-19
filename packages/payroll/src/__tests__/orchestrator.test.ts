@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { orchestratePayrollRun, applyDeductionCaps } from "../orchestrator";
+import { orchestratePayrollRun, applyDeductionCaps, computeProrationFactor } from "../orchestrator";
 import type { EmployeeContext } from "../types";
 
 const emp = (id: string, overrides: Partial<EmployeeContext> = {}): EmployeeContext => ({
@@ -108,5 +108,55 @@ describe("orchestratePayrollRun", () => {
     expect(caps.appliedLoan).toBe(1000);
     expect(caps.appliedOther).toBe(4000);
     expect(caps.appliedTotal).toBe(5000);
+  });
+
+  // ── Mid-month proration (Art 88 day count) ────────────────────────────────
+
+  it("PAY-004: joiner on 15 Jul is paid 17/31 of the month", () => {
+    expect(computeProrationFactor("2026-07-01", "2026-07-15", null)).toBeCloseTo(17 / 31, 6);
+    const result = orchestratePayrollRun({
+      payrollRunId: "run-1",
+      periodDate: "2026-07-01",
+      employees: [emp("e1", {
+        salaryBasic: 12000, salaryHousing: 0, salaryTransport: 0,
+        hireDate: "2026-07-15",
+      })],
+    });
+    const slip = result.payslips[0];
+    expect(slip?.basic).toBeCloseTo(6580.65, 1); // 12000 × 17/31
+  });
+
+  it("PAY-005: leaver on 15 Jul is paid 15/31 of the month", () => {
+    expect(computeProrationFactor("2026-07-01", "2020-01-01", "2026-07-15")).toBeCloseTo(15 / 31, 6);
+    const result = orchestratePayrollRun({
+      payrollRunId: "run-1",
+      periodDate: "2026-07-01",
+      employees: [emp("e1", {
+        salaryBasic: 12000, salaryHousing: 0, salaryTransport: 0,
+        lastWorkingDay: "2026-07-15",
+      })],
+    });
+    const slip = result.payslips[0];
+    expect(slip?.basic).toBeCloseTo(5806.45, 1); // 12000 × 15/31
+  });
+
+  it("PAY-009: GOSI is prorated for a mid-month joiner", () => {
+    const full = orchestratePayrollRun({
+      payrollRunId: "run-1",
+      periodDate: "2026-07-01",
+      employees: [emp("e1", { salaryBasic: 15000, salaryHousing: 5000, salaryTransport: 0, gosiRegistrationDate: "2020-01-01" })],
+    });
+    const partial = orchestratePayrollRun({
+      payrollRunId: "run-1",
+      periodDate: "2026-07-01",
+      employees: [emp("e1", { salaryBasic: 15000, salaryHousing: 5000, salaryTransport: 0, gosiRegistrationDate: "2020-01-01", hireDate: "2026-07-15" })],
+    });
+    // Existing-system full month employee GOSI = 1950; partial should be ~17/31 of it
+    expect(full.payslips[0]?.gosiEmployee).toBe(1950);
+    expect(partial.payslips[0]?.gosiEmployee).toBeCloseTo(1950 * 17 / 31, 0);
+  });
+
+  it("full-month employee is unaffected by proration (factor = 1)", () => {
+    expect(computeProrationFactor("2026-07-01", "2020-01-01", null)).toBe(1);
   });
 });
