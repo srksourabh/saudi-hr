@@ -104,7 +104,7 @@ export function LoginForm() {
                 Password
               </label>
               <a
-                href="mailto:support@taazur.example?subject=Password%20reset"
+                href="/forgot-password"
                 className="text-xs font-semibold text-[hsl(var(--saudi-green))] hover:underline"
               >
                 Forgot password?

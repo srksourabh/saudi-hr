@@ -74,6 +74,8 @@ export const config = {
   matcher: [
     "/api/auth/callback/credentials",
     "/api/auth/signup",
+    "/api/auth/request-reset",
+    "/api/auth/reset",
     "/api/trpc/:path*",
     "/employees/:path*",
     "/departments/:path*",
