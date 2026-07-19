@@ -9,7 +9,9 @@ import {
   leaveBalanceSchema,
 } from "@hrms-app/validators";
 import { and, eq, desc } from "drizzle-orm";
+import { TRPCError } from "@trpc/server";
 import { runMonthlyAccrual, runAnnualAccrual } from "@hrms-app/leave";
+import { getManagedDepartmentIds } from "../scoping";
 
 function parseNumeric(value: string | null | undefined): number {
   return value ? Number.parseFloat(value) : 0;
@@ -150,6 +152,23 @@ export const leaveRouter = createTRPCRouter({
     updateStatus: requireRole("super_admin", "hr_manager", "department_manager")
       .input(z.object({ id: z.string().uuid(), data: updateLeaveRequestSchema }))
       .mutation(async ({ ctx, input }) => {
+        // Department Manager may only action leave for their own department (RBAC-002).
+        if (ctx.user.role === "department_manager") {
+          const existing = await ctx.db.query.leaveRequests.findFirst({
+            where: eq(schema.tenant.leaveRequests.id, input.id),
+            with: { employee: true },
+          });
+          if (!existing) throw new TRPCError({ code: "NOT_FOUND", message: "Leave request not found." });
+          const deptId = (existing.employee as { departmentId?: string } | null)?.departmentId;
+          const managed = await getManagedDepartmentIds(ctx);
+          if (!deptId || !managed.includes(deptId)) {
+            throw new TRPCError({
+              code: "FORBIDDEN",
+              message: "You can only approve leave requests for employees in your own department.",
+            });
+          }
+        }
+
         const [request] = await ctx.db
           .update(schema.tenant.leaveRequests)
           .set(input.data)

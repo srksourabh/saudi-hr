@@ -2,9 +2,10 @@ import { z } from "zod";
 import { createTRPCRouter, companyProcedure, protectedProcedure, requireRole } from "../server";
 import { schema } from "@hrms-app/db";
 import { createEmployeeSchema, updateEmployeeSchema, employeeQuerySchema } from "@hrms-app/validators";
-import { and, eq, like, desc, count } from "drizzle-orm";
+import { and, eq, like, desc, count, inArray } from "drizzle-orm";
 import { TRPCError } from "@trpc/server";
 import { writeAudit, SALARY_FIELDS, pickChanged } from "../audit";
+import { getManagedDepartmentIds } from "../scoping";
 
 const SALARY_AUTHORISED_ROLES = ["super_admin", "hr_manager", "payroll_admin"] as const;
 const PROFILE_AUTHORISED_ROLES = ["super_admin", "hr_manager", "hr_specialist"] as const;
@@ -13,13 +14,20 @@ export const employeeRouter = createTRPCRouter({
   list: companyProcedure
     .input(employeeQuerySchema.optional().default({}))
     .query(async ({ ctx, input }) => {
-      const conditions: ReturnType<typeof eq>[] = [];
+      const conditions: (ReturnType<typeof eq> | undefined)[] = [];
       if (input?.status) conditions.push(eq(schema.tenant.employees.employmentStatus, input.status));
       if (input?.departmentId) conditions.push(eq(schema.tenant.employees.departmentId, input.departmentId));
       if (input?.search) {
         conditions.push(like(schema.tenant.employees.fullName, `%${input.search}%`));
       }
-      const where = conditions.length > 0 ? and(...conditions) : undefined;
+      // Department Manager sees only their own department(s) (RBAC-002).
+      if (ctx.user.role === "department_manager") {
+        const managed = await getManagedDepartmentIds(ctx);
+        if (managed.length === 0) return [];
+        conditions.push(inArray(schema.tenant.employees.departmentId, managed));
+      }
+      const active = conditions.filter(Boolean) as ReturnType<typeof eq>[];
+      const where = active.length > 0 ? and(...active) : undefined;
       return await ctx.db.query.employees.findMany({
         where,
         with: { department: true },
