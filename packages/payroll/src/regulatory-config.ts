@@ -178,6 +178,11 @@ const SAUDI_BASELINE_CONFIGS: RegulatoryConfig[] = [
     version: "2024-v1",
     createdAt: "2024-07-01T00:00:00Z",
     createdBy: "system",
+    // ⚠️ NOT AUTHORITATIVE for GOSI amounts. The live two-system, date-driven
+    // GOSI engine is `calculateGosi` in ./gosi.ts (used by the orchestrator).
+    // This single-rate block cannot represent the existing/new-system split and
+    // is retained only for the config-history scaffold; do not compute payroll
+    // GOSI from here. See docs/protocol-v3-audit-and-remediation.md (P0-1).
     gosi: {
       employee: 0.11,
       employer: 0.11,

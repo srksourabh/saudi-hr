@@ -54,16 +54,17 @@ interface GosiRateSet {
 
 const GOSI_OLD: GosiRateSet = {
   employee: 0.09,   // 9% pension
-  employer:  0.10,  // 10% pension
+  employer:  0.09,  // 9% pension (existing-system employer total = 9% + 0.75% SANED + 2% occ.haz = 11.75%)
   escalationYear: 0,
 };
 
-// New system (M/273): pension starts at 9.5% each side (Jul 2024),
-// rising 0.5%/side/yr through Jul 2028.
+// New system (M/273): pension starts at 9% each side (Jul 2024),
+// rising 0.5%/side/yr through Jul 2028. At Jul 2026 (escalation year 2)
+// pension is 10% each side, giving totals of 10.75% employee / 12.75% employer.
 // Total employee = pension + SANED_employee (0.75%)
 // Total employer = pension + SANED_employer (0.75%) + occ.haz (2%)
 function getGosiNewRates(escalationYears = 0): GosiRateSet {
-  const basePension = 0.095; // 9.5% — Jul 2024 starting rate
+  const basePension = 0.09; // 9% — Jul 2024 starting rate
   const increment = escalationYears * 0.005;
   return {
     employee:    basePension + increment,
@@ -140,9 +141,9 @@ function resolveGosiRates(input: GosiInput): GosiRateSet | null {
  *   salaryHousing: 3000,
  *   effectiveDate: "2026-07-01",
  * });
- * // Existing system: pension 9%/10%, SANED 0.75% each, occ.haz 2% employer
- * //   employee = 9%×13000 + 0.75%×13000 = 1,170 + 98 = 1,268
- * //   employer = 10%×13000 + 0.75%×13000 + 2%×13000 = 1,300 + 98 + 260 = 1,658
+ * // Existing system: pension 9%/9%, SANED 0.75% each, occ.haz 2% employer
+ * //   employee = 9%×13000 + 0.75%×13000 = 1,170 + 97.5 = 1,267.5
+ * //   employer = 9%×13000 + 0.75%×13000 + 2%×13000 = 1,170 + 97.5 + 260 = 1,527.5
  */
 export function calculateGosi(input: GosiInput): GosiResult {
   const base = Math.min(input.salaryBasic + input.salaryHousing, GOSI_MONTHLY_CAP);
