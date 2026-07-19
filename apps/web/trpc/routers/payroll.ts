@@ -53,6 +53,21 @@ export const payrollRouter = createTRPCRouter({
     create: requireRole("super_admin", "hr_manager")
       .input(createPayrollRunSchema)
       .mutation(async ({ ctx, input }) => {
+        // ── Period lock (PAY-010): never double-post a month ──────────────
+        // Block a second run for the same period unless the prior one was
+        // cancelled. Prevents re-running payroll and paying twice.
+        const existingRun = await ctx.db.query.payrollRuns.findFirst({
+          where: eq(schema.tenant.payrollRuns.periodMonth, input.periodMonth),
+        });
+        if (existingRun && existingRun.status !== "cancelled") {
+          throw new TRPCError({
+            code: "CONFLICT",
+            message:
+              `A payroll run for ${input.periodMonth} already exists (status: ${existingRun.status}). ` +
+              `Cancel or reopen it instead of creating a duplicate.`,
+          });
+        }
+
         const [run] = await ctx.db.insert(schema.tenant.payrollRuns).values(input).returning();
 
         const activeEmployees = await ctx.db.query.employees.findMany({
@@ -121,11 +136,55 @@ export const payrollRouter = createTRPCRouter({
     updateStatus: requireRole("super_admin", "hr_manager")
       .input(z.object({ id: z.string().uuid(), data: updatePayrollRunSchema }))
       .mutation(async ({ ctx, input }) => {
+        // ── Reopen guard (PAY-011): a completed period is locked ──────────
+        // The generic status change must not silently reopen a completed
+        // run; that requires the audited `reopen` workflow below.
+        const current = await ctx.db.query.payrollRuns.findFirst({
+          where: eq(schema.tenant.payrollRuns.id, input.id),
+        });
+        if (!current) {
+          throw new TRPCError({ code: "NOT_FOUND", message: "Payroll run not found." });
+        }
+        if (
+          current.status === "completed" &&
+          input.data.status !== "completed" &&
+          input.data.status !== "cancelled"
+        ) {
+          throw new TRPCError({
+            code: "FORBIDDEN",
+            message: "A completed payroll period is locked. Use the reopen workflow (with a reason) to change it.",
+          });
+        }
+
         const [run] = await ctx.db
           .update(schema.tenant.payrollRuns)
           .set(input.data)
           .where(eq(schema.tenant.payrollRuns.id, input.id))
           .returning();
+        return run;
+      }),
+
+    // Audited reopen of a completed period. A reason is mandatory; the change
+    // is intended to be recorded in the audit log once B3 (audit helper) lands.
+    reopen: requireRole("super_admin", "hr_manager")
+      .input(z.object({ id: z.string().uuid(), reason: z.string().trim().min(10, "A reason (min 10 chars) is required to reopen a period.") }))
+      .mutation(async ({ ctx, input }) => {
+        const current = await ctx.db.query.payrollRuns.findFirst({
+          where: eq(schema.tenant.payrollRuns.id, input.id),
+        });
+        if (!current) {
+          throw new TRPCError({ code: "NOT_FOUND", message: "Payroll run not found." });
+        }
+        if (current.status !== "completed") {
+          throw new TRPCError({ code: "BAD_REQUEST", message: "Only a completed period can be reopened." });
+        }
+        const [run] = await ctx.db
+          .update(schema.tenant.payrollRuns)
+          .set({ status: "draft" })
+          .where(eq(schema.tenant.payrollRuns.id, input.id))
+          .returning();
+        // TODO(B3): write audit entry { actor: ctx.user.id, action: "payroll.reopen",
+        //   entity: run.id, reason: input.reason, periodMonth: current.periodMonth }.
         return run;
       }),
 
