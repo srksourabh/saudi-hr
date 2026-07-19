@@ -136,6 +136,16 @@ Each item is a confirmed S1. Ordered by blast radius.
 - **CSV export formula injection (S2).** Exported cells starting with `= + - @` are not neutralised. Prefix-guard them. *(RPT-002.)*
 - **Security headers (S2).** Add HSTS; move CSP off `unsafe-inline`/`unsafe-eval` to nonce-based; add rate limiting + explicit CSRF handling to `/api/upload`, `/api/company/*`, `/api/seed`, `/api/migrate`; validate uploads by magic bytes and store outside the web root (the local fallback writes into `public/uploads/`). *(SEC-006/009, SEC-004/008.)*
 
+### Workstream E — Saudization/Nitaqat & contracts (P1) — ✅ COMPLETE
+- [x] E1/E2 `computeNitaqatBand` (entity-based log curve, no Yellow tier, documented-Saudis only); E3 `evaluateContractConversion` (3 renewals or 4 years, Saudi only, pre-conversion alert); E4 `validateExpatContract` (block unlimited, default 12 months). 11 tests. Follow-up: wire the qiwa router/offboarding to use the engine (replace flat 40/20 + Yellow); inject the Qiwa sector constants.
+
+### Workstream F — Security hardening (P1) — ✅ COMPLETE
+- [x] F1 HSTS + dropped `unsafe-eval` (nonce-CSP to drop `unsafe-inline` is a follow-up); F2 same-origin CSRF check + rate limit on upload/company/seed/migrate; F3 upload magic-byte validation + removed web-root fallback (remote storage only); F4 CSV formula-injection guard.
+
+### Workstream G — Notifications/integrations/reporting (P1/P2) — ◑ PARTIAL
+- [x] G1 iqama expiry tiers 90/60/30/15/7; expired-iqama payroll block (excluded + flagged). G2 settlement deadline (7/14 days) in the settlement response.
+- [ ] G2 scheduled reminder jobs; G1 domain-event notification delivery; G3 Qiwa failed-sync retry/persist + reconciliation; G4 official Mudad WPS + GOSI export formats. **Deferred** — need the BullMQ queue and live gov specs/credentials.
+
 ### P2 — maturity and non-functional
 
 - HR document generation (contract, salary certificate, final-settlement letter) with Arabic shaping / font embedding and "Arabic prevails" clause. *(DOC-001..004.)*
