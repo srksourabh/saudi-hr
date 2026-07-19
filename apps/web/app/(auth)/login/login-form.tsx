@@ -26,8 +26,9 @@ export function LoginForm() {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [totp, setTotp] = useState("");
 
-  async function authenticate(credentials: { email: string; password: string }) {
+  async function authenticate(credentials: { email: string; password: string; totp?: string }) {
     setLoading(true);
     setError("");
 
@@ -53,7 +54,7 @@ export function LoginForm() {
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    await authenticate({ email, password });
+    await authenticate({ email, password, totp: totp || undefined });
   }
 
   function fillSample(sample: { email: string }) {
@@ -143,6 +144,22 @@ export function LoginForm() {
                 )}
               </button>
             </div>
+          </div>
+          <div className="space-y-2">
+            <label htmlFor="totp" className="block text-sm font-medium text-slate-700">
+              Authenticator code <span className="font-normal text-slate-400">(if enabled)</span>
+            </label>
+            <input
+              id="totp"
+              name="totp"
+              type="text"
+              inputMode="numeric"
+              autoComplete="one-time-code"
+              placeholder="123456"
+              value={totp}
+              onChange={(event) => setTotp(event.target.value.replace(/\D/g, "").slice(0, 6))}
+              className="flex h-11 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm outline-none transition placeholder:text-slate-400 focus:border-emerald-700 focus:ring-2 focus:ring-emerald-700/15"
+            />
           </div>
         </div>
 

@@ -5,6 +5,7 @@ import { users, tenants } from '@hrms-app/db';
 import { compare } from 'bcryptjs';
 import { eq, sql } from 'drizzle-orm';
 import { resolveDemoIdentity } from './demo-identities';
+import { verifyTotp } from './totp';
 
 // ── Account lockout (C2) ──────────────────────────────────────────────────────
 // Durable per-account lockout with exponential backoff, stored on the users
@@ -103,6 +104,7 @@ const nextAuthResult: AuthResult = NextAuth({
       credentials: {
         email: { label: 'Email', type: 'email' },
         password: { label: 'Password', type: 'password' },
+        totp: { label: 'Authenticator code', type: 'text' },
       },
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) return null;
@@ -139,6 +141,17 @@ const nextAuthResult: AuthResult = NextAuth({
           await recordFailedAttempt(user.id, lock?.attempts ?? 0);
           console.warn('[auth] failed login attempt for', email);
           return null;
+        }
+
+        // MFA gate (C4) — enforced only for accounts that have enrolled a
+        // secret, so accounts without MFA are unaffected. A wrong/missing code
+        // does not count toward lockout (the password was correct).
+        if (user.mfaSecret) {
+          const totp = typeof credentials.totp === 'string' ? credentials.totp : '';
+          if (!verifyTotp(user.mfaSecret, totp)) {
+            console.warn('[auth] MFA verification failed for', email);
+            return null;
+          }
         }
 
         // Successful login — clear any prior failed-attempt state.
@@ -207,3 +220,5 @@ export const handlers = nextAuthResult.handlers;
 export const signIn = nextAuthResult.signIn as (options: { redirect: boolean; callbackUrl?: string }) => Promise<void>;
 export const signOut = nextAuthResult.signOut as (options: { redirect: boolean; callbackUrl?: string }) => Promise<void>;
 export const auth = nextAuthResult.auth as () => Promise<Session | null>;
+
+export { generateTotpSecret, verifyTotp, totpAuthUri } from './totp';
