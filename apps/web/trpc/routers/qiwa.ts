@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { createTRPCRouter, companyProcedure } from "../server";
+import { createTRPCRouter, companyProcedure, requireRole, PAYROLL_VIEW_ROLES } from "../server";
 import { schema } from "@hrms-app/db";
 import { TRPCError } from "@trpc/server";
 import { eq, desc } from "drizzle-orm";
@@ -399,7 +399,7 @@ export const qiwaRouter = createTRPCRouter({
       };
     }),
 
-  list: companyProcedure
+  list: requireRole(...PAYROLL_VIEW_ROLES)
     .input(
       z.object({
         status: z.enum(["draft", "submitted", "accepted", "rejected", "terminated"]).optional(),
@@ -421,14 +421,14 @@ export const qiwaRouter = createTRPCRouter({
       return { contracts, nextCursor: contracts.length };
     }),
 
-  getById: companyProcedure.input(z.string().uuid()).query(async ({ ctx, input }) => {
+  getById: requireRole(...PAYROLL_VIEW_ROLES).input(z.string().uuid()).query(async ({ ctx, input }) => {
     return await ctx.db.query.qiwaContracts.findFirst({
       where: eq(schema.tenant.qiwaContracts.id, input),
       with: { employee: true },
     });
   }),
 
-  getByEmployee: companyProcedure.input(z.string().uuid()).query(async ({ ctx, input }) => {
+  getByEmployee: requireRole(...PAYROLL_VIEW_ROLES).input(z.string().uuid()).query(async ({ ctx, input }) => {
     return await ctx.db.query.qiwaContracts.findFirst({
       where: eq(schema.tenant.qiwaContracts.employeeId, input),
       with: { employee: true },
