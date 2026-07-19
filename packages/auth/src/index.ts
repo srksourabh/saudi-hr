@@ -45,7 +45,10 @@ const nextAuthResult: AuthResult = NextAuth({
     },
     warn(code) { console.warn('[next-auth][warn]', code); },
   },
-  session: { strategy: 'jwt' },
+  // 30-minute idle timeout (C3 / AUTH-007): the JWT expires 30 min after it
+  // was last issued; it is re-issued on activity (updateAge), so active users
+  // stay signed in while idle sessions expire and require re-authentication.
+  session: { strategy: 'jwt', maxAge: 30 * 60, updateAge: 5 * 60 },
   pages: { signIn: '/login', error: '/login' },
   providers: [
     Credentials({

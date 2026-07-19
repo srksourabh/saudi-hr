@@ -5,7 +5,7 @@ describe("signupSchema", () => {
   it("accepts valid input", () => {
     const result = signupSchema.safeParse({
       email: "test@example.com",
-      password: "Password1",
+      password: "Password1!",
       name: "Test User",
       companyName: "Test Company",
       crNumber: "CR-12345",
@@ -39,6 +39,28 @@ describe("signupSchema", () => {
     const result = signupSchema.safeParse({
       email: "test@example.com",
       password: "Password",
+      name: "Test",
+      companyName: "Test Co",
+      crNumber: "CR-12345",
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects password without lowercase", () => {
+    const result = signupSchema.safeParse({
+      email: "test@example.com",
+      password: "PASSWORD1!",
+      name: "Test",
+      companyName: "Test Co",
+      crNumber: "CR-12345",
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects password without a special character", () => {
+    const result = signupSchema.safeParse({
+      email: "test@example.com",
+      password: "Password1",
       name: "Test",
       companyName: "Test Co",
       crNumber: "CR-12345",
