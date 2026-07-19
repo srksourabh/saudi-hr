@@ -161,6 +161,8 @@ export interface FinalSettlementInput {
   separationReason:   SeparationReason;
   /** Whether the employee completed the probation period */
   completedProbation: boolean;
+  /** Unpaid-leave days to exclude from EOSB service (Art 111 — unpaid leave does not count). */
+  unpaidLeaveDays?: number;
   /**
    * Full-award override (Article 87 / Article 81).
    * Set true when the employee qualifies for full EOSB regardless of resignation tier:

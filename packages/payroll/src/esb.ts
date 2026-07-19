@@ -66,13 +66,14 @@ const RESIGNATION_PENALTY_TABLE: { minYears: number; fraction: number }[] = [
 
 export function calculateFinalSettlement(input: FinalSettlementInput): FinalSettlementResult {
   const { hireDate, terminationDate, basicSalary, housingAllowance, transportAllowance,
-    separationReason, completedProbation, fullAwardOverride } = input;
+    separationReason, completedProbation, fullAwardOverride, unpaidLeaveDays } = input;
 
   const totalMonthlySalary = basicSalary + housingAllowance + transportAllowance;
   const halfMonthSalary   = totalMonthlySalary / 2;
 
   // ── Tenure calculation (years and days) ───────────────────────────────
-  const { years, days } = calculateTenure(hireDate, terminationDate);
+  // Unpaid leave does not count toward service (Article 111).
+  const { years, days } = calculateTenure(hireDate, terminationDate, unpaidLeaveDays ?? 0);
 
   const warnings: string[] = [];
   let   requiresHrReview = false;
@@ -274,12 +275,14 @@ function lookupFraction(years: number, table: { minYears: number; fraction: numb
 
 function calculateTenure(
   hireDate: string,
-  terminationDate: string
+  terminationDate: string,
+  unpaidLeaveDays = 0,
 ): { years: number; days: number; totalDays: number } {
   const hire        = new Date(hireDate);
   const term       = new Date(terminationDate);
   const totalMs    = term.getTime() - hire.getTime();
-  const totalDays  = Math.max(0, Math.floor(totalMs / (1000 * 60 * 60 * 24)));
+  const rawDays    = Math.max(0, Math.floor(totalMs / (1000 * 60 * 60 * 24)));
+  const totalDays  = Math.max(0, rawDays - Math.max(0, unpaidLeaveDays));
   const years      = totalDays / DAYS_PER_YEAR_APPROX;
   const days       = totalDays % Math.floor(DAYS_PER_YEAR_APPROX);
   return { years, days, totalDays };

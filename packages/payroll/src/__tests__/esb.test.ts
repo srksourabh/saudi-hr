@@ -93,6 +93,23 @@ describe("calculateFinalSettlement", () => {
     expect(result.eosbAmount).toBeLessThan(27100);
   });
 
+  it("LEV-005: unpaid leave is excluded from EOSB service", () => {
+    // 6 calendar years, but 3 months (~91 days) unpaid → service ~5.75 yr.
+    const withUnpaid = calculateFinalSettlement(baseInput({
+      hireDate:           "2020-01-01",
+      terminationDate:    "2026-01-01",
+      separationReason:   "termination",
+      unpaidLeaveDays:    91,
+    }));
+    const withoutUnpaid = calculateFinalSettlement(baseInput({
+      hireDate:           "2020-01-01",
+      terminationDate:    "2026-01-01",
+      separationReason:   "termination",
+    }));
+    expect(withUnpaid.components.yearsOfService).toBeLessThan(withoutUnpaid.components.yearsOfService);
+    expect(withUnpaid.components.yearsOfService).toBeCloseTo(5.75, 1);
+  });
+
   it("Art 87 window helper: marriage/childbirth only for a resignation in-window", () => {
     // resign 2026-05-01, married 2026-02-01 (3 months) → qualifies
     expect(qualifiesForArt87FullAward("resignation", "2026-05-01", { marriageDate: "2026-02-01" })).toBe(true);

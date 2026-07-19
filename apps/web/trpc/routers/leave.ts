@@ -17,6 +17,36 @@ function parseNumeric(value: string | null | undefined): number {
   return value ? Number.parseFloat(value) : 0;
 }
 
+/** Inclusive calendar-day span between two YYYY-MM-DD dates. */
+function leaveDays(start: string, end: string): number {
+  const s = new Date(start).getTime();
+  const e = new Date(end).getTime();
+  return Math.floor((e - s) / 86_400_000) + 1;
+}
+
+/** Adjust a leave balance row by `delta` days (no-op if the row is untracked). */
+async function adjustLeaveBalance(
+  ctx: { db: any },
+  employeeId: string,
+  leaveTypeId: string,
+  year: number,
+  delta: number,
+): Promise<void> {
+  const bal = await ctx.db.query.leaveBalances.findFirst({
+    where: and(
+      eq(schema.tenant.leaveBalances.employeeId, employeeId),
+      eq(schema.tenant.leaveBalances.leaveTypeId, leaveTypeId),
+      eq(schema.tenant.leaveBalances.year, year),
+    ),
+  });
+  if (!bal) return;
+  const next = Math.max(0, parseNumeric(bal.balance) + delta);
+  await ctx.db
+    .update(schema.tenant.leaveBalances)
+    .set({ balance: next.toString() })
+    .where(eq(schema.tenant.leaveBalances.id, bal.id));
+}
+
 function toLeaveTypeContext(row: typeof schema.tenant.leaveTypes.$inferSelect) {
   return {
     id: row.id,
@@ -142,6 +172,43 @@ export const leaveRouter = createTRPCRouter({
           }
           employeeId = linkedEmployeeId;
         }
+
+        // Overlap check (LEV-010): reject a request that overlaps an existing
+        // active (pending/approved) request for the same employee.
+        const active = await ctx.db.query.leaveRequests.findMany({
+          where: eq(schema.tenant.leaveRequests.employeeId, employeeId),
+        });
+        const overlaps = active.some(
+          (r: { status: string; startDate: string; endDate: string }) =>
+            (r.status === "pending" || r.status === "approved") &&
+            r.startDate <= input.endDate &&
+            r.endDate >= input.startDate,
+        );
+        if (overlaps) {
+          throw new TRPCError({
+            code: "CONFLICT",
+            message: "This leave overlaps an existing pending or approved request.",
+          });
+        }
+
+        // Balance check (LEV-009): block a request that exceeds the available
+        // balance for the leave type/year (when a balance is tracked).
+        const requestedDays = leaveDays(input.startDate, input.endDate);
+        const year = new Date(input.startDate).getUTCFullYear();
+        const bal = await ctx.db.query.leaveBalances.findFirst({
+          where: and(
+            eq(schema.tenant.leaveBalances.employeeId, employeeId),
+            eq(schema.tenant.leaveBalances.leaveTypeId, input.leaveTypeId),
+            eq(schema.tenant.leaveBalances.year, year),
+          ),
+        });
+        if (bal && requestedDays > parseNumeric(bal.balance)) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: `This request is ${requestedDays} days but only ${parseNumeric(bal.balance)} are available.`,
+          });
+        }
+
         const [request] = await ctx.db
           .insert(schema.tenant.leaveRequests)
           .values({ ...input, employeeId })
@@ -169,11 +236,32 @@ export const leaveRouter = createTRPCRouter({
           }
         }
 
+        // Load the current request to compute the balance effect of the
+        // status transition (WF-001).
+        const current = await ctx.db.query.leaveRequests.findFirst({
+          where: eq(schema.tenant.leaveRequests.id, input.id),
+        });
+        if (!current) throw new TRPCError({ code: "NOT_FOUND", message: "Leave request not found." });
+
         const [request] = await ctx.db
           .update(schema.tenant.leaveRequests)
           .set(input.data)
           .where(eq(schema.tenant.leaveRequests.id, input.id))
           .returning();
+
+        // Balance moves only on the approval boundary: decrement when a request
+        // becomes approved, restore when a previously-approved one is
+        // rejected/cancelled. Pending↔rejected never touches the balance.
+        const days = leaveDays(current.startDate, current.endDate);
+        const year = new Date(current.startDate).getUTCFullYear();
+        const wasApproved = current.status === "approved";
+        const nowApproved = input.data.status === "approved";
+        if (!wasApproved && nowApproved) {
+          await adjustLeaveBalance(ctx, current.employeeId, current.leaveTypeId, year, -days);
+        } else if (wasApproved && !nowApproved) {
+          await adjustLeaveBalance(ctx, current.employeeId, current.leaveTypeId, year, +days);
+        }
+
         return request;
       }),
 
