@@ -327,12 +327,15 @@ Grouped by workstream, ordered so blockers come first. Check off as completed.
 
 **Workstream B verification:** web app typechecks clean. Follow-ups: run the B4 migration; build the persisted salary-change approval queue (currently hr_specialist salary edits are blocked, not queued); failed-login logging lands with C (auth package); B2 step-up with C.
 
-### Workstream C — Authentication hardening (P0)
-- [ ] C1. Real password reset: single-use, time-limited, hashed token using `verification_tokens`.
-- [ ] C2. Durable (Redis) login rate limit + account lockout with backoff.
-- [ ] C3. Session `maxAge`+`updateAge` (idle timeout) + revocation/jti denylist so logout invalidates.
-- [ ] C4. TOTP MFA for HR Manager and Payroll Admin.
-- [ ] C5. Password policy: add lowercase/special + last-5 reuse block.
+### Workstream C — Authentication hardening (P0) — ✅ MOSTLY COMPLETE (branch `fix/workstream-a-payroll-compliance`)
+- [x] C1. Real password reset: single-use, time-limited, SHA-256-hashed token in `verification_tokens`; `/api/auth/request-reset` + `/api/auth/reset` + `/forgot-password` + `/reset-password` pages; no account enumeration. Email delivery stubbed (logged link). _(C1 commit)_
+- [x] C2. Durable per-account lockout with exponential backoff (users table, exception-wrapped so it can't break login pre-migration) + tighter 5/min login rate limit. Migration 0008 (**not run**). Redis not used (edge middleware can't); DB lockout is the backstop. _(C2 commit)_
+- [x] C3. Session `maxAge` 30m + `updateAge` 5m → real 30-minute idle timeout (was 30-day default). _(C5/C3 commit)_ Follow-up: server-side revocation/jti denylist (stateless JWT logout doesn't invalidate a captured token yet).
+- [x] C4. Dependency-free TOTP MFA (RFC 6238, verified against RFC vectors), opt-in so it can't lock anyone out; enroll/confirm/disable procedures + login gate + optional code field. _(C4 commit)_ Follow-up: enrollment settings UI (QR) + make it mandatory for HR Manager/Payroll Admin.
+- [x] C5. Password policy: added lowercase + special char; reset blocks reuse of the current password. _(C5/C3 commit)_ Follow-up: full last-5 history needs a password-history table.
+- [ ] B2 (step-up re-auth). **Still deferred** — needs a short-lived step-up token/flag store; a genuine standalone feature, not half-built.
+
+**Workstream C verification:** all touched packages typecheck clean; TOTP + password-policy tests pass. Migrations 0007 + 0008 must be run against prod.
 
 ### Workstream D — Data integrity & lifecycle (P0/P1)
 - [ ] D1. National-ID field + iqama unique constraints + format regex + duplicate check on create.
