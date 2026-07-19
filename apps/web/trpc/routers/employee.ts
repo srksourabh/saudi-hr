@@ -64,6 +64,30 @@ export const employeeRouter = createTRPCRouter({
     });
   }),
 
+  /**
+   * PDPL data-subject access request (PDPL-001): an employee exports their own
+   * complete record. Own data only; the export itself is audited.
+   */
+  exportMyData: protectedProcedure.query(async ({ ctx }) => {
+    const employeeId = ctx.user.employeeId;
+    if (!employeeId) {
+      throw new TRPCError({ code: "BAD_REQUEST", message: "No employee profile is linked to this account." });
+    }
+    const subject = await ctx.db.query.employees.findFirst({
+      where: eq(schema.tenant.employees.id, employeeId),
+      with: { department: true, documents: true, leaveRequests: true, payslips: true },
+    });
+    if (!subject) throw new TRPCError({ code: "NOT_FOUND", message: "Employee not found." });
+
+    await writeAudit(ctx, {
+      action: "pdpl.self_export",
+      entityType: "employee",
+      entityId: employeeId,
+    });
+
+    return { exportedAt: new Date().toISOString(), subject };
+  }),
+
   // Employees can submit a self-onboarding record (org-wide); HR and
   // super_admin can create records directly. Either way, the record lands
   // in the same table — RBAC + ownership scopes decide what the rest of the

@@ -1,7 +1,7 @@
 import { z } from "zod";
-import { createTRPCRouter, companyProcedure, requireRole } from "../server";
+import { createTRPCRouter, companyProcedure, protectedProcedure, requireRole } from "../server";
 import { schema } from "@hrms-app/db";
-import { createFinalSettlementSchema } from "@hrms-app/validators";
+import { createFinalSettlementSchema, separationReasonSchema } from "@hrms-app/validators";
 import { calculateFinalSettlement, qualifiesForArt87FullAward } from "@hrms-app/payroll";
 import { TRPCError } from "@trpc/server";
 import { and, eq, desc } from "drizzle-orm";
@@ -185,6 +185,50 @@ export const settlementRouter = createTRPCRouter({
           settlementDeadline,
           settlementDeadlineDays: deadlineDays,
         },
+      };
+    }),
+
+  /**
+   * Self-service EOSB estimate (ESS-006). Employees can simulate their own
+   * end-of-service for a hypothetical termination date/reason. Own data only —
+   * scoped to ctx.user.employeeId; never accepts another employee's id.
+   */
+  simulateOwn: protectedProcedure
+    .input(
+      z
+        .object({
+          terminationDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+          separationReason: separationReasonSchema.optional(),
+        })
+        .optional()
+        .default({}),
+    )
+    .query(async ({ ctx, input }) => {
+      if (!ctx.user.employeeId) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "No employee profile is linked to this account." });
+      }
+      const employee = await ctx.db.query.employees.findFirst({
+        where: eq(schema.tenant.employees.id, ctx.user.employeeId),
+      });
+      if (!employee) throw new TRPCError({ code: "NOT_FOUND", message: "Employee not found." });
+
+      const terminationDate = input?.terminationDate ?? new Date().toISOString().slice(0, 10);
+      const separationReason = input?.separationReason ?? "resignation";
+      const eosb = calculateFinalSettlement({
+        hireDate: employee.hireDate,
+        terminationDate,
+        basicSalary: toNumber(employee.salaryBasic),
+        housingAllowance: toNumber(employee.salaryHousing),
+        transportAllowance: toNumber(employee.salaryTransport),
+        separationReason,
+        completedProbation: true,
+      });
+      return {
+        eosbAmount: eosb.eosbAmount,
+        yearsOfService: eosb.components.yearsOfService,
+        resignationFraction: eosb.eosbResignationFraction,
+        basedOn: { terminationDate, separationReason },
+        note: "Estimate only — the final settlement is calculated by HR at termination.",
       };
     }),
 
