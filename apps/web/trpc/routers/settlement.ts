@@ -165,6 +165,15 @@ export const settlementRouter = createTRPCRouter({
         },
       });
 
+      // Settlement deadline (Art 88 / PAY-006): 7 days if employer-terminated,
+      // 14 days on resignation.
+      const deadlineDays = input.separationReason === "resignation" ? 14 : 7;
+      const settlementDeadline = new Date(
+        new Date(input.terminationDate).getTime() + deadlineDays * 86_400_000,
+      )
+        .toISOString()
+        .slice(0, 10);
+
       return {
         ...settlement,
         computed: {
@@ -173,6 +182,8 @@ export const settlementRouter = createTRPCRouter({
           yearsOfService: eosb.components.yearsOfService,
           warnings: eosb.warnings,
           requiresHrReview: eosb.requiresHrReview,
+          settlementDeadline,
+          settlementDeadlineDays: deadlineDays,
         },
       };
     }),

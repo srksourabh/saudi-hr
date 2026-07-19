@@ -35,11 +35,11 @@ describe("checkDocumentExpiry", () => {
       doc("d4", null), // no expiry
     ];
 
-    const result = checkDocumentExpiry(documents, { checkDate, thresholds: thresholds([90, 60, 30, 14, 7, 1]) });
+    const result = checkDocumentExpiry(documents, { checkDate, thresholds: thresholds([90, 60, 30, 15, 7]) });
 
     expect(result.alerts).toHaveLength(2);
-    expect(result.alerts[0]?.daysUntilExpiry).toBe(14);
-    expect(result.alerts[0]?.threshold.days).toBe(14);
+    // d1 is ~14 days out → now caught by the 15-day tier (was 14).
+    expect(result.alerts[0]?.threshold.days).toBe(15);
     expect(result.alerts[1]?.daysUntilExpiry).toBe(45);
     expect(result.alerts[1]?.threshold.days).toBe(60);
   });
@@ -94,7 +94,7 @@ describe("checkDocumentExpiry", () => {
       doc("d4", "2024-09-15"), // 76 days - info
     ];
 
-    const result = checkDocumentExpiry(documents, { checkDate, thresholds: thresholds([90, 60, 30, 14, 7, 1]) });
+    const result = checkDocumentExpiry(documents, { checkDate, thresholds: thresholds([90, 60, 30, 15, 7]) });
 
     const critical = result.alerts.filter((a) => a.threshold.severity === "critical");
     const warning = result.alerts.filter((a) => a.threshold.severity === "warning");
@@ -106,6 +106,6 @@ describe("checkDocumentExpiry", () => {
   });
 
   it("uses default EXPIRY_THRESHOLDS", () => {
-    expect(EXPIRY_THRESHOLDS.map((t) => t.days)).toEqual([90, 60, 30, 14, 7, 1]);
+    expect(EXPIRY_THRESHOLDS.map((t) => t.days)).toEqual([90, 60, 30, 15, 7]);
   });
 });

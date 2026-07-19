@@ -72,23 +72,35 @@ export const payrollRouter = createTRPCRouter({
 
         const [run] = await ctx.db.insert(schema.tenant.payrollRuns).values(input).returning();
 
-        const activeEmployees = await ctx.db.query.employees.findMany({
+        const allActive = await ctx.db.query.employees.findMany({
           where: eq(schema.tenant.employees.employmentStatus, "active"),
         });
 
-        if (activeEmployees.length === 0) {
+        if (allActive.length === 0) {
           return run;
         }
 
+        const [yy, mm] = input.periodMonth.split("-").map(Number);
+        const periodStart = `${input.periodMonth}-01`;
+        const lastDay = new Date(Date.UTC(yy ?? 1970, mm ?? 1, 0)).getUTCDate();
+        const periodEnd = `${input.periodMonth}-${String(lastDay).padStart(2, "0")}`;
+
+        // ── Expired-iqama payroll block (G1 / NOT-002) ─────────────────────
+        // An expatriate with an expired iqama cannot be paid via WPS. Exclude
+        // them from the run and flag them; they still appear on the roster.
+        type EmpRow = typeof schema.tenant.employees.$inferSelect;
+        const iqamaBlocked = (allActive as EmpRow[]).filter(
+          (e) =>
+            e.nationality === "expat" &&
+            (e.immigrationStatus === "expired" || (e.iqamaExpiry != null && e.iqamaExpiry < periodStart)),
+        );
+        const blockedIds = new Set(iqamaBlocked.map((e) => e.id));
+        const activeEmployees = (allActive as EmpRow[]).filter((e) => !blockedIds.has(e.id));
         const employeeContexts = activeEmployees.map(toEmployeeContext);
 
         // ── Attendance → payroll bridge (D6 / ATT-002/ATT-003) ─────────────
         // Aggregate the period's attendance into overtime pay and absence
         // deductions per employee, then feed them to the engine.
-        const [yy, mm] = input.periodMonth.split("-").map(Number);
-        const periodStart = `${input.periodMonth}-01`;
-        const lastDay = new Date(Date.UTC(yy ?? 1970, mm ?? 1, 0)).getUTCDate();
-        const periodEnd = `${input.periodMonth}-${String(lastDay).padStart(2, "0")}`;
 
         const attendance = await ctx.db.query.attendanceRecords.findMany({
           where: and(
@@ -163,6 +175,17 @@ export const payrollRouter = createTRPCRouter({
           status: c.status,
           flaggedIssues: c.flaggedIssues,
         }));
+
+        if (iqamaBlocked.length > 0) {
+          complianceValues.push({
+            payrollRunId: run.id,
+            checkType: "iqama_expiry_block",
+            status: "blocked",
+            flaggedIssues: iqamaBlocked.map(
+              (e) => `${e.fullName}: iqama expired — excluded from payroll (renew before paying).`,
+            ),
+          });
+        }
 
         if (complianceValues.length > 0) {
           await ctx.db.insert(schema.tenant.complianceChecks).values(complianceValues);
