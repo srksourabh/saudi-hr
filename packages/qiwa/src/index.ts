@@ -263,3 +263,5 @@ export class QiwaApiClientImpl implements QiwaApiClient {
 export function createQiwaClient(config: QiwaApiConfig): QiwaApiClient {
   return new QiwaApiClientImpl(config);
 }
+export * from "./nitaqat";
+export * from "./contracts";
