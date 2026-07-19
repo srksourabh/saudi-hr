@@ -3,8 +3,10 @@ import { createTRPCRouter, companyProcedure, protectedProcedure, requireRole } f
 import { schema } from "@hrms-app/db";
 import { createDocumentSchema, updateDocumentSchema, documentQuerySchema } from "@hrms-app/validators";
 import { and, eq, desc, lte, isNotNull } from "drizzle-orm";
-import { checkDocumentExpiry, EXPIRY_THRESHOLDS } from "@hrms-app/documents";
+import { checkDocumentExpiry, EXPIRY_THRESHOLDS, generateSalaryCertificate, generateExperienceLetter } from "@hrms-app/documents";
 import type { ExpiryThreshold } from "@hrms-app/documents";
+import { TRPCError } from "@trpc/server";
+import { tenants } from "@hrms-app/db";
 
 function toDocumentContext(row: typeof schema.tenant.documents.$inferSelect & { employee: { fullName: string } }) {
   return {
@@ -30,6 +32,45 @@ function toThreshold(days: number): ExpiryThreshold {
 }
 
 export const documentRouter = createTRPCRouter({
+  /**
+   * Generate a bilingual HR letter (DOC-001/002) as self-contained HTML that
+   * the client can view / print / save-as-PDF. Data is merged from the
+   * employee record; the Arabic version is marked as prevailing.
+   */
+  generateLetter: requireRole("super_admin", "hr_manager", "hr_specialist")
+    .input(z.object({ employeeId: z.string().uuid(), type: z.enum(["salary_certificate", "experience_letter"]) }))
+    .query(async ({ ctx, input }) => {
+      const employee = await ctx.db.query.employees.findFirst({
+        where: eq(schema.tenant.employees.id, input.employeeId),
+        with: { department: true },
+      });
+      if (!employee) throw new TRPCError({ code: "NOT_FOUND", message: "Employee not found." });
+
+      const tenant = await ctx.adminDb.query.tenants.findFirst({
+        where: eq(tenants.id, ctx.user.tenantId),
+      });
+      const company = {
+        nameEn: tenant?.companyName ?? "Company",
+        nameAr: tenant?.companyName ?? "الشركة",
+        crNumber: tenant?.crNumber,
+      };
+      const e = {
+        fullName: employee.fullName,
+        nationalId: employee.iqamaNumberEnc,
+        position: employee.occupationCode,
+        department: (employee.department as { name?: string } | null)?.name ?? null,
+        joinDate: employee.hireDate,
+        basicSalary: Number(employee.salaryBasic),
+        housingAllowance: Number(employee.salaryHousing),
+        transportAllowance: Number(employee.salaryTransport),
+      };
+      const html =
+        input.type === "salary_certificate"
+          ? generateSalaryCertificate(company, e)
+          : generateExperienceLetter(company, e, employee.terminationDate ?? new Date().toISOString().slice(0, 10));
+      return { html, type: input.type };
+    }),
+
   list: companyProcedure
     .input(documentQuerySchema.optional().default({}))
     .query(async ({ ctx, input }) => {
