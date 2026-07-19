@@ -1,5 +1,5 @@
 export { calculateGosi } from "./gosi";
-export { calculateEsb, calculateFinalSettlement } from "./esb";
+export { calculateEsb, calculateFinalSettlement, qualifiesForArt87FullAward } from "./esb";
 export type { SeparationReason, FinalSettlementInput, FinalSettlementResult } from "./types";
 export { SaudiLeaveEngine, computeLeave, getLeaveBalance } from "./leave";
 export type { LeaveType, LeaveStatus, LeaveRequest, LeaveEntitlementSummary, LeaveBalance, LeaveCalculation, LeavePeriod } from "./leave";

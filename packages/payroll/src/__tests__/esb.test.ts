@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { calculateFinalSettlement } from "../esb";
+import { calculateFinalSettlement, qualifiesForArt87FullAward } from "../esb";
 import type { FinalSettlementInput } from "../types";
 
 const baseInput = (overrides: Partial<FinalSettlementInput> = {}): FinalSettlementInput => ({
@@ -75,5 +75,34 @@ describe("calculateFinalSettlement", () => {
     expect(result.eosbAmount).toBeGreaterThan(37400);
     expect(result.eosbAmount).toBeLessThan(37600);
     expect(result.eosbResignationFraction).toBe(1);
+  });
+
+  it("EOSB-006: resignation within 6 months of marriage gets the full award (Art 87)", () => {
+    // 12,000 wage, 4.5 yr → full EOSB = 0.5 × 12000 × 4.5 = 27,000
+    const result = calculateFinalSettlement(baseInput({
+      hireDate:           "2021-07-01",
+      terminationDate:    "2026-01-01",   // ~4.5 yr
+      basicSalary:        12000,
+      housingAllowance:   0,
+      transportAllowance: 0,
+      separationReason:   "resignation",
+      fullAwardOverride:  true,
+    }));
+    expect(result.eosbResignationFraction).toBe(1);
+    expect(result.eosbAmount).toBeGreaterThan(26900);
+    expect(result.eosbAmount).toBeLessThan(27100);
+  });
+
+  it("Art 87 window helper: marriage/childbirth only for a resignation in-window", () => {
+    // resign 2026-05-01, married 2026-02-01 (3 months) → qualifies
+    expect(qualifiesForArt87FullAward("resignation", "2026-05-01", { marriageDate: "2026-02-01" })).toBe(true);
+    // married 2025-06-01 (11 months before) → out of window
+    expect(qualifiesForArt87FullAward("resignation", "2026-05-01", { marriageDate: "2025-06-01" })).toBe(false);
+    // childbirth 2026-03-15 (~1.5 months) → qualifies
+    expect(qualifiesForArt87FullAward("resignation", "2026-05-01", { childbirthDate: "2026-03-15" })).toBe(true);
+    // childbirth 2026-01-01 (4 months) → out of the 3-month window
+    expect(qualifiesForArt87FullAward("resignation", "2026-05-01", { childbirthDate: "2026-01-01" })).toBe(false);
+    // not a resignation → never qualifies
+    expect(qualifiesForArt87FullAward("termination", "2026-05-01", { marriageDate: "2026-04-01" })).toBe(false);
   });
 });

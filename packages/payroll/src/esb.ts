@@ -40,6 +40,7 @@
 import type {
   FinalSettlementInput,
   FinalSettlementResult,
+  SeparationReason,
 } from "./types";
 
 // Backward-compatibility alias so existing callers and tests don't break
@@ -286,4 +287,37 @@ function calculateTenure(
 
 function round(value: number, decimals = 2): number {
   return Math.round(value * 10 ** decimals) / 10 ** decimals;
+}
+
+/**
+ * Article 87 full-award test: a female employee who resigns within 6 months of
+ * marriage or 3 months of childbirth is entitled to the full EOSB regardless of
+ * the resignation tier. Returns true only for a resignation within the window.
+ */
+export function qualifiesForArt87FullAward(
+  separationReason: SeparationReason,
+  terminationDate: string,
+  opts: { marriageDate?: string | null; childbirthDate?: string | null },
+): boolean {
+  if (separationReason !== "resignation") return false;
+
+  const term = new Date(terminationDate);
+  const monthsBefore = (iso: string): number => {
+    const d = new Date(iso);
+    const months =
+      (term.getUTCFullYear() - d.getUTCFullYear()) * 12 +
+      (term.getUTCMonth() - d.getUTCMonth()) -
+      (term.getUTCDate() < d.getUTCDate() ? 1 : 0);
+    return months;
+  };
+
+  if (opts.marriageDate) {
+    const m = monthsBefore(opts.marriageDate);
+    if (m >= 0 && m < 6) return true;
+  }
+  if (opts.childbirthDate) {
+    const m = monthsBefore(opts.childbirthDate);
+    if (m >= 0 && m < 3) return true;
+  }
+  return false;
 }

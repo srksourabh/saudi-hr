@@ -174,6 +174,19 @@ export class TerminationWorkflow {
   computeNotice(): NoticePeriod {
     const { contractType, reason, initiator } = this.initiation;
 
+    // No notice period applies when the employee terminates for employer breach
+    // (Article 81) or is summarily dismissed for cause (Article 80).
+    if (reason === "employer_fault" || reason === "termination_for_cause") {
+      return {
+        weeks: 0,
+        days: 0,
+        totalDays: 0,
+        gardenLeave: false,
+        salaryInLieu: undefined,
+        jobSearchHoursPerWeek: 0,
+      };
+    }
+
     // Asymmetric notice: 30 days (employee) / 60 days (employer) for indefinite
     // Definite-term: 30 days standard
     let baseDays: number;

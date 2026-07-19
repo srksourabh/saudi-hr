@@ -2,7 +2,7 @@ import { z } from "zod";
 import { createTRPCRouter, companyProcedure, requireRole } from "../server";
 import { schema } from "@hrms-app/db";
 import { createFinalSettlementSchema } from "@hrms-app/validators";
-import { calculateFinalSettlement } from "@hrms-app/payroll";
+import { calculateFinalSettlement, qualifiesForArt87FullAward } from "@hrms-app/payroll";
 import { TRPCError } from "@trpc/server";
 import { and, eq, desc } from "drizzle-orm";
 
@@ -121,6 +121,14 @@ export const settlementRouter = createTRPCRouter({
         }
       }
 
+      // ── Article 87 auto-derivation ────────────────────────────────────────
+      // A resignation within 6 months of marriage / 3 months of childbirth
+      // qualifies for the full award without the caller flipping a flag.
+      const art87 = qualifiesForArt87FullAward(input.separationReason, input.terminationDate, {
+        marriageDate: input.marriageDate,
+        childbirthDate: input.childbirthDate,
+      });
+
       // ── Compute EOSB from the engine — never trust a client-supplied amount (DOC-003) ──
       const eosb = calculateFinalSettlement({
         hireDate: employee.hireDate,
@@ -130,7 +138,7 @@ export const settlementRouter = createTRPCRouter({
         transportAllowance: toNumber(employee.salaryTransport),
         separationReason: input.separationReason,
         completedProbation: input.completedProbation,
-        fullAwardOverride: input.fullAwardOverride,
+        fullAwardOverride: input.fullAwardOverride || art87,
       });
 
       const [settlement] = await ctx.db
