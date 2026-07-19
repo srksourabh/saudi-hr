@@ -7,6 +7,7 @@ import { departments } from "./tenant/departments";
 import { employees } from "./tenant/employees";
 import { employmentHistory } from "./tenant/employment_history";
 import { documents } from "./tenant/documents";
+import { expenses } from "./tenant/expenses";
 import {
   shifts,
   shiftAssignments,
@@ -120,6 +121,19 @@ export const documentsRelations = relations(documents, ({ one }) => ({
 export const leaveTypesRelations = relations(leaveTypes, ({ many }) => ({
   leaveRequests: many(leaveRequests),
   leaveBalances: many(leaveBalances),
+}));
+
+export const expensesRelations = relations(expenses, ({ one }) => ({
+  employee: one(employees, {
+    fields: [expenses.employeeId],
+    references: [employees.id],
+    relationName: "expense_employee",
+  }),
+  approver: one(employees, {
+    fields: [expenses.approverEmployeeId],
+    references: [employees.id],
+    relationName: "expense_approver",
+  }),
 }));
 
 export const leaveRequestsRelations = relations(leaveRequests, ({ one }) => ({

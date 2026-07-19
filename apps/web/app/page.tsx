@@ -181,7 +181,7 @@ function CommandCenter({ userName, role, dbCounts }: { userName: string; role: A
       </section>
 
       <section className="relative overflow-hidden rounded-[24px] border border-slate-200 bg-white px-6 py-7 sm:px-8">
-        <div className="grid gap-6 xl:grid-cols-[1.35fr_.65fr] xl:items-end">
+        <div>
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Your Workspace</p>
             <h1 className="mt-2 max-w-3xl text-3xl font-semibold tracking-[-0.04em] text-slate-950 sm:text-4xl">
@@ -206,20 +206,6 @@ function CommandCenter({ userName, role, dbCounts }: { userName: string; role: A
                   New candidate <ArrowUpRight className="h-4 w-4" />
                 </Link>
               )}
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 gap-3">
-            <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-medium text-emerald-800">Payroll readiness · June 2026</span>
-                <CheckCircle2 className="h-4 w-4 text-emerald-700" />
-              </div>
-              <div className="mt-3 h-2 overflow-hidden rounded-full bg-emerald-100"><div className="h-full w-[94%] rounded-full bg-emerald-600" /></div>
-              <div className="mt-2 flex justify-between text-xs">
-                <span className="text-slate-600">{payslipsCount} payslips validated</span>
-                <strong className="text-emerald-800">94% ready</strong>
-              </div>
             </div>
           </div>
         </div>
