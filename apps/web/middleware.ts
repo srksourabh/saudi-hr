@@ -22,11 +22,43 @@ function checkRateLimit(key: string, maxRequests: number, windowMs: number): boo
   return true;
 }
 
+const CSRF_PROTECTED_PREFIXES = ["/api/upload", "/api/company", "/api/seed", "/api/migrate"];
+
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const ip = request.headers.get("x-forwarded-for") ?? request.headers.get("x-real-ip") ?? "unknown";
   const isAuthRoute = AUTH_ROUTES.some((route) => pathname.startsWith(route));
   const isApiRoute = API_ROUTES.some((route) => pathname.startsWith(route));
+
+  // Same-origin (CSRF) check for state-changing requests to custom API routes
+  // that don't carry NextAuth's built-in CSRF token (F2 / SEC-004).
+  const method = request.method.toUpperCase();
+  if (
+    (method === "POST" || method === "PUT" || method === "PATCH" || method === "DELETE") &&
+    CSRF_PROTECTED_PREFIXES.some((p) => pathname.startsWith(p))
+  ) {
+    const origin = request.headers.get("origin");
+    const host = request.headers.get("host");
+    if (origin) {
+      try {
+        if (new URL(origin).host !== host) {
+          return new NextResponse(JSON.stringify({ error: "Cross-origin request rejected" }), {
+            status: 403,
+            headers: { "Content-Type": "application/json" },
+          });
+        }
+      } catch {
+        return new NextResponse(JSON.stringify({ error: "Invalid origin" }), { status: 403 });
+      }
+    }
+    // Rate-limit these sensitive endpoints (30/min/IP).
+    if (!checkRateLimit(`custom:${ip}`, 30, 60_000)) {
+      return new NextResponse(JSON.stringify({ error: "Too many requests" }), {
+        status: 429,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+  }
 
   // Tight limit on credential login attempts (brute-force front line, C2).
   // Complemented by durable per-account lockout in the authorize() callback.
@@ -76,6 +108,10 @@ export const config = {
     "/api/auth/signup",
     "/api/auth/request-reset",
     "/api/auth/reset",
+    "/api/upload",
+    "/api/company/:path*",
+    "/api/seed/:path*",
+    "/api/migrate/:path*",
     "/api/trpc/:path*",
     "/employees/:path*",
     "/departments/:path*",

@@ -149,6 +149,12 @@ ${rows}
 </wageFile>`;
 }
 
+/** Escape a CSV cell and neutralise spreadsheet formula injection (F4 / RPT-002). */
+function csvCell(value: string): string {
+  const guarded = /^[=+\-@\t\r]/.test(value) ? `'${value}` : value;
+  return `"${guarded.replace(/"/g, '""')}"`;
+}
+
 export function mudadToCsv(file: MudadWageFile): string {
   const header = [
     "employeeId",
@@ -163,9 +169,9 @@ export function mudadToCsv(file: MudadWageFile): string {
   const rows = file.employees.map((e) =>
     [
       e.employeeId,
-      `"${e.fullName}"`,
-      e.iqamaNumber ?? "/* LIVE DATA REQUIRED */",
-      e.bankAccount ?? "/* LIVE DATA REQUIRED */",
+      csvCell(e.fullName),
+      csvCell(e.iqamaNumber ?? "/* LIVE DATA REQUIRED */"),
+      csvCell(e.bankAccount ?? "/* LIVE DATA REQUIRED */"),
       e.basic.toFixed(2),
       e.housing.toFixed(2),
       e.transport.toFixed(2),
