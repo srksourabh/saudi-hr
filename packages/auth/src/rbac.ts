@@ -197,12 +197,16 @@ const employeeProcedures = new Set([
   "payroll.payslip.myLatest",
   "settlement.simulateOwn",
   "retention.goal.mine",
+  // Employee self-help assistant (Taāzur AI). The answer is grounded in the
+  // in-app Saudi-HR knowledge prompt; employees may ask it for help.
+  "ai.chat.send",
 ]);
 
 const candidateProcedures = new Set([
   "user.me",
   "recruitment.myApplications",
   "recruitment.myInterviews",
+  "ai.chat.send",
 ]);
 
 export function canAccessProcedure(role: string | null | undefined, path: string): boolean {

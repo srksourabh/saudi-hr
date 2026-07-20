@@ -165,15 +165,24 @@ export const aiRouter = createTRPCRouter({
           "Keep the response under 350 words unless the caller asks for detail. Use markdown.",
         ].join("\n\n");
 
-        const haveKey = !!(process.env.ANTHROPIC_API_KEY || process.env.GEMINI_API_KEY);
-        if (!haveKey) {
+        // Pick the provider whose key is actually present. Honour LLM_PROVIDER
+        // when its key exists; otherwise fall back to whichever key is set. This
+        // avoids the "key present but wrong default provider" crash (e.g. only
+        // GEMINI_API_KEY set while the default provider is Claude).
+        const hasGemini = !!process.env.GEMINI_API_KEY;
+        const hasClaude = !!process.env.ANTHROPIC_API_KEY;
+        const explicit = process.env.LLM_PROVIDER;
+        const provider =
+          explicit === "gemini" && hasGemini ? "gemini"
+          : explicit === "claude" && hasClaude ? "claude"
+          : hasGemini ? "gemini"
+          : hasClaude ? "claude"
+          : null;
+        if (!provider) {
           return { reply: stubReply(input.messages, preferredLanguage), source: "stub" as const };
         }
 
-        const client = getLlmClient();
-        if (!client) {
-          return { reply: stubReply(input.messages, preferredLanguage), source: "stub" as const };
-        }
+        const client = getLlmClient({ provider });
 
         const res = await client.complete({
           system: systemPrompt,

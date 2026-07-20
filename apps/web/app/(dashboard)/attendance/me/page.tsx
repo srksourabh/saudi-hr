@@ -70,15 +70,16 @@ export default function MyAttendancePage() {
   const punchedIn = !!latestRecord?.punchInAt;
   const punchedOut = !!latestRecord?.punchOutAt;
   const todayLocation = useMemo<LocationPickerValue | null>(() => {
-    if (latestRecord?.workLocation) {
+    if (latestRecord?.punchInLat != null && latestRecord?.punchInLng != null) {
       return {
-        lat: latestRecord.workLocation.split(",")[0]?.trim() ? Number(latestRecord.workLocation.split(",")[0]) : 0,
-        lng: latestRecord.workLocation.split(",")[1]?.trim() ? Number(latestRecord.workLocation.split(",")[1]) : 0,
-        siteName: latestRecord.workLocation,
+        lat: latestRecord.punchInLat,
+        lng: latestRecord.punchInLng,
+        accuracy: latestRecord.punchInAccuracy ?? undefined,
+        siteName: latestRecord.workLocation ?? "Punch-in location",
       };
     }
     return null;
-  }, [latestRecord?.workLocation]);
+  }, [latestRecord?.punchInLat, latestRecord?.punchInLng, latestRecord?.punchInAccuracy, latestRecord?.workLocation]);
 
   const monthLabel = useMemo(() => {
     const [y, m] = month.split("-").map(Number);
@@ -185,7 +186,9 @@ export default function MyAttendancePage() {
                   onClick={() =>
                     punchInMutation.mutate({
                       workLocation: location?.siteName ?? (location ? `${location.lat.toFixed(4)}, ${location.lng.toFixed(4)}` : "On-site"),
-                      notes: location ? `lat=${location.lat},lng=${location.lng}${location.accuracy ? `,acc=${Math.round(location.accuracy)}m` : ""}` : undefined,
+                      lat: location?.lat,
+                      lng: location?.lng,
+                      accuracy: location?.accuracy,
                     })
                   }
                 >
@@ -196,12 +199,9 @@ export default function MyAttendancePage() {
                   size="lg"
                   variant="outline"
                   disabled={!punchedIn || punchedOut || punchOutMutation.isPending}
-                  onClick={() =>
-                    punchOutMutation.mutate({
-                      workLocation: location?.siteName ?? latestRecord?.workLocation ?? (location ? `${location.lat.toFixed(4)}, ${location.lng.toFixed(4)}` : "On-site"),
-                      notes: location ? `lat=${location.lat},lng=${location.lng}${location.accuracy ? `,acc=${Math.round(location.accuracy)}m` : ""}` : undefined,
-                    })
-                  }
+                  // Punch-out records the time only — location is not tracked
+                  // once the employee is off the clock.
+                  onClick={() => punchOutMutation.mutate({})}
                 >
                   <LogOut className="mr-2 h-4 w-4" />
                   {punchedOut ? "Already punched out" : "Punch out"}

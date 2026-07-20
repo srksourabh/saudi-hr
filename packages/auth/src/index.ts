@@ -89,7 +89,12 @@ const nextAuthResult: AuthResult = NextAuth({
   trustHost: true,
   logger: {
     error(error) {
-      console.error('[next-auth][error]', error instanceof Error ? error.message : String(error));
+      // Surface the underlying cause (e.g. a DB error) rather than next-auth's
+      // generic wrapper message, so login failures are diagnosable in the logs.
+      const e = error as { message?: string; cause?: unknown };
+      const cause = e?.cause as { err?: { message?: string } } | undefined;
+      const detail = cause?.err?.message;
+      console.error('[next-auth][error]', e?.message, detail ? `— ${detail}` : '');
     },
     warn(code) { console.warn('[next-auth][warn]', code); },
   },

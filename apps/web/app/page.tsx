@@ -22,7 +22,7 @@ import {
   Users,
 } from "lucide-react";
 import { DashboardShell } from "~/components/dashboard-shell";
-import { EmployeeCommandCenter } from "~/components/demo/employee-command-center";
+import { EmployeeTimesheetHome } from "~/components/employee-timesheet-home";
 import { DashboardProviders } from "~/components/dashboard-providers";
 import { productModules } from "~/lib/module-catalog";
 
@@ -48,7 +48,6 @@ export default async function RootPage() {
 
   if (!session?.user) redirect("/login");
 
-  const isDemo = session.user.id.startsWith("demo-");
   const isEmployee = session.user.role === "employee";
 
   // Fetch counts from the database on the server side
@@ -97,8 +96,8 @@ export default async function RootPage() {
   return (
     <DashboardProviders session={session}>
       <DashboardShell user={session.user} regulatoryContext={session.user.regulatoryContext ?? "saudi"} preferredLanguage={session.user.preferredLanguage ?? "en"}>
-        {isEmployee && isDemo ? (
-          <EmployeeCommandCenter employeeId={session.user.employeeId} />
+        {isEmployee ? (
+          <EmployeeTimesheetHome userName={session.user.name ?? "Team member"} />
         ) : (
           <CommandCenter userName={session.user.name ?? "HR Manager"} role={session.user.role as AppRole} dbCounts={dbCounts} />
         )}

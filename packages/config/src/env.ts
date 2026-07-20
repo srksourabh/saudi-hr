@@ -10,6 +10,13 @@ const envSchema = z.object({
     }),
   AUTH_GOOGLE_ID: z.string().optional(),
   AUTH_GOOGLE_SECRET: z.string().optional(),
+  // Master key for field-level PII encryption at rest (SEC-008). Required in
+  // production; optional in dev/test where the codec falls back to a fixed
+  // insecure dev key. Enforced by the production refine below.
+  FIELD_ENCRYPTION_KEY: z
+    .string()
+    .min(32, "FIELD_ENCRYPTION_KEY must be at least 32 characters")
+    .optional(),
   REDIS_URL: z.string().default("redis://localhost:6379"),
   RESEND_API_KEY: z.string().optional(),
   UPSTASH_REDIS_REST_URL: z.string().optional(),
@@ -36,6 +43,16 @@ const envSchema = z.object({
   // block on the login page for prospect walkthroughs. Never enable
   // in a production tenant.
   NEXT_PUBLIC_DEMO_MODE: z.enum(["true", "false"]).default("false"),
+}).superRefine((val, ctx) => {
+  // Fail-closed: production must ship a real field-encryption key so PII is
+  // never written in plaintext (SEC-008).
+  if (val.NODE_ENV === "production" && (!val.FIELD_ENCRYPTION_KEY || val.FIELD_ENCRYPTION_KEY.length < 32)) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["FIELD_ENCRYPTION_KEY"],
+      message: "FIELD_ENCRYPTION_KEY (>=32 chars) is required in production.",
+    });
+  }
 });
 
 export type Env = z.infer<typeof envSchema>;

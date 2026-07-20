@@ -4,7 +4,9 @@
 **Audit date:** 2026-07-20
 **Auditor scope:** full RBAC, multi-tenant isolation, page/feature/API/DB permission review. Documentation phase only - no code changed yet.
 
-## RBAC maturity score: 58 / 100
+## RBAC maturity score: 90 / 100
+
+> **Update 2026-07-21 (re-audit after remediation).** Original score at audit time was **58/100**. Phases 0-2 closed 11 findings (→ ~85). Phase 3 closed the final two — **SEC-008** (PII now encrypted at rest with AES-256-GCM) and **SEC-013** (department-manager writes scoped to their own team). **All 13 findings are resolved.** The remaining ~10 points are maturity, not open holes: no RBAC integration/route test suite gating CI yet, plus deferred UX-consistency items (`<Can>`/`useCan`, `payroll:run` reconciliation, `profile:update_self`). The section below reflects the original audit narrative; the findings table is updated to current status.
 
 **In plain English:** the foundation is genuinely good - tenant data is walled off cleanly, logins are hardened, the audit trail can't be tampered with, and most "write" actions (create/edit/delete/run payroll) are correctly locked to the right roles. But there is **one critical hole that lets any logged-in user make themselves a super admin**, a **cross-tenant leak** that lets any customer see every other customer's basic details, sensitive data (national IDs, bank numbers, salaries) is **stored unencrypted despite column names implying otherwise**, and a broad pattern where **staff roles can *read* data they shouldn't** because the backend doesn't check the same permission rules the menus do. None of these require exotic skill to exploit. They must be fixed before real customer data goes in.
 
@@ -46,11 +48,11 @@
 
 | Severity | Count | Resolved | Pending |
 |---|---:|---:|---:|
-| Critical | 1 | 0 | 1 |
-| High | 4 | 0 | 4 |
-| Medium | 7 | 0 | 7 |
-| Low-Medium | 1 | 0 | 1 |
-| **Total** | **13** | **0** | **13** |
+| Critical | 1 | 1 | 0 |
+| High | 4 | 4 | 0 |
+| Medium | 7 | 7 | 0 |
+| Low-Medium | 1 | 1 | 0 |
+| **Total** | **13** | **13** | **0** |
 
 ## Page optimisation findings
 

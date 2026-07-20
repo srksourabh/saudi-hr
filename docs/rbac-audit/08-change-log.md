@@ -97,8 +97,30 @@ Systemic capability enforcement — closes the SEC-006 over-permissive-read clus
 - rbac unit tests: **6/6 pass**.
 - Lint: no new errors introduced; pre-existing `any`/non-null-assertion debt unchanged.
 
-### Remaining (Phases 3-7)
-Not yet implemented: SEC-008 (encryption at rest — largest), SEC-013 (broader department scoping), the `<Can>`/`useCan` UX layer, `payroll:run` reconciliation, `profile:update_self` backend, and the RBAC integration test suite (doc 06). See `07-remediation-plan.md`.
+## Implementation phase - Phase 3 (applied 2026-07-21)
+
+Closes the last two open findings. `apps/web` + `@hrms-app/db` + `@hrms-app/config` typecheck clean; crypto codec tests pass (5/5); no new lint errors.
+
+### SEC-008 — PII encryption at rest
+- Change: added a transparent field-encryption codec (`packages/db/src/crypto.ts`). `iqama_number_enc`, `passport_number_enc`, `bank_iban_enc` now encrypt on write / decrypt on read via a Drizzle `encryptedText` custom type — storage stays `text`, so no column migration is needed. Cipher is **AES-256-GCM with a synthetic (plaintext-derived) IV**, making the ciphertext deterministic so the iqama uniqueness check (`employee.create`) and the unique index (migration 0009) keep working. Values without the `encv1:` marker are treated as legacy plaintext and passed through on read.
+- Key management: `FIELD_ENCRYPTION_KEY` added to `packages/config/src/env.ts` — **required in production** (fail-closed via superRefine), with a fixed insecure dev/test fallback so local work is unaffected.
+- Backfill: `scripts/encrypt-pii-backfill.ts` re-encrypts pre-existing plaintext rows across every tenant schema (idempotent). Must be run once per environment after deploy.
+- Also: removed the fake `enc:v1:` marker the Rukn Energy seed prepended to IBANs (would have double-wrapped through the codec).
+- Files: `packages/db/src/crypto.ts` (new), `packages/db/src/index.ts`, `packages/db/src/schema/tenant/employees.ts`, `packages/config/src/env.ts`, `scripts/encrypt-pii-backfill.ts` (new), `scripts/seed-rukn-energy.ts`
+- Tests: `packages/db/src/__tests__/crypto.test.ts` (round-trip, deterministic, ciphertext≠plaintext, legacy pass-through, tamper-rejection).
+- **Deploy note:** set `FIELD_ENCRYPTION_KEY` (>=32 chars) in the environment, then run the backfill script once.
+
+### SEC-013 — Department-manager write scoping
+- Change: added fail-closed scope helpers to `apps/web/trpc/scoping.ts` (`assertManagesEmployee/Goal/Review/ReviewResponse/Exception`). A `department_manager` may now only write records for employees in the department(s) they head; company-wide roles are unaffected. Applied to `retention.goal.create/update/updateStatus/updateProgress`, `retention.review.create/update`, `retention.reviewResponse.create/update`, and `attendance.resolveException`.
+- Files: `apps/web/trpc/scoping.ts`, `apps/web/trpc/routers/retention.ts`, `apps/web/trpc/routers/attendance.ts`
+
+### Verification (Phase 3)
+- Typecheck (`web`, `@hrms-app/db`, `@hrms-app/config`): **pass**.
+- Tests: crypto 5/5, payroll/validators/db suites pass. (Unrelated pre-existing failure: `packages/auth/.../demo-identities.test.ts` — stale `emp-*` id assertions, not touched here.)
+- Lint: `@hrms-app/db` and `@hrms-app/config` clean; no new errors in `web`.
+
+### Remaining (Phases 4-6)
+All 13 security findings are now resolved. Not yet implemented (maturity, not open vulnerabilities): the `<Can>`/`useCan` UX layer, `payroll:run` reconciliation, `profile:update_self` backend, and the RBAC integration/route test suite (doc 06) that would gate CI against regressions. See `07-remediation-plan.md`.
 
 ---
 

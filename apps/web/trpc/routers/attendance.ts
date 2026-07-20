@@ -9,6 +9,7 @@ import {
   requireCapability,
 } from "../server";
 import { schema } from "@hrms-app/db";
+import { assertManagesException } from "../scoping";
 import {
   createShiftSchema,
   updateShiftSchema,
@@ -198,6 +199,10 @@ export const attendanceRouter = createTRPCRouter({
           lateMinutes,
           scheduledStart,
           workLocation: input.workLocation,
+          // Store the punch-in GPS location (time + location, SEC requirement).
+          punchInLat: input.lat ?? null,
+          punchInLng: input.lng ?? null,
+          punchInAccuracy: input.accuracy != null ? Math.round(input.accuracy) : null,
           notes: input.notes,
           shiftId: assignment?.shiftId ?? null,
         })
@@ -240,6 +245,10 @@ export const attendanceRouter = createTRPCRouter({
       }
 
       const now = new Date();
+      // Worked time for THIS sequence = punch-out minus punch-in. Only the
+      // punched-in interval is counted; the gap until the next punch-in (break)
+      // is a separate sequence and is never counted (matches the model where a
+      // 2h morning + 1h evening = 3h across two sequences).
       const workedMinutes = Math.max(
         0,
         Math.floor((now.getTime() - openRecord.punchInAt.getTime()) / 60_000),
@@ -247,10 +256,7 @@ export const attendanceRouter = createTRPCRouter({
 
       let overtimeMinutes = 0;
       let earlyLeaveMinutes = 0;
-      let status = openRecord.status;
-      const breakMinutes = openRecord.shift?.breakMinutes ?? 60;
-
-      const netMinutes = Math.max(0, workedMinutes - breakMinutes);
+      const status = openRecord.status;
 
       if (openRecord.scheduledEnd) {
         const scheduledEndDate = combineDateTime(workDate, openRecord.scheduledEnd);
@@ -261,10 +267,6 @@ export const attendanceRouter = createTRPCRouter({
             (scheduledEndDate.getTime() - now.getTime()) / 60_000,
           );
         }
-      }
-
-      if (netMinutes > 0 && netMinutes < 240 && status !== "late") {
-        status = "half_day";
       }
 
       const [record] = await ctx.db
@@ -539,6 +541,8 @@ export const attendanceRouter = createTRPCRouter({
   resolveException: requireRole("super_admin", "hr_manager", "department_manager")
     .input(resolveExceptionSchema)
     .mutation(async ({ ctx, input }) => {
+      // A department_manager may only resolve exceptions for their own team (SEC-013).
+      await assertManagesException(ctx, input.id);
       const [exc] = await ctx.db
         .update(schema.tenant.attendanceExceptions)
         .set({
@@ -663,6 +667,10 @@ export const attendanceRouter = createTRPCRouter({
       }
 
       const now = new Date();
+      // Worked time for THIS sequence = punch-out minus punch-in. Only the
+      // punched-in interval is counted; the gap until the next punch-in (break)
+      // is a separate sequence and is never counted (matches the model where a
+      // 2h morning + 1h evening = 3h across two sequences).
       const workedMinutes = Math.max(
         0,
         Math.floor((now.getTime() - openRecord.punchInAt.getTime()) / 60_000),
@@ -670,10 +678,7 @@ export const attendanceRouter = createTRPCRouter({
 
       let overtimeMinutes = 0;
       let earlyLeaveMinutes = 0;
-      let status = openRecord.status;
-      const breakMinutes = openRecord.shift?.breakMinutes ?? 60;
-
-      const netMinutes = Math.max(0, workedMinutes - breakMinutes);
+      const status = openRecord.status;
 
       if (openRecord.scheduledEnd) {
         const scheduledEndDate = combineDateTime(workDate, openRecord.scheduledEnd);
@@ -684,10 +689,6 @@ export const attendanceRouter = createTRPCRouter({
             (scheduledEndDate.getTime() - now.getTime()) / 60_000,
           );
         }
-      }
-
-      if (netMinutes > 0 && netMinutes < 240 && status !== "late") {
-        status = "half_day";
       }
 
       const [record] = await ctx.db

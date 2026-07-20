@@ -37,6 +37,10 @@ export const punchInSchema = z.object({
     .optional()
     .describe("Defaults to today if omitted"),
   workLocation: z.string().max(100).optional(),
+  // GPS captured at punch-in (from the browser / LocationPicker).
+  lat: z.number().min(-90).max(90).optional(),
+  lng: z.number().min(-180).max(180).optional(),
+  accuracy: z.number().nonnegative().optional().describe("GPS accuracy in metres"),
   notes: z.string().max(500).optional(),
 });
 

@@ -834,7 +834,7 @@ async function main() {
     salaryTransport: Number(e.sal[2]),
     hireDate: e.hire,
     employmentStatus: e.status,
-    bankIbanEnc: e.iban ? `enc:v1:${e.iban}` : null,
+    bankIbanEnc: e.iban ?? null,
     gosiRegistrationDate: e.gosi ?? null,
     passportExpiry: null,
     iqamaExpiry: e.iqamaExpiry ?? null,

@@ -4,6 +4,12 @@ import { createTRPCRouter, protectedProcedure, requireRole, requireCapability } 
 import { schema } from "@hrms-app/db";
 import { goalStatusEnum, createGoalSchema, updateGoalSchema, goalQuerySchema, createGoalKeyResultSchema, updateGoalKeyResultSchema, createReviewCycleSchema, updateReviewCycleSchema, reviewCycleQuerySchema, createReviewSchema, updateReviewSchema, reviewQuerySchema, createReviewSectionSchema, updateReviewSectionSchema, createReviewResponseSchema, updateReviewResponseSchema, createSkillSchema, updateSkillSchema, skillQuerySchema, createEmployeeSkillSchema, updateEmployeeSkillSchema, employeeSkillQuerySchema, createSkillGapSchema, updateSkillGapSchema, createLearningProgramSchema, updateLearningProgramSchema, learningProgramQuerySchema, createLearningEnrollmentSchema, updateLearningEnrollmentSchema, learningEnrollmentQuerySchema, successionStatusEnum, createCareerRoleSchema, updateCareerRoleSchema, careerRoleQuerySchema, createCareerPathSchema, updateCareerPathSchema, createEmployeeCareerPathSchema, updateEmployeeCareerPathSchema, createSuccessionPlanSchema, updateSuccessionPlanSchema, createSuccessionCandidateSchema, updateSuccessionCandidateSchema, stayInterviewStatusEnum, createEngagementSurveySchema, updateEngagementSurveySchema, engagementSurveyQuerySchema, createSurveyResponseSchema, updateSurveyResponseSchema, createStayInterviewSchema, updateStayInterviewSchema, createRecognitionSchema, createRewardSchema, updateRewardSchema, rewardQuerySchema, createRewardRedemptionSchema, createTotalRewardsStatementSchema, totalRewardsQuerySchema, createCompensationPlanSchema, updateCompensationPlanSchema, createCompensationAdjustmentSchema, updateCompensationAdjustmentSchema, compensationAdjustmentQuerySchema, createTalentReviewSchema, updateTalentReviewSchema, createTalentReviewParticipantSchema, updateTalentReviewParticipantSchema, idSchema } from "@hrms-app/validators";
 import { and, eq, desc } from "drizzle-orm";
+import {
+  assertManagesEmployee,
+  assertManagesGoal,
+  assertManagesReview,
+  assertManagesReviewResponse,
+} from "../scoping";
 
 // Retention reads expose performance reviews, talent/succession ratings, stay
 // interviews and survey responses — gate to `performance:view_team` (HR +
@@ -69,12 +75,14 @@ export const retentionRouter = createTRPCRouter({
     create: requireRole("super_admin", "hr_manager", "department_manager")
       .input(createGoalSchema)
       .mutation(async ({ ctx, input }) => {
+        await assertManagesEmployee(ctx, input.employeeId);
         const [item] = await ctx.db.insert(schema.tenant.goals).values(input).returning();
         return item;
       }),
     update: requireRole("super_admin", "hr_manager", "department_manager")
       .input(z.object({ id: idSchema, data: updateGoalSchema }))
       .mutation(async ({ ctx, input }) => {
+        await assertManagesGoal(ctx, input.id);
         const [item] = await ctx.db
           .update(schema.tenant.goals)
           .set({ ...input.data, updatedAt: new Date() })
@@ -91,6 +99,7 @@ export const retentionRouter = createTRPCRouter({
     updateStatus: requireRole("super_admin", "hr_manager", "department_manager")
       .input(z.object({ id: idSchema, status: goalStatusEnum }))
       .mutation(async ({ ctx, input }) => {
+        await assertManagesGoal(ctx, input.id);
         const [item] = await ctx.db
           .update(schema.tenant.goals)
           .set({ status: input.status, updatedAt: new Date() })
@@ -101,6 +110,7 @@ export const retentionRouter = createTRPCRouter({
     updateProgress: requireRole("super_admin", "hr_manager", "department_manager")
       .input(z.object({ id: idSchema, progress: z.number().min(0).max(100) }))
       .mutation(async ({ ctx, input }) => {
+        await assertManagesGoal(ctx, input.id);
         const [item] = await ctx.db
           .update(schema.tenant.goals)
           .set({ progress: input.progress, updatedAt: new Date() })
@@ -262,12 +272,14 @@ export const retentionRouter = createTRPCRouter({
     create: requireRole("super_admin", "hr_manager", "department_manager")
       .input(createReviewSchema)
       .mutation(async ({ ctx, input }) => {
+        await assertManagesEmployee(ctx, input.employeeId);
         const [item] = await ctx.db.insert(schema.tenant.reviews).values(input).returning();
         return item;
       }),
     update: requireRole("super_admin", "hr_manager", "department_manager")
       .input(z.object({ id: idSchema, data: updateReviewSchema }))
       .mutation(async ({ ctx, input }) => {
+        await assertManagesReview(ctx, input.id);
         const [item] = await ctx.db
           .update(schema.tenant.reviews)
           .set({ ...input.data, updatedAt: new Date() })
@@ -376,12 +388,14 @@ export const retentionRouter = createTRPCRouter({
     create: requireRole("super_admin", "hr_manager", "department_manager")
       .input(createReviewResponseSchema)
       .mutation(async ({ ctx, input }) => {
+        await assertManagesReview(ctx, input.reviewId);
         const [item] = await ctx.db.insert(schema.tenant.reviewResponses).values(input).returning();
         return item;
       }),
     update: requireRole("super_admin", "hr_manager", "department_manager")
       .input(z.object({ id: idSchema, data: updateReviewResponseSchema }))
       .mutation(async ({ ctx, input }) => {
+        await assertManagesReviewResponse(ctx, input.id);
         const [item] = await ctx.db
           .update(schema.tenant.reviewResponses)
           .set({ ...input.data, updatedAt: new Date() })

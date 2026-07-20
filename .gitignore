@@ -20,3 +20,6 @@ _db_url.txt
 _tmp_migration.sql
 scripts/.env.production
 .env*.local
+
+# Playwright MCP test artifacts
+.playwright-mcp/

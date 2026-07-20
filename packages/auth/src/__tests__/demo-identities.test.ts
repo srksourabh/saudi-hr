@@ -10,8 +10,10 @@ describe("Taāzur demo identities", () => {
       "employee",
     ]);
     expect(new Set(Object.values(demoIdentities).map((identity) => identity.email)).size).toBe(4);
-    expect(demoIdentities.hrSpecialist.employeeId).toBe("emp-aisha");
-    expect(demoIdentities.departmentManager.employeeId).toBe("emp-fahad");
+    // Demo logins map to real employee rows in the Rukn Energy tenant so
+    // attendance/timesheet and profile read live data.
+    expect(demoIdentities.hrSpecialist.employeeId).toBe("ea1c81d1-7231-52de-8c35-feb24ba88fd5");
+    expect(demoIdentities.departmentManager.employeeId).toBe("0c3b4817-a265-5d61-87e9-abcc6518ff4a");
   });
 
   it("resolves valid credentials only when demo mode is enabled", () => {

@@ -1,5 +1,6 @@
 import { pgTable, uuid, text, timestamp, pgEnum, numeric, date } from "drizzle-orm/pg-core";
 import { departments } from "./departments";
+import { encryptedText } from "../../crypto";
 
 export const employmentStatusEnum   = pgEnum("employment_status",   ["active", "terminated", "suspended", "on_leave"]);
 export const gosiSystemEnum       = pgEnum("gosi_system",        ["old", "new"]);
@@ -47,10 +48,13 @@ export const employees = pgTable("employees", {
   gosiRegistrationDate: date("gosi_registration_date"),
   gosiSystem:      gosiSystemEnum("gosi_system"),
 
-  // ── Encrypted PII ──────────────────────────────────────────────────────
-  iqamaNumberEnc:    text("iqama_number_enc"),
-  passportNumberEnc: text("passport_number_enc"),
-  bankIbanEnc:      text("bank_iban_enc"),
+  // ── Encrypted PII (AES-256-GCM at rest, SEC-008) ───────────────────────
+  // Transparent encrypt-on-write / decrypt-on-read via the `encryptedText`
+  // codec. Storage stays `text`; encryption is deterministic so the iqama
+  // unique index and equality lookups keep working.
+  iqamaNumberEnc:    encryptedText("iqama_number_enc"),
+  passportNumberEnc: encryptedText("passport_number_enc"),
+  bankIbanEnc:      encryptedText("bank_iban_enc"),
 
   // ── Immigration / Right-to-work (P0-6) ─────────────────────────────────
   /**

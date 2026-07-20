@@ -6,6 +6,7 @@ import {
   date,
   time,
   integer,
+  doublePrecision,
   pgEnum,
   index,
 } from "drizzle-orm/pg-core";
@@ -112,6 +113,11 @@ export const attendanceRecords = pgTable(
 
     status: attendanceStatusEnum("attendance_status").notNull().default("present"),
     workLocation: text("work_location"),
+    // Punch-in GPS coordinates — captured at punch-in only. Location is not
+    // tracked while punched out (break time is neither counted nor located).
+    punchInLat: doublePrecision("punch_in_lat"),
+    punchInLng: doublePrecision("punch_in_lng"),
+    punchInAccuracy: integer("punch_in_accuracy"),
     notes: text("notes"),
 
     createdAt: timestamp("created_at").defaultNow().notNull(),
