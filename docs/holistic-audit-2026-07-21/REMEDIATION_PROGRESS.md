@@ -82,8 +82,8 @@ into `createTenantSchema`, parity test 5/5). Regenerate: `pnpm --filter
 - [ ] UX-006 icon-only clear-search no accessible name
 - [ ] UX-007 Save Map View modal: dialog semantics/focus trap/Esc
 - [ ] UX-008 help chat no aria-live
-- [ ] UX-011 no skip-to-main link
-- [ ] UX-012 Table header cells no scope="col"
+- [x] UX-011 skip-to-main link added to dashboard shell
+- [x] UX-012 shared Table th defaults scope="col"
 - [ ] UX-013 row role=link + nested button
 - [ ] API-006 error strings (done wave1) — verify
 
