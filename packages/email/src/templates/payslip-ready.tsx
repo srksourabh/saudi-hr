@@ -11,10 +11,14 @@ import {
 } from "@react-email/components";
 import { productBrand } from "@hrms-app/config/brand";
 
+/**
+ * Deliberately does NOT include any salary figure (PRIV-012 / PDPL data
+ * minimisation): the email only announces availability and links to the
+ * secured payslip in the portal.
+ */
 interface PayslipReadyEmailProps {
   employeeName: string;
   period: string;
-  netPay: string;
   dashboardUrl: string;
   appName?: string;
 }
@@ -81,23 +85,6 @@ const styles = {
     fontWeight: "600",
     margin: 0,
   },
-  netPayRow: {
-    borderTop: "2px solid #006C35",
-    marginTop: "8px",
-    paddingTop: "12px",
-  },
-  netPayLabel: {
-    color: "#006C35",
-    fontSize: "16px",
-    fontWeight: "700",
-    margin: 0,
-  },
-  netPayValue: {
-    color: "#006C35",
-    fontSize: "22px",
-    fontWeight: "bold",
-    margin: 0,
-  },
   button: {
     display: "inline-block",
     backgroundColor: "#006C35",
@@ -122,7 +109,6 @@ const styles = {
 export function PayslipReadyEmail({
   employeeName,
   period,
-  netPay,
   dashboardUrl,
   appName = productBrand.name,
 }: PayslipReadyEmailProps) {
@@ -147,17 +133,19 @@ export function PayslipReadyEmail({
                 <Text style={styles.summaryLabel}>Period</Text>
                 <Text style={styles.summaryValue}>{period}</Text>
               </div>
-              <div style={{ ...styles.summaryRow, ...styles.netPayRow }}>
-                <Text style={styles.netPayLabel}>Net Pay</Text>
-                <Text style={styles.netPayValue}>{netPay} SAR</Text>
-              </div>
             </Section>
+            <Text style={styles.paragraph}>
+              For your privacy, salary details are not included in this email.
+              Sign in to view your full payslip securely.
+            </Text>
             <Button href={dashboardUrl} style={styles.button}>
               View Payslip
             </Button>
             <Hr style={styles.hr} />
             <Text style={styles.footer}>
-              This is an automated notification from {appName}.
+              This is an automated notification from {appName}. To change how
+              you receive these notifications, or to withdraw consent, use the
+              privacy options in your {appName} profile.
             </Text>
           </Section>
         </Container>

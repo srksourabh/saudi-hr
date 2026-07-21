@@ -1,8 +1,16 @@
 import { NextResponse } from "next/server";
+import { z } from "zod";
 import { auth } from "@hrms-app/auth";
 import { adminDb, tenants } from "@hrms-app/db";
 import { eq } from "drizzle-orm";
 import { forbidIfNotRole, COMPANY_ADMIN_ROLES } from "../../../../lib/route-auth";
+
+// Bounded PATCH body (API-011) — matches the project's Zod-everywhere convention.
+const profilePatchSchema = z.object({
+  industry: z.string().max(120).nullish(),
+  companySize: z.string().max(60).nullish(),
+  website: z.string().max(255).nullish(),
+});
 
 export async function GET() {
   const session = await auth();
@@ -31,8 +39,18 @@ export async function PATCH(request: Request) {
   const forbidden = forbidIfNotRole(session, COMPANY_ADMIN_ROLES);
   if (forbidden) return forbidden;
 
-  const body = await request.json();
-  const { industry, companySize, website } = body;
+  let body: unknown;
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ error: "Invalid request" }, { status: 400 });
+  }
+  const parsed = profilePatchSchema.safeParse(body);
+  if (!parsed.success) {
+    const first = parsed.error.issues[0]?.message ?? "Invalid input";
+    return NextResponse.json({ error: first }, { status: 400 });
+  }
+  const { industry, companySize, website } = parsed.data;
 
   try {
     await adminDb

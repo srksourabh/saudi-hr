@@ -20,6 +20,7 @@ import { attendanceRouter } from "./routers/attendance";
 import { guideMapRouter } from "./routers/guideMap";
 import { auditRouter } from "./routers/audit";
 import { mfaRouter } from "./routers/mfa";
+import { privacyRouter } from "./routers/privacy";
 
 export const appRouter = createTRPCRouter({
   auth: authRouter,
@@ -43,6 +44,7 @@ export const appRouter = createTRPCRouter({
   guideMap: guideMapRouter,
   audit: auditRouter,
   mfa: mfaRouter,
+  privacy: privacyRouter,
 });
 
 export type AppRouter = typeof appRouter;

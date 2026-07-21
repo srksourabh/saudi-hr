@@ -42,10 +42,15 @@ export async function POST(request: Request) {
         expires,
       });
       const base = process.env.NEXTAUTH_URL ?? process.env.NEXT_PUBLIC_APP_URL ?? "";
-      const resetUrl = `${base}/reset-password?email=${encodeURIComponent(email)}&token=${rawToken}`;
-      // TODO(email): deliver via @hrms-app/email. Logged until wired so the flow
-      // is testable without sending mail to real recipients.
-      console.info("[auth] password reset link generated for", email, resetUrl);
+      // Token-only link (PRIV-006): the email is resolved server-side from the
+      // hashed token record, so the address never appears in URLs/history.
+      const resetUrl = `${base}/reset-password?token=${rawToken}`;
+      // TODO(email): deliver via @hrms-app/email. The raw token in logs enables
+      // account takeover (API-012 / PRIV-005), so the dev-testing fallback below
+      // is gated to non-production and never includes the user's email.
+      if (process.env.NODE_ENV !== "production") {
+        console.info("[auth] password reset link (dev only):", resetUrl);
+      }
     }
   } catch (err) {
     console.error("[auth] request-reset error", err);

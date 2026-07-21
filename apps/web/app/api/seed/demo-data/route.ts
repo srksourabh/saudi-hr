@@ -11,6 +11,7 @@
  * Token-protected via MIGRATION_TOKEN. Idempotent.
  */
 import { adminDb } from "@hrms-app/db";
+import { sql } from "drizzle-orm";
 import { NextResponse } from "next/server";
 
 export const runtime = "nodejs";
@@ -25,6 +26,9 @@ async function getSchemaName(): Promise<string> {
   const r = Array.isArray(rows) ? rows : (rows as any).rows ?? [];
   const name = r[0]?.schema_name;
   if (!name) throw new Error("No active tenant");
+  // Defense-in-depth (API-008): the schema name is interpolated into SQL below,
+  // so refuse anything that isn't a plain Postgres identifier.
+  if (!/^[a-z_][a-z0-9_]*$/.test(name)) throw new Error("Unexpected schema name");
   return name;
 }
 
@@ -79,9 +83,11 @@ export async function POST(req: Request) {
     for (const emp of empList) {
       for (const t of typeList) {
         const balance = t.name === "Annual Leave" ? 14 : t.name === "Sick Leave" ? 30 : 30;
+        // Parameterized via the drizzle sql tag (API-008) — only the validated
+        // schema name is spliced raw.
         await adminDb.execute(
-          `INSERT INTO ${schema}.leave_balances (id, employee_id, leave_type_id, balance, year)
-           VALUES (gen_random_uuid(), '${emp.id}', '${t.id}', ${balance}, ${year})`,
+          sql`INSERT INTO ${sql.raw(schema)}.leave_balances (id, employee_id, leave_type_id, balance, year)
+           VALUES (gen_random_uuid(), ${emp.id}, ${t.id}, ${balance}, ${year})`,
         );
       }
     }
@@ -91,12 +97,12 @@ export async function POST(req: Request) {
     if (empList.length >= 3) {
       const annual = typeList.find((t: any) => t.name === "Annual Leave");
       if (annual) {
-        await adminDb.execute(`
-          INSERT INTO ${schema}.leave_requests (id, employee_id, leave_type_id, start_date, end_date, status, created_at, updated_at)
+        await adminDb.execute(sql`
+          INSERT INTO ${sql.raw(schema)}.leave_requests (id, employee_id, leave_type_id, start_date, end_date, status, created_at, updated_at)
           VALUES
-            (gen_random_uuid(), '${empList[0].id}', '${annual.id}', CURRENT_DATE + 7, CURRENT_DATE + 11, 'pending', NOW(), NOW()),
-            (gen_random_uuid(), '${empList[1].id}', '${annual.id}', CURRENT_DATE + 14, CURRENT_DATE + 18, 'pending', NOW(), NOW()),
-            (gen_random_uuid(), '${empList[2].id}', '${annual.id}', CURRENT_DATE - 7, CURRENT_DATE - 3, 'approved', NOW(), NOW())
+            (gen_random_uuid(), ${empList[0].id}, ${annual.id}, CURRENT_DATE + 7, CURRENT_DATE + 11, 'pending', NOW(), NOW()),
+            (gen_random_uuid(), ${empList[1].id}, ${annual.id}, CURRENT_DATE + 14, CURRENT_DATE + 18, 'pending', NOW(), NOW()),
+            (gen_random_uuid(), ${empList[2].id}, ${annual.id}, CURRENT_DATE - 7, CURRENT_DATE - 3, 'approved', NOW(), NOW())
         `);
         log.push("leave_requests seeded (3)");
       }
@@ -140,12 +146,15 @@ export async function POST(req: Request) {
     );
     const deptList = Array.isArray(dept) ? dept : (dept as any).rows ?? [];
     if (deptList.length > 0 && empList.length > 0) {
-      await adminDb.execute(`
-        INSERT INTO ${schema}.job_requisitions (id, title, description, department_id, hiring_manager_id, recruiter_id, status, openings, created_at, updated_at)
+      const deptId = deptList[0].id;
+      const managerId = empList[0].id;
+      const recruiterId = empList[Math.min(1, empList.length - 1)].id;
+      await adminDb.execute(sql`
+        INSERT INTO ${sql.raw(schema)}.job_requisitions (id, title, description, department_id, hiring_manager_id, recruiter_id, status, openings, created_at, updated_at)
         VALUES
-          (gen_random_uuid(), 'Senior Project Engineer', 'Lead energy infrastructure projects in Riyadh.', '${deptList[0].id}', '${empList[0].id}', '${empList[Math.min(1, empList.length - 1)].id}', 'open', 2, NOW(), NOW()),
-          (gen_random_uuid(), 'HSE Specialist', 'Health, safety and environment compliance.', '${deptList[0].id}', '${empList[0].id}', '${empList[Math.min(1, empList.length - 1)].id}', 'open', 1, NOW(), NOW()),
-          (gen_random_uuid(), 'HR Operations Specialist', 'Support payroll, leave and onboarding.', '${deptList[0].id}', '${empList[0].id}', '${empList[Math.min(1, empList.length - 1)].id}', 'open', 1, NOW(), NOW())
+          (gen_random_uuid(), 'Senior Project Engineer', 'Lead energy infrastructure projects in Riyadh.', ${deptId}, ${managerId}, ${recruiterId}, 'open', 2, NOW(), NOW()),
+          (gen_random_uuid(), 'HSE Specialist', 'Health, safety and environment compliance.', ${deptId}, ${managerId}, ${recruiterId}, 'open', 1, NOW(), NOW()),
+          (gen_random_uuid(), 'HR Operations Specialist', 'Support payroll, leave and onboarding.', ${deptId}, ${managerId}, ${recruiterId}, 'open', 1, NOW(), NOW())
       `);
       log.push("job_requisitions seeded (3)");
     }

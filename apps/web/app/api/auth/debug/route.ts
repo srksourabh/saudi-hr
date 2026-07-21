@@ -1,14 +1,30 @@
+import { auth } from "@hrms-app/auth";
+
 /**
  * Configuration diagnostics endpoint.
  *
- * Disabled in production — the response reveals internal hostnames and
- * the length of the auth secret which is enough information to start a
- * side-channel attack. The endpoint stays available in non-production
- * environments so on-call engineers can confirm env wiring without
- * having to ssh into the box.
+ * Disabled in production — the response reveals internal env wiring which is
+ * enough information to start a side-channel attack. In every environment the
+ * endpoint additionally requires a platform-operator session (the same
+ * PLATFORM_ADMIN_EMAILS allowlist that gates auth.tenantsList), because
+ * preview/staging deployments are frequently internet-reachable
+ * (AUTH-011 / RBAC-009). Secret metadata (AUTH_SECRET length) and DB
+ * host/port are never returned.
  */
 export async function GET() {
   if (process.env.NODE_ENV === "production" && process.env.ENABLE_DEBUG_ENDPOINT !== "true") {
+    return new Response("Not found", { status: 404 });
+  }
+
+  // Platform-operator gate — fail-closed when the allowlist is unset. Respond
+  // 404 (not 403) so the route's existence is not confirmed to anonymous callers.
+  const session = await auth();
+  const email = session?.user?.email?.toLowerCase();
+  const allowedOperators = (process.env.PLATFORM_ADMIN_EMAILS ?? "")
+    .split(",")
+    .map((e) => e.trim().toLowerCase())
+    .filter(Boolean);
+  if (!email || !allowedOperators.includes(email)) {
     return new Response("Not found", { status: 404 });
   }
 
@@ -18,24 +34,13 @@ export async function GET() {
   const dbUrl = process.env.DATABASE_URL;
   const demoMode = process.env.DEMO_MODE;
 
-  let dbHost = "unknown";
-  let dbPort = "unknown";
-  try {
-    const u = new URL(dbUrl ?? "");
-    dbHost = u.hostname;
-    dbPort = u.port || "5432";
-  } catch { /* ignore */ }
-
   return Response.json({
     hasAuthSecret: !!authSecret,
-    authSecretLength: authSecret?.length ?? 0,
     hasAuthUrl: !!authUrl,
     authUrlValue: authUrl ?? "not set",
     hasNextAuthUrl: !!nextAuthUrl,
     nextAuthUrlValue: nextAuthUrl ?? "not set",
     hasDbUrl: !!dbUrl,
-    dbHost,
-    dbPort,
     nodeEnv: process.env.NODE_ENV,
     demoModeValue: demoMode ?? "not set",
     demoModeIsTrue: demoMode === "true",

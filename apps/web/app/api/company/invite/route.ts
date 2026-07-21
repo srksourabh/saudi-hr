@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { z } from "zod";
 
 import { auth } from "@hrms-app/auth";
 import { adminDb, getTenantDb, tenants, inviteTokenIndex } from "@hrms-app/db";
@@ -15,6 +16,14 @@ const INVITE_ROLES = ["super_admin", "hr_manager"] as const;
 // allowlist the tRPC procedure uses.
 const ASSIGNABLE_ROLES = ["hr_manager", "department_manager", "payroll_admin", "employee"] as const;
 
+// Validated body (API-011): proper email format + the assignable-role enum —
+// never trust a client-supplied role beyond the allowlist (blocks
+// self-escalation to super_admin).
+const inviteSchema = z.object({
+  email: z.string().trim().email("A valid email is required").max(255),
+  role: z.enum(ASSIGNABLE_ROLES).default("employee"),
+});
+
 export async function POST(request: Request) {
   const session = await auth();
   if (!session?.user?.tenantId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -24,15 +33,18 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "You are not permitted to invite users" }, { status: 403 });
   }
 
-  const body = await request.json();
-  const { email, role = "employee" } = body;
-  if (!email?.trim()) return NextResponse.json({ error: "Email is required" }, { status: 400 });
-
-  // Validate the assignable role — never trust a client-supplied role beyond
-  // the allowlist (blocks self-escalation to super_admin).
-  if (!ASSIGNABLE_ROLES.includes(role as (typeof ASSIGNABLE_ROLES)[number])) {
-    return NextResponse.json({ error: "Invalid or disallowed role" }, { status: 400 });
+  let body: unknown;
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ error: "Invalid request" }, { status: 400 });
   }
+  const parsed = inviteSchema.safeParse(body);
+  if (!parsed.success) {
+    const first = parsed.error.issues[0]?.message ?? "Invalid input";
+    return NextResponse.json({ error: first }, { status: 400 });
+  }
+  const { email, role } = parsed.data;
 
   try {
     const tenant = await adminDb.query.tenants.findFirst({

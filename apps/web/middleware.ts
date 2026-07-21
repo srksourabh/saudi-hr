@@ -7,9 +7,23 @@ const AUTH_ROUTES = ["/login", "/signup", "/api/auth"];
 const API_ROUTES = ["/api/trpc", "/api/health"];
 
 const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
+// Bound the per-instance store (API-007): sweep expired entries once the cap is
+// hit, then drop oldest-inserted keys if churn (e.g. spoofed IPs) outpaces expiry.
+const RATE_LIMIT_MAX_ENTRIES = 10_000;
+
+function evictRateLimitEntries(now: number): void {
+  for (const [key, entry] of rateLimitMap) {
+    if (now > entry.resetAt) rateLimitMap.delete(key);
+  }
+  for (const key of rateLimitMap.keys()) {
+    if (rateLimitMap.size < RATE_LIMIT_MAX_ENTRIES) break;
+    rateLimitMap.delete(key);
+  }
+}
 
 function checkRateLimit(key: string, maxRequests: number, windowMs: number): boolean {
   const now = Date.now();
+  if (rateLimitMap.size >= RATE_LIMIT_MAX_ENTRIES) evictRateLimitEntries(now);
   const entry = rateLimitMap.get(key);
 
   if (!entry || now > entry.resetAt) {
@@ -49,6 +63,29 @@ export async function middleware(request: NextRequest) {
         }
       } catch {
         return new NextResponse(JSON.stringify({ error: "Invalid origin" }), { status: 403 });
+      }
+    } else {
+      // Fail closed when Origin is absent (API-007): fall back to Referer and
+      // reject requests carrying neither. Requests bearing the migration token
+      // (header or ?token=) are exempt — cross-site browser requests cannot
+      // attach custom headers, and the seed/migrate routes validate the token
+      // value themselves.
+      const hasMigrationToken =
+        request.headers.has("x-migration-token") || request.nextUrl.searchParams.has("token");
+      if (!hasMigrationToken) {
+        const referer = request.headers.get("referer");
+        let refererHost: string | null = null;
+        try {
+          refererHost = referer ? new URL(referer).host : null;
+        } catch {
+          refererHost = null;
+        }
+        if (!refererHost || refererHost !== host) {
+          return new NextResponse(JSON.stringify({ error: "Cross-origin request rejected" }), {
+            status: 403,
+            headers: { "Content-Type": "application/json" },
+          });
+        }
       }
     }
     // Rate-limit these sensitive endpoints (30/min/IP).

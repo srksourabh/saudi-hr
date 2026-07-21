@@ -105,6 +105,10 @@ export interface QiwaApiClient {
   testConnectivity(): Promise<boolean>;
 }
 
+// Bound every Qiwa call so a slow/hung government endpoint cannot hang the
+// calling request indefinitely (QA-005).
+const QIWA_TIMEOUT_MS = 20_000;
+
 export class QiwaApiClientImpl implements QiwaApiClient {
   private accessToken: string | null = null;
   private tokenExpiry = 0;
@@ -125,8 +129,23 @@ export class QiwaApiClientImpl implements QiwaApiClient {
     };
   }
 
+  /**
+   * fetch with a bounded timeout (QA-005). `retry: true` re-attempts once on a
+   * network-level failure (timeout / connection reset) — used only for
+   * idempotent GET reads, never for submit/update mutations.
+   */
+  private async request(url: string, init: RequestInit, opts?: { retry?: boolean }): Promise<Response> {
+    const attempt = () => fetch(url, { ...init, signal: AbortSignal.timeout(QIWA_TIMEOUT_MS) });
+    try {
+      return await attempt();
+    } catch (err) {
+      if (opts?.retry) return await attempt();
+      throw err;
+    }
+  }
+
   async authenticate(): Promise<{ accessToken: string; expiresIn: number }> {
-    const response = await fetch(`${this.config.baseUrl}/api/v2/auth/token`, {
+    const response = await this.request(`${this.config.baseUrl}/api/v2/auth/token`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -152,7 +171,7 @@ export class QiwaApiClientImpl implements QiwaApiClient {
   }
 
   async submitEmployee(employee: QiwaEmployee): Promise<QiwaSubmissionResponse> {
-    const response = await fetch(`${this.config.baseUrl}/api/v2/employees`, {
+    const response = await this.request(`${this.config.baseUrl}/api/v2/employees`, {
       method: "POST",
       headers: this.getHeaders(),
       body: JSON.stringify(employee),
@@ -163,7 +182,7 @@ export class QiwaApiClientImpl implements QiwaApiClient {
   }
 
   async updateEmployee(qiwaEmployeeId: string, employee: Partial<QiwaEmployee>): Promise<QiwaSubmissionResponse> {
-    const response = await fetch(`${this.config.baseUrl}/api/v2/employees/${qiwaEmployeeId}`, {
+    const response = await this.request(`${this.config.baseUrl}/api/v2/employees/${qiwaEmployeeId}`, {
       method: "PUT",
       headers: this.getHeaders(),
       body: JSON.stringify(employee),
@@ -174,7 +193,7 @@ export class QiwaApiClientImpl implements QiwaApiClient {
   }
 
   async submitContract(contract: QiwaContract): Promise<QiwaSubmissionResponse> {
-    const response = await fetch(`${this.config.baseUrl}/api/v2/contracts`, {
+    const response = await this.request(`${this.config.baseUrl}/api/v2/contracts`, {
       method: "POST",
       headers: this.getHeaders(),
       body: JSON.stringify(contract),
@@ -185,7 +204,7 @@ export class QiwaApiClientImpl implements QiwaApiClient {
   }
 
   async updateContract(qiwaEmployeeId: string, contract: Partial<QiwaContract>): Promise<QiwaSubmissionResponse> {
-    const response = await fetch(`${this.config.baseUrl}/api/v2/contracts/${qiwaEmployeeId}`, {
+    const response = await this.request(`${this.config.baseUrl}/api/v2/contracts/${qiwaEmployeeId}`, {
       method: "PUT",
       headers: this.getHeaders(),
       body: JSON.stringify(contract),
@@ -196,9 +215,11 @@ export class QiwaApiClientImpl implements QiwaApiClient {
   }
 
   async getEmployee(qiwaEmployeeId: string): Promise<QiwaEmployee | null> {
-    const response = await fetch(`${this.config.baseUrl}/api/v2/employees/${qiwaEmployeeId}`, {
-      headers: this.getHeaders(),
-    });
+    const response = await this.request(
+      `${this.config.baseUrl}/api/v2/employees/${qiwaEmployeeId}`,
+      { headers: this.getHeaders() },
+      { retry: true },
+    );
 
     if (response.status === 404) {
       return null;
@@ -213,9 +234,11 @@ export class QiwaApiClientImpl implements QiwaApiClient {
   }
 
   async getContractStatus(qiwaEmployeeId: string): Promise<QiwaSyncStatus | null> {
-    const response = await fetch(`${this.config.baseUrl}/api/v2/contracts/${qiwaEmployeeId}/status`, {
-      headers: this.getHeaders(),
-    });
+    const response = await this.request(
+      `${this.config.baseUrl}/api/v2/contracts/${qiwaEmployeeId}/status`,
+      { headers: this.getHeaders() },
+      { retry: true },
+    );
 
     if (response.status === 404) {
       return null;
@@ -235,9 +258,10 @@ export class QiwaApiClientImpl implements QiwaApiClient {
     if (params?.page) searchParams.set("page", String(params.page));
     if (params?.limit) searchParams.set("limit", String(params.limit));
 
-    const response = await fetch(
+    const response = await this.request(
       `${this.config.baseUrl}/api/v2/employees?${searchParams.toString()}`,
       { headers: this.getHeaders() },
+      { retry: true },
     );
 
     if (!response.ok) {
@@ -250,7 +274,7 @@ export class QiwaApiClientImpl implements QiwaApiClient {
 
   async testConnectivity(): Promise<boolean> {
     try {
-      await fetch(`${this.config.baseUrl}/api/v2/health`, {
+      await this.request(`${this.config.baseUrl}/api/v2/health`, {
         headers: this.getHeaders(),
       });
       return true;

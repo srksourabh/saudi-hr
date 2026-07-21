@@ -1,5 +1,14 @@
 import { NextResponse } from "next/server";
 import { auth } from "@hrms-app/auth";
+import { z } from "zod";
+
+// Single path-safe segment — no dots, slashes or traversal sequences, so the
+// client-supplied category cannot escape the tenant's storage prefix (API-005).
+const categorySchema = z
+  .string()
+  .min(1)
+  .max(64)
+  .regex(/^[a-zA-Z0-9_-]+$/);
 
 const ALLOWED_MIME_TYPES = [
   "application/pdf",
@@ -44,11 +53,19 @@ export async function POST(request: Request) {
     const tenantId = session.user.tenantId;
     const formData = await request.formData();
     const file = formData.get("file") as File | null;
-    const category = formData.get("category") as string | null;
+    const categoryResult = categorySchema.safeParse(formData.get("category"));
 
     if (!file) {
       return NextResponse.json({ error: "No file provided" }, { status: 400 });
     }
+
+    if (!categoryResult.success) {
+      return NextResponse.json(
+        { error: "Invalid category. Use letters, numbers, underscores or hyphens only." },
+        { status: 400 }
+      );
+    }
+    const category = categoryResult.data;
 
     // Validate MIME type
     if (!ALLOWED_MIME_TYPES.includes(file.type)) {

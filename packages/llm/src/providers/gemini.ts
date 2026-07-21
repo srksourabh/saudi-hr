@@ -22,6 +22,10 @@ import { LlmError } from "../types";
 const GEMINI_API_BASE = "https://generativelanguage.googleapis.com/v1beta/models";
 const DEFAULT_MODEL = "gemini-2.5-flash";
 const DEFAULT_MAX_TOKENS = 4000; // PRD Section 6.4 cap
+// Bound every upstream call so a hung Gemini connection cannot hang the
+// calling tRPC procedure indefinitely (QA-005). Generous enough for a full
+// 4000-token completion. No retry: completions are non-idempotent (and paid).
+const REQUEST_TIMEOUT_MS = 30_000;
 
 export interface GeminiClientConfig {
   apiKey: string;
@@ -78,9 +82,16 @@ export function createGeminiClient(config: GeminiClientConfig): LlmClient {
               temperature,
             },
           }),
+          signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
         });
       } catch (err) {
-        throw new LlmError(provider, undefined, "Network error", err);
+        const timedOut = err instanceof Error && err.name === "TimeoutError";
+        throw new LlmError(
+          provider,
+          undefined,
+          timedOut ? `Request timed out after ${REQUEST_TIMEOUT_MS}ms` : "Network error",
+          err,
+        );
       }
 
       if (!response.ok) {

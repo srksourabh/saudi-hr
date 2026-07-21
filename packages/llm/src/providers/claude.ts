@@ -22,6 +22,10 @@ const ANTHROPIC_API_URL = "https://api.anthropic.com/v1/messages";
 const ANTHROPIC_API_VERSION = "2023-06-01";
 const DEFAULT_MODEL = "claude-3-5-sonnet-latest";
 const DEFAULT_MAX_TOKENS = 4000; // PRD Section 6.4 cap
+// Bound every upstream call so a hung Anthropic connection cannot hang the
+// calling tRPC procedure indefinitely (QA-005). Generous enough for a full
+// 4000-token completion. No retry: completions are non-idempotent (and paid).
+const REQUEST_TIMEOUT_MS = 30_000;
 
 export interface ClaudeClientConfig {
   apiKey: string;
@@ -67,9 +71,16 @@ export function createClaudeClient(config: ClaudeClientConfig): LlmClient {
             system: req.system,
             messages,
           }),
+          signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
         });
       } catch (err) {
-        throw new LlmError(provider, undefined, "Network error", err);
+        const timedOut = err instanceof Error && err.name === "TimeoutError";
+        throw new LlmError(
+          provider,
+          undefined,
+          timedOut ? `Request timed out after ${REQUEST_TIMEOUT_MS}ms` : "Network error",
+          err,
+        );
       }
 
       if (!response.ok) {

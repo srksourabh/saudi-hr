@@ -1,13 +1,21 @@
 import { NextResponse } from "next/server";
 import { hash, compare } from "bcryptjs";
 import { createHash } from "crypto";
+import { z } from "zod";
 import { adminDb, users, verificationTokens } from "@hrms-app/db";
-import { and, eq, sql } from "drizzle-orm";
-import { resetPasswordSchema } from "@hrms-app/validators";
+import { eq, sql } from "drizzle-orm";
+import { passwordSchema } from "@hrms-app/validators";
 
 function hashResetToken(raw: string): string {
   return createHash("sha256").update(raw).digest("hex");
 }
+
+// Token-only reset (PRIV-006): the email is resolved server-side from the
+// hashed token record, so reset links no longer carry the address in the URL.
+const resetSchema = z.object({
+  token: z.string().min(20, "Invalid or missing reset token"),
+  password: passwordSchema,
+});
 
 const INVALID = "This reset link is invalid or has expired. Please request a new one.";
 
@@ -24,23 +32,21 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Invalid request" }, { status: 400 });
   }
 
-  const parsed = resetPasswordSchema.safeParse(body);
+  const parsed = resetSchema.safeParse(body);
   if (!parsed.success) {
     const first = parsed.error.issues[0]?.message ?? "Invalid input";
     return NextResponse.json({ error: first }, { status: 400 });
   }
-  const { email, token, password } = parsed.data;
+  const { token, password } = parsed.data;
 
   try {
     const record = await adminDb.query.verificationTokens.findFirst({
-      where: and(
-        eq(verificationTokens.identifier, email),
-        eq(verificationTokens.token, hashResetToken(token)),
-      ),
+      where: eq(verificationTokens.token, hashResetToken(token)),
     });
     if (!record || record.expires < new Date()) {
       return NextResponse.json({ error: INVALID }, { status: 400 });
     }
+    const email = record.identifier;
 
     const user = await adminDb.query.users.findFirst({ where: eq(users.email, email) });
     if (!user) {

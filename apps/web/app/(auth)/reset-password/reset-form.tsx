@@ -8,7 +8,6 @@ const inputClass =
 
 export function ResetPasswordForm() {
   const params = useSearchParams();
-  const email = params.get("email") ?? "";
   const token = params.get("token") ?? "";
 
   const [password, setPassword] = useState("");
@@ -17,7 +16,7 @@ export function ResetPasswordForm() {
   const [loading, setLoading] = useState(false);
   const [done, setDone] = useState(false);
 
-  const missingLink = !email || !token;
+  const missingLink = !token;
 
   async function onSubmit(event: React.FormEvent) {
     event.preventDefault();
@@ -31,7 +30,7 @@ export function ResetPasswordForm() {
       const res = await fetch("/api/auth/reset", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, token, password }),
+        body: JSON.stringify({ token, password }),
       });
       const data = (await res.json()) as { ok?: boolean; error?: string };
       if (!res.ok || !data.ok) {

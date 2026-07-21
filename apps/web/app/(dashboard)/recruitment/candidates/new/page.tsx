@@ -217,7 +217,7 @@ export default function RecruitmentCandidatesNewPage() {
       e.expectedSalary = "Must be a positive number";
     }
     if (!form.gdprConsent) {
-      e.gdprConsent = "GDPR consent is required to store candidate data";
+      e.gdprConsent = "Candidate consent is required under the Saudi Personal Data Protection Law (PDPL) to store candidate data";
     }
     setErrors(e);
     return Object.keys(e).length === 0;
@@ -613,7 +613,7 @@ export default function RecruitmentCandidatesNewPage() {
 
             <hr className="border-slate-100" />
 
-            {/* ── GDPR Consent ── */}
+            {/* ── PDPL Consent ── */}
             <section className="space-y-3">
               <h3 className="flex items-center gap-2 text-sm font-semibold uppercase tracking-wider text-slate-500">
                 <ShieldCheck className="h-4 w-4" />

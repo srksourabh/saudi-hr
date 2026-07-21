@@ -30,16 +30,18 @@ function clientIp(headers: Headers): string | null {
 
 export async function writeAudit(ctx: AuditableContext, entry: AuditEntry): Promise<void> {
   try {
+    const oldValue = redactSensitive(entry.oldValue);
+    const newValue = redactSensitive(entry.newValue);
     await ctx.db.insert(schema.tenant.auditLogs).values({
       userId: ctx.user.id,
       action: entry.action,
       entityType: entry.entityType,
       entityId: entry.entityId,
       // Record the acting role alongside the values so a dual-role actor is traceable.
-      oldValue: entry.oldValue ?? null,
+      oldValue: oldValue ?? null,
       newValue:
-        entry.newValue !== undefined
-          ? { ...(entry.newValue as Record<string, unknown>), _actingRole: ctx.user.role }
+        newValue !== undefined
+          ? { ...(newValue as Record<string, unknown>), _actingRole: ctx.user.role }
           : { _actingRole: ctx.user.role },
       ipAddress: clientIp(ctx.headers),
     });
@@ -50,6 +52,31 @@ export async function writeAudit(ctx: AuditableContext, entry: AuditEntry): Prom
 
 /** Fields whose changes are salary-sensitive and gated to payroll-authorised roles. */
 export const SALARY_FIELDS = ["salaryBasic", "salaryHousing", "salaryTransport"] as const;
+
+/**
+ * Fields whose raw values must never land in the audit trail (PRIV-013):
+ * salary figures plus the PII fields that are encrypted at rest in `employees`
+ * (their audit snapshots would otherwise sit unencrypted in `audit_logs`).
+ * The audit row still records WHICH field changed, just not the value.
+ */
+const SENSITIVE_AUDIT_FIELDS = new Set<string>([
+  ...SALARY_FIELDS,
+  "iqamaNumberEnc",
+  "passportNumberEnc",
+  "bankIbanEnc",
+]);
+
+const REDACTED = "[redacted]";
+
+/** Mask sensitive field values in an audit payload; returns a new object (no mutation). */
+function redactSensitive(value: unknown): unknown {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return value;
+  const out: Record<string, unknown> = {};
+  for (const [key, v] of Object.entries(value as Record<string, unknown>)) {
+    out[key] = SENSITIVE_AUDIT_FIELDS.has(key) && v != null ? REDACTED : v;
+  }
+  return out;
+}
 
 /** Pick only the keys present in `changed` from `source` (for old-value snapshots). */
 export function pickChanged<T extends Record<string, unknown>>(
