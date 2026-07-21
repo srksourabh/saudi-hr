@@ -35,18 +35,19 @@ PRIV-002, PRIV-005, PRIV-006, PRIV-008, PRIV-009, PRIV-012(p), PRIV-013, QA-005.
 - [x] RBAC-004 attendance/leave company reads → requireCapability (recruiter excluded)
 - [x] BIZ-004 leave overdraw re-checked at approval boundary
 - [x] BIZ-005 leave self-approval blocked (segregation of duties)
-- [ ] BIZ-009 payroll updateStatus state-machine shortcuts
-- [ ] BIZ-010 payslip.create arbitrary amounts
-- [ ] BIZ-011 compensation self-approval
-- [ ] BIZ-013 referral self-crediting
-- [ ] BIZ-014 self-authored performance review
-- [ ] BIZ-015 approval race (atomic status guard)
-- [ ] BIZ-003 expense mutation audit trail
-- [ ] BIZ-006 leave back-dating
-- [ ] BIZ-012 offer state-machine guard
-- [ ] API-009 retention update employeeId/status spread
+- [x] BIZ-009 payroll updateStatus forward-only state machine + audit
+- [x] BIZ-010 payslip.create removed (arbitrary amounts)
+- [x] BIZ-011 compensation self-approval blocked (server-stamped approver)
+- [x] BIZ-013 referral self-crediting — referrer from session
+- [def] BIZ-014 self-authored performance review — ambiguous (self_review is a valid phase); deferred
+- [x] BIZ-015 approval race — atomic status guards (expense markPaid, offers)
+- [x] BIZ-003 expense mutation audit trail
+- [def] BIZ-006 leave back-dating — validator lower-bound (Low); deferred
+- [x] BIZ-012 offer state-machine guards (send/accept/decline)
+- [~] API-009 retention update spread — comp adjustment fixed; systemic input.data
+      spread across ~30 sub-routers still trusts client fields (needs validator omit); deferred
 - [x] API-010 ai.chat no longer forwards client model string
-- [ ] RBAC-007 recruitment application/referral full client payload
+- [x] RBAC-007 referral.create no longer trusts client referrer; application.create constrained by schema
 - [x] RBAC-008 ai.assistant list/getById → requireCapability(settings:manage)
 - [ ] PRIV-010 salary cert/experience letter unaudited PII exposure
 - [ ] PRIV-011 audit log omits auth/role/export/PII-view events

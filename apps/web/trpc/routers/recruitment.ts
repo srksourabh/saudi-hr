@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { TRPCError } from "@trpc/server";
 import { createTRPCRouter, protectedProcedure, requireRole, requireCapability } from "../server";
 import { schema } from "@hrms-app/db";
 import {
@@ -503,14 +504,18 @@ myInterviews: protectedProcedure.query(async ({ ctx }) => {
         return offer;
       }),
 
+    // BIZ-012: offer outcomes follow a state machine (draft → sent →
+    // accepted/declined). Each transition only fires from the valid prior
+    // state, guarded atomically in the UPDATE's WHERE clause.
     send: requireRole("super_admin", "hr_manager")
       .input(z.object({ id: z.string().uuid() }))
       .mutation(async ({ ctx, input }) => {
         const [offer] = await ctx.db
           .update(schema.tenant.offers)
           .set({ status: "sent", sentAt: new Date(), updatedAt: new Date() })
-          .where(eq(schema.tenant.offers.id, input.id))
+          .where(and(eq(schema.tenant.offers.id, input.id), eq(schema.tenant.offers.status, "draft")))
           .returning();
+        if (!offer) throw new TRPCError({ code: "CONFLICT", message: "Only a draft offer can be sent." });
         return offer;
       }),
 
@@ -522,8 +527,9 @@ myInterviews: protectedProcedure.query(async ({ ctx }) => {
         const [offer] = await ctx.db
           .update(schema.tenant.offers)
           .set({ status: "accepted", acceptedAt: new Date(), updatedAt: new Date() })
-          .where(eq(schema.tenant.offers.id, input.id))
+          .where(and(eq(schema.tenant.offers.id, input.id), eq(schema.tenant.offers.status, "sent")))
           .returning();
+        if (!offer) throw new TRPCError({ code: "CONFLICT", message: "Only a sent offer can be accepted." });
         return offer;
       }),
 
@@ -533,8 +539,9 @@ myInterviews: protectedProcedure.query(async ({ ctx }) => {
         const [offer] = await ctx.db
           .update(schema.tenant.offers)
           .set({ status: "declined", declinedAt: new Date(), declineReason: input.reason, updatedAt: new Date() })
-          .where(eq(schema.tenant.offers.id, input.id))
+          .where(and(eq(schema.tenant.offers.id, input.id), eq(schema.tenant.offers.status, "sent")))
           .returning();
+        if (!offer) throw new TRPCError({ code: "CONFLICT", message: "Only a sent offer can be declined." });
         return offer;
       }),
   }),
@@ -653,7 +660,21 @@ myInterviews: protectedProcedure.query(async ({ ctx }) => {
     create: protectedProcedure
       .input(createReferralSchema)
       .mutation(async ({ ctx, input }) => {
-        const [referral] = await ctx.db.insert(schema.tenant.referrals).values(input).returning();
+        // BIZ-013/RBAC-007: the referrer is the acting employee, never a
+        // client-supplied id (self-crediting). HR/recruiters may refer on
+        // behalf of another employee; the reward is set later by HR.
+        const canReferOnBehalf =
+          ctx.user.role === "super_admin" ||
+          ctx.user.role === "hr_manager" ||
+          ctx.user.role === "recruiter";
+        const referrerEmployeeId = canReferOnBehalf ? input.referrerEmployeeId : ctx.user.employeeId;
+        if (!referrerEmployeeId) {
+          throw new TRPCError({ code: "BAD_REQUEST", message: "Your login is not linked to an employee record." });
+        }
+        const [referral] = await ctx.db
+          .insert(schema.tenant.referrals)
+          .values({ ...input, referrerEmployeeId })
+          .returning();
         return referral;
       }),
 

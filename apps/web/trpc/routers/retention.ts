@@ -1474,15 +1474,35 @@ export const retentionRouter = createTRPCRouter({
     create: requireRole("super_admin", "hr_manager")
       .input(createCompensationAdjustmentSchema)
       .mutation(async ({ ctx, input }) => {
-        const [item] = await ctx.db.insert(schema.tenant.compensationAdjustments).values(input).returning();
+        // BIZ-011: a create cannot self-approve — force pending and ignore any
+        // client-supplied approver. Approval is a separate, actor-checked step.
+        const { status: _status, approvedById: _approver, ...rest } = input;
+        const [item] = await ctx.db
+          .insert(schema.tenant.compensationAdjustments)
+          .values({ ...rest, status: "pending", approvedById: null })
+          .returning();
         return item;
       }),
     update: requireRole("super_admin", "hr_manager")
       .input(z.object({ id: idSchema, data: updateCompensationAdjustmentSchema }))
       .mutation(async ({ ctx, input }) => {
+        const existing = await ctx.db.query.compensationAdjustments.findFirst({
+          where: eq(schema.tenant.compensationAdjustments.id, input.id),
+        });
+        if (!existing) throw new TRPCError({ code: "NOT_FOUND", message: "Compensation adjustment not found." });
+
+        // BIZ-011: never trust a client-supplied approver; approval is
+        // server-stamped and cannot be self-approval.
+        const { approvedById: _clientApprover, ...data } = input.data;
+        if (data.status === "approved" && ctx.user.employeeId && existing.employeeId === ctx.user.employeeId) {
+          throw new TRPCError({ code: "FORBIDDEN", message: "You cannot approve your own compensation adjustment." });
+        }
+        const approvalStamp =
+          data.status === "approved" ? { approvedById: ctx.user.employeeId ?? null } : {};
+
         const [item] = await ctx.db
           .update(schema.tenant.compensationAdjustments)
-          .set({ ...input.data, updatedAt: new Date() })
+          .set({ ...data, ...approvalStamp, updatedAt: new Date() })
           .where(eq(schema.tenant.compensationAdjustments.id, input.id))
           .returning();
         return item;
