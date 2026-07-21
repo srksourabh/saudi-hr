@@ -63,8 +63,8 @@ into `createTenantSchema`, parity test 5/5). Regenerate: `pnpm --filter
 - [ ] AUTH-004 lockout columns absent from Drizzle schema (schema drift)
 - [ ] AUTH-006 MFA not enforced by policy
 - [ ] AUTH-008 MFA no backup codes / TOTP throttle
-- [ ] DB-007 crypto dev-key fallback + no versioning
-- [ ] DB-011 users.mfa_secret plaintext (not encryptedText)
+- [x] DB-007 crypto key fails closed everywhere except automated tests
+- [x] DB-011 users.mfa_secret now encryptedText (NULL/legacy-plaintext safe on read)
 - [ ] QA-002 attendance.getSubtree fetches whole tenant
 - [ ] QA-003 leave.runAccrual per-row writes → bulk
 - [ ] QA-012 employees fullName leading-wildcard search

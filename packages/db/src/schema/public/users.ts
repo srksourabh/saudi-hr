@@ -1,5 +1,6 @@
 import { pgTable, uuid, text, timestamp, pgEnum } from "drizzle-orm/pg-core";
 import { tenants } from "./tenants";
+import { encryptedText } from "../../crypto";
 
 export const userRoleEnum = pgEnum("user_role", [
   "super_admin",
@@ -25,7 +26,9 @@ export const users = pgTable("users", {
   emailVerified: timestamp("email_verified", { mode: "date" }),
   role: userRoleEnum("role").notNull().default("employee"),
   preferredLanguage: preferredLanguageEnum("preferred_language").notNull().default("en"),
-  mfaSecret: text("mfa_secret"),
+  // TOTP seed, encrypted at rest (DB-011). Legacy plaintext rows pass through
+  // on read until scripts/encrypt-mfa-backfill.ts is run once per environment.
+  mfaSecret: encryptedText("mfa_secret"),
   employeeId: uuid("employee_id"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at")

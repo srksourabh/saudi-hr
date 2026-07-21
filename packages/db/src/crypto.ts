@@ -24,26 +24,33 @@ const IV_LEN = 12;
 const TAG_LEN = 16;
 
 /**
- * Insecure, fixed key used ONLY for local development and tests so the codec is
- * exercised without every developer having to provision a key. Production is
- * required to set `FIELD_ENCRYPTION_KEY` — enforced in packages/config env
- * validation and guarded again below.
+ * Insecure, fixed key used ONLY for automated test runs so the codec is
+ * exercised without every test environment having to provision a key. Every
+ * other environment (production, preview, staging, local dev) MUST set
+ * `FIELD_ENCRYPTION_KEY` — a missing key fails closed (DB-007) so PII is never
+ * silently encrypted under a key committed to source control.
  */
-const DEV_FALLBACK_KEY = "hrms-dev-only-insecure-field-encryption-key";
+const TEST_FALLBACK_KEY = "hrms-dev-only-insecure-field-encryption-key";
+
+/** True only for automated test runs (vitest sets both of these). */
+function isTestRun(): boolean {
+  return process.env.NODE_ENV === "test" || !!process.env.VITEST;
+}
 
 let cachedKeys: { encKey: Buffer; ivKey: Buffer } | null = null;
 
 function deriveKeys(): { encKey: Buffer; ivKey: Buffer } {
   if (cachedKeys) return cachedKeys;
   const raw = process.env.FIELD_ENCRYPTION_KEY?.trim();
-  if (!raw && process.env.NODE_ENV === "production") {
+  if (!raw && !isTestRun()) {
     throw new Error(
-      "FIELD_ENCRYPTION_KEY must be set in production to encrypt PII at rest (SEC-008).",
+      "FIELD_ENCRYPTION_KEY must be set to encrypt PII at rest (SEC-008). " +
+        "Only automated test runs may omit it — set it in every deployed and local environment.",
     );
   }
   // Normalise any provided secret to a 32-byte master key, then derive two
   // independent subkeys (one for AES, one for the synthetic IV) via HMAC.
-  const master = createHash("sha256").update(raw || DEV_FALLBACK_KEY).digest();
+  const master = createHash("sha256").update(raw || TEST_FALLBACK_KEY).digest();
   const encKey = createHmac("sha256", master).update("hrms/field-enc/v1/enc").digest();
   const ivKey = createHmac("sha256", master).update("hrms/field-enc/v1/iv").digest();
   cachedKeys = { encKey, ivKey };
