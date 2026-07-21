@@ -39,7 +39,7 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
             Edit
           </Button>
           {job.status === "draft" && (
-            <Button variant="destructive" onClick={() => deleteMutation.mutate(job.id)}>
+            <Button variant="destructive" onClick={() => { if (confirm("Delete this job requisition?")) deleteMutation.mutate(job.id); }}>
               Delete
             </Button>
           )}

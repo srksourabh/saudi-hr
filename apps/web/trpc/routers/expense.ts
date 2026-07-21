@@ -1,8 +1,9 @@
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
-import { createTRPCRouter, protectedProcedure, companyProcedure } from "../server";
+import { createTRPCRouter, protectedProcedure, requireRole } from "../server";
 import { schema } from "@hrms-app/db";
 import { and, or, eq, desc, gte } from "drizzle-orm";
+import { writeAudit } from "../audit";
 import {
   createExpenseSchema,
   updateExpenseSchema,
@@ -21,7 +22,8 @@ import {
  * Access control:
  *   - Employees can create, edit, and cancel their *own* pending expenses
  *   - Managers can list and act on expenses where they are the approver
- *   - HR / super_admin can mark approved expenses as paid
+ *   - Finance roles (super_admin / hr_manager / payroll_admin) mark approved expenses as paid
+ *   - The submitter can never be their own approver or payer (BIZ-001/BIZ-002)
  */
 // Roles that legitimately see every expense in the tenant (HR + finance).
 // department_manager and recruiter are intentionally excluded — they are
@@ -155,6 +157,11 @@ export const expenseRouter = createTRPCRouter({
         }
       }
 
+      // BIZ-001: the submitter can never be their own approver.
+      if (approverEmployeeId && approverEmployeeId === userEmployeeId) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "You cannot set yourself as your own approver" });
+      }
+
       const [expense] = await ctx.db
         .insert(schema.tenant.expenses)
         .values({
@@ -169,6 +176,14 @@ export const expenseRouter = createTRPCRouter({
           status: "pending",
         })
         .returning();
+
+      // BIZ-003: audit trail on expense submission.
+      await writeAudit(ctx, {
+        action: "expense.create",
+        entityType: "expense",
+        entityId: expense.id,
+        newValue: { amount: expense.amount, category: expense.category, status: expense.status },
+      });
 
       return expense;
     }),
@@ -242,6 +257,12 @@ export const expenseRouter = createTRPCRouter({
       });
       if (!existing) throw new TRPCError({ code: "NOT_FOUND" });
 
+      // BIZ-001/BIZ-005: no one may approve their own expense (segregation of duties),
+      // even HR/super_admin acting on their own claim.
+      if (existing.employeeId === userEmployeeId) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "You cannot approve your own expense" });
+      }
+
       // Only the assigned approver, or HR, may act.
       if (!isHR && existing.approverEmployeeId !== userEmployeeId) {
         throw new TRPCError({ code: "FORBIDDEN", message: "You are not the approver for this expense" });
@@ -256,6 +277,14 @@ export const expenseRouter = createTRPCRouter({
           .set({ status: "approved", approvedAt: new Date(), rejectionReason: null })
           .where(eq(schema.tenant.expenses.id, input.id))
           .returning();
+        // BIZ-003: audit the approval decision.
+        await writeAudit(ctx, {
+          action: "expense.approve",
+          entityType: "expense",
+          entityId: input.id,
+          oldValue: { status: existing.status },
+          newValue: { status: "approved" },
+        });
         return updated;
       }
 
@@ -267,6 +296,14 @@ export const expenseRouter = createTRPCRouter({
         .set({ status: "rejected", rejectionReason: input.rejectionReason })
         .where(eq(schema.tenant.expenses.id, input.id))
         .returning();
+      // BIZ-003: audit the rejection decision.
+      await writeAudit(ctx, {
+        action: "expense.reject",
+        entityType: "expense",
+        entityId: input.id,
+        oldValue: { status: existing.status },
+        newValue: { status: "rejected" },
+      });
       return updated;
     }),
 
@@ -274,7 +311,7 @@ export const expenseRouter = createTRPCRouter({
    * Finance close-out: mark an approved expense as paid.
    * Only HR / super_admin can do this.
    */
-  markPaid: companyProcedure
+  markPaid: requireRole("super_admin", "hr_manager", "payroll_admin")
     .input(z.object({ id: z.string().uuid() }))
     .mutation(async ({ ctx, input }) => {
       const existing = await ctx.db.query.expenses.findFirst({
@@ -284,11 +321,24 @@ export const expenseRouter = createTRPCRouter({
       if (existing.status !== "approved") {
         throw new TRPCError({ code: "BAD_REQUEST", message: "Only approved expenses can be marked paid" });
       }
+      // BIZ-015: atomic status guard — the UPDATE only fires while the row is still
+      // 'approved', so two concurrent payouts cannot both succeed.
       const [updated] = await ctx.db
         .update(schema.tenant.expenses)
         .set({ status: "paid", paidAt: new Date() })
-        .where(eq(schema.tenant.expenses.id, input.id))
+        .where(and(eq(schema.tenant.expenses.id, input.id), eq(schema.tenant.expenses.status, "approved")))
         .returning();
+      if (!updated) {
+        throw new TRPCError({ code: "CONFLICT", message: "Expense is no longer awaiting payment" });
+      }
+      // BIZ-003: audit the payout.
+      await writeAudit(ctx, {
+        action: "expense.markPaid",
+        entityType: "expense",
+        entityId: input.id,
+        oldValue: { status: "approved" },
+        newValue: { status: "paid" },
+      });
       return updated;
     }),
 

@@ -81,9 +81,14 @@ export function calculateAccrual(
   daysAccrued += tenureBonus;
 
   const previousBalance = existingBalance?.balance ?? 0;
-  let newBalance = previousBalance + daysAccrued;
+  // BIZ-007: `daysAccrued` is already the year-to-date entitlement, so accrual
+  // is an idempotent recompute to that target — NOT an additive step. Adding it
+  // onto the same-year balance on every monthly run compounded the balance ~6.5x
+  // over a year. The balance now converges to the YTD entitlement.
+  let newBalance = daysAccrued;
 
   if (rules.carryOverMax !== undefined) {
+    // Prior-year carryover, capped, plus this year's entitlement.
     const carryOver = Math.min(previousBalance, rules.carryOverMax);
     newBalance = carryOver + daysAccrued;
   }

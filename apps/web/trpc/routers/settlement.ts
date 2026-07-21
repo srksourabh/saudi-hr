@@ -4,7 +4,7 @@ import { schema } from "@hrms-app/db";
 import { createFinalSettlementSchema, separationReasonSchema } from "@hrms-app/validators";
 import { calculateFinalSettlement, qualifiesForArt87FullAward } from "@hrms-app/payroll";
 import { TRPCError } from "@trpc/server";
-import { and, eq, desc } from "drizzle-orm";
+import { and, eq, desc, isNotNull } from "drizzle-orm";
 import { writeAudit } from "../audit";
 
 function toNumber(value: string | null | undefined): number {
@@ -96,6 +96,23 @@ export const settlementRouter = createTRPCRouter({
       });
       if (!employee) {
         throw new TRPCError({ code: "NOT_FOUND", message: "Employee not found." });
+      }
+
+      // ── BIZ-008: duplicate-EOSB guard ─────────────────────────────────────
+      // The final_settlements table also holds the offboarding workflow row
+      // (esbAmount NULL), so the guard targets a *computed* settlement only:
+      // one EOSB per employee, or a re-run would double the payout.
+      const existingEosb = await ctx.db.query.finalSettlements.findFirst({
+        where: and(
+          eq(schema.tenant.finalSettlements.employeeId, input.employeeId),
+          isNotNull(schema.tenant.finalSettlements.esbAmount),
+        ),
+      });
+      if (existingEosb) {
+        throw new TRPCError({
+          code: "CONFLICT",
+          message: "A final settlement has already been created for this employee.",
+        });
       }
 
       // ── Article 80 documentation gate (EOSB-010) ──────────────────────────

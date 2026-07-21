@@ -287,7 +287,7 @@ export default function GuideMapPage() {
                     size="icon"
                     variant="ghost"
                     className="h-7 w-7 shrink-0 text-muted-foreground hover:text-red-500"
-                    onClick={() => deleteMutation.mutate(gm.id)}
+                    onClick={() => { if (confirm(`Delete map "${gm.name}"?`)) deleteMutation.mutate(gm.id); }}
                   >
                     <Trash2 className="h-3.5 w-3.5" />
                   </Button>

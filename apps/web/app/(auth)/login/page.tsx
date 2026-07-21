@@ -8,19 +8,9 @@ export default function LoginPage() {
       {/* Backdrop — Riyadh variant with dim overlay for content readability */}
       <SaudiBackdrop variant="riyadh" dim className="absolute inset-0" />
 
-      {/* Top bar: language toggle + brand */}
-      <header className="relative z-10 flex items-center justify-between px-6 py-5 sm:px-10">
+      {/* Top bar: brand */}
+      <header className="relative z-10 flex items-center px-6 py-5 sm:px-10">
         <BrandLockup inverse priority />
-        <div className="flex items-center gap-2 text-sm text-white/80">
-          <button
-            type="button"
-            className="rounded-full px-3 py-1 transition hover:bg-white/10 hover:text-white"
-          >
-            العربية
-          </button>
-          <span className="opacity-50">|</span>
-          <span className="font-medium text-white">EN</span>
-        </div>
       </header>
 
       {/* Main content: split layout — visual left, form right */}

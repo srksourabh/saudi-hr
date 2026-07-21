@@ -104,6 +104,20 @@ describe("runMonthlyAccrual", () => {
     expect(result?.previousBalance).toBe(20);
     expect(result?.newBalance).toBe(40); // 10 (capped carry over) + 30
   });
+
+  it("BIZ-007: repeated monthly runs do not compound the balance", () => {
+    const leaveTypes = [leaveType("lt1", "Annual", 24, { accrualFrequency: "monthly" })];
+    const employees = [employee("e1", "2020-01-01")];
+    const config = { effectiveDate: new Date("2024-07-15"), runForYear: 2024 };
+
+    const first = runMonthlyAccrual(leaveTypes, employees, [], config);
+    const firstBalance = first[0]!.newBalance;
+
+    // Feed the first run's balance back in, exactly as the monthly cron would.
+    const existing = [{ id: "e1-lt1-2024", employeeId: "e1", leaveTypeId: "lt1", balance: firstBalance, year: 2024 }];
+    const second = runMonthlyAccrual(leaveTypes, employees, existing, config);
+    expect(second[0]!.newBalance).toBe(firstBalance);
+  });
 });
 
 describe("runAnnualAccrual", () => {
