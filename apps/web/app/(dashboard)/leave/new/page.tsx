@@ -4,6 +4,7 @@ import { api } from "~/trpc/react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { Button, Card, CardHeader, CardTitle, CardContent, Input, DualDate } from "@hrms-app/ui";
+import { ArrowLeft } from "lucide-react";
 import { useState, useEffect } from "react";
 
 export default function NewLeaveRequestPage() {
@@ -33,7 +34,10 @@ export default function NewLeaveRequestPage() {
 
   const createMutation = api.leave.request.create.useMutation({
     onSuccess: () => {
+      // Refresh both the company queue (HR/managers) and the employee's own
+      // list so a freshly filed request appears immediately.
       utils.leave.request.list.invalidate();
+      utils.leave.request.my.invalidate();
       router.push("/leave");
     },
     onError: (err) => setError(err.message),
@@ -58,6 +62,14 @@ export default function NewLeaveRequestPage() {
   return (
     <div className="mx-auto max-w-xl space-y-6">
       <div>
+        <Button
+          variant="ghost"
+          size="sm"
+          className="mb-2 -ml-2 h-8 px-2 text-muted-foreground"
+          onClick={() => router.push("/")}
+        >
+          <ArrowLeft className="mr-1.5 h-4 w-4" /> Back to dashboard
+        </Button>
         <h1 className="text-3xl font-bold">New Leave Request</h1>
         <p className="text-muted-foreground">{isEmployee ? "Request time off" : "Create a leave request for an employee"}</p>
       </div>

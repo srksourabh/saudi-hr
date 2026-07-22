@@ -173,9 +173,14 @@ export const attendanceRouter = createTRPCRouter({
       let lateMinutes = 0;
       let status: "present" | "late" | "remote" = "present";
       let scheduledStart: string | null = null;
+      // Capture the shift's END time at punch-in so punch-out can compute
+      // overtime (ATT-OT): without it, the overtime branch never runs and OT
+      // was always 0 (which zeroed payroll overtime pay too).
+      let scheduledEnd: string | null = null;
 
       if (assignment?.shift) {
         scheduledStart = assignment.shift.startTime;
+        scheduledEnd = assignment.shift.endTime;
         const scheduledDateTime = combineDateTime(workDate, assignment.shift.startTime);
         const grace = assignment.shift.graceMinutes ?? 0;
         if (now.getTime() > scheduledDateTime.getTime() + grace * 60_000) {
@@ -197,6 +202,7 @@ export const attendanceRouter = createTRPCRouter({
           status,
           lateMinutes,
           scheduledStart,
+          scheduledEnd,
           workLocation: input.workLocation,
           // Store the punch-in GPS location (time + location, SEC requirement).
           punchInLat: input.lat ?? null,
@@ -386,8 +392,28 @@ export const attendanceRouter = createTRPCRouter({
         totalOvertimeMinutes: 0,
         totalLateMinutes: 0,
       };
+      // Working hours per the agreed model: for each day, the total is the span
+      // from that day's FIRST punch-in to its LAST punch-out (breaks between
+      // multiple punch sequences are included). An open sequence counts up to now.
+      const spanByDate = new Map<string, { firstIn: number; lastOut: number }>();
+      const nowMs = Date.now();
       for (const r of records) {
-        summary.totalWorkedMinutes += r.workedMinutes;
+        if (!r.punchInAt) continue;
+        const inMs = r.punchInAt.getTime();
+        const outMs = r.punchOutAt ? r.punchOutAt.getTime() : nowMs;
+        const cur = spanByDate.get(r.workDate);
+        if (!cur) {
+          spanByDate.set(r.workDate, { firstIn: inMs, lastOut: outMs });
+        } else {
+          cur.firstIn = Math.min(cur.firstIn, inMs);
+          cur.lastOut = Math.max(cur.lastOut, outMs);
+        }
+      }
+      for (const { firstIn, lastOut } of spanByDate.values()) {
+        summary.totalWorkedMinutes += Math.max(0, Math.floor((lastOut - firstIn) / 60_000));
+      }
+
+      for (const r of records) {
         summary.totalOvertimeMinutes += r.overtimeMinutes;
         summary.totalLateMinutes += r.lateMinutes;
         switch (r.status) {
@@ -591,9 +617,11 @@ export const attendanceRouter = createTRPCRouter({
       let lateMinutes = 0;
       let status: "present" | "late" | "remote" = "present";
       let scheduledStart: string | null = null;
+      let scheduledEnd: string | null = null;
 
       if (assignment?.shift) {
         scheduledStart = assignment.shift.startTime;
+        scheduledEnd = assignment.shift.endTime;
         const scheduledDateTime = combineDateTime(workDate, assignment.shift.startTime);
         const grace = assignment.shift.graceMinutes ?? 0;
         if (now.getTime() > scheduledDateTime.getTime() + grace * 60_000) {
@@ -615,6 +643,7 @@ export const attendanceRouter = createTRPCRouter({
           status,
           lateMinutes,
           scheduledStart,
+          scheduledEnd,
           workLocation: input.workLocation,
           notes: input.notes,
           shiftId: assignment?.shiftId ?? null,

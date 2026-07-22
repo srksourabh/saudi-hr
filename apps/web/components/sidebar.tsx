@@ -108,6 +108,7 @@ const employeeNavGroups = [
       { href: "/profile", label: "My profile", labelAr: "ملفي", icon: CircleUserRound },
       { href: "/attendance/me", label: "My attendance", labelAr: "حضوري", icon: CalendarCheck },
       { href: "/modules/time-leave-attendance", label: "My leave", labelAr: "إجازاتي", icon: CalendarCheck },
+      { href: "/payroll/me", label: "My payroll", labelAr: "رواتبي", icon: Landmark },
       { href: "/modules/documents-certificates", label: "My documents", labelAr: "مستنداتي", icon: FileText },
       { href: "/modules/learning-skills", label: "My learning", labelAr: "تعلمي", icon: BookOpenCheck },
       { href: "/expenses", label: "My expenses", labelAr: "مصروفاتي", icon: WalletCards },

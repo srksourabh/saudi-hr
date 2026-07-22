@@ -80,14 +80,102 @@ Cover at least these topics:
 
 If the user asks a question unrelated to Taazur, politely redirect them back to the platform topics above.`;
 
-const QUICK_TOPICS = [
-  { label: "How do I punch in?",        text: "How do I punch in for the day? Where is the attendance button?" },
-  { label: "How to file leave?",       text: "How do I file a new leave request as an employee?" },
-  { label: "Run payroll",              text: "How does HR run a payroll period and download the Mudad wage file?" },
-  { label: "Performance review",       text: "How does a department manager start a performance review?" },
-  { label: "View organogram",          text: "Where can I see the company organogram and reporting lines?" },
-  { label: "Forgot password",          text: "I forgot my password. How do I reset it?" },
+/**
+ * Ready-made questions, each with a ready-made written answer. These are served
+ * locally (no LLM call), so the assistant works even when no AI key is
+ * configured. Free-typed questions match against `keywords`; anything unmatched
+ * falls back to the LLM via `ai.chat.send`.
+ */
+interface CannedTopic { label: string; q: string; a: string; keywords: string[] }
+
+const CANNED_TOPICS: CannedTopic[] = [
+  {
+    label: "How do I punch in?",
+    q: "How do I punch in for the day?",
+    a: "Go to **My day** (your home dashboard) or **My attendance**. Confirm your location on the map, then tap **Punch in**. Your GPS location and the time are captured automatically.",
+    keywords: ["punch in", "clock in", "check in", "start work"],
+  },
+  {
+    label: "How do I punch out?",
+    q: "How do I punch out?",
+    a: "On **My attendance** (or **My day**), tap **Punch out**. You can punch in and out several times a day — for example a morning and an afternoon session.",
+    keywords: ["punch out", "clock out", "check out", "end work"],
+  },
+  {
+    label: "How are my hours counted?",
+    q: "How are my daily working hours calculated?",
+    a: "Your working hours for a day are counted from your **first punch-in** to your **last punch-out**. Your dashboard also shows totals for **this week** and **this month**.",
+    keywords: ["hours counted", "working hours", "how many hours", "total hours", "daily hours"],
+  },
+  {
+    label: "How do I request leave?",
+    q: "How do I file a leave request?",
+    a: "Go to **My leave** → **New Leave Request**. Choose a leave type, pick your start and end dates, then click **Create Leave Request**. It is sent to your manager as **Pending**.",
+    keywords: ["request leave", "file leave", "apply leave", "take leave", "time off", "vacation", "holiday request"],
+  },
+  {
+    label: "Where are my leave requests?",
+    q: "Where do I see my leave requests?",
+    a: "Open **My leave**. Every request you file appears there with its status — **Pending**, **Approved** or **Rejected**. Use the tabs to filter.",
+    keywords: ["my leave request", "see leave", "leave status", "pending leave", "track leave"],
+  },
+  {
+    label: "My payslips",
+    q: "How do I see and download my payslips?",
+    a: "Go to **My Payroll** in the sidebar. Each payslip shows a full breakdown (basic, housing, transport, overtime, GOSI, net pay). Open one and click **Download / Print** to save it as a PDF.",
+    keywords: ["payslip", "pay slip", "salary slip", "my payroll", "my salary", "download pay"],
+  },
+  {
+    label: "Fix a payslip",
+    q: "How do I request a correction to my payslip?",
+    a: "On **My Payroll**, open the payslip and click **Request a correction**. Type what looks wrong and submit — your message is sent to HR to review.",
+    keywords: ["correction", "wrong pay", "payslip mistake", "fix payslip", "dispute salary"],
+  },
+  {
+    label: "Overtime",
+    q: "How is my overtime calculated?",
+    a: "Overtime is the time you work **beyond your shift's end time**. It appears on your attendance record and is paid on the next payroll run.",
+    keywords: ["overtime", "extra hours", "ot "],
+  },
+  {
+    label: "My team / organogram",
+    q: "Where can I see my team and reporting line?",
+    a: "Go to **View organogram**. You'll see your **manager above you** and the **people who report to you below**. Click any person to open their card.",
+    keywords: ["organogram", "org chart", "my team", "who reports", "reporting line", "employees under"],
+  },
+  {
+    label: "Submit an expense",
+    q: "How do I submit an expense?",
+    a: "Go to **My expenses** → **Submit expense**. Your name and department are filled in automatically, and your line manager is set as the approver. Add the category, amount and date, then submit.",
+    keywords: ["expense", "reimburse", "claim", "receipt"],
+  },
+  {
+    label: "My documents",
+    q: "Where are my documents?",
+    a: "Go to **My documents** to view your uploaded documents and certificates (iqama, passport, contract, etc.).",
+    keywords: ["document", "certificate", "iqama", "passport", "contract"],
+  },
+  {
+    label: "Forgot password",
+    q: "I forgot my password. How do I reset it?",
+    a: "On the login screen, click **Forgot password?** and follow the reset link sent to your email.",
+    keywords: ["password", "forgot", "reset login", "can't sign in", "locked out"],
+  },
+  {
+    label: "Contact support",
+    q: "How do I contact support?",
+    a: "For help, email **support@taazur.example** or use the **Help** link in your profile menu (top-right).",
+    keywords: ["support", "help desk", "contact", "raise a ticket"],
+  },
 ];
+
+function findCanned(text: string): CannedTopic | null {
+  const t = text.toLowerCase();
+  for (const c of CANNED_TOPICS) {
+    if (c.keywords.some((k) => t.includes(k))) return c;
+  }
+  return null;
+}
 
 export function FloatingChatbot() {
   const [open, setOpen] = useState(false);
@@ -123,11 +211,32 @@ export function FloatingChatbot() {
     }
   }, [messages, open]);
 
+  // A quick-help chip: post its ready-made question + ready-made answer locally,
+  // with no server call — so it always works, even without an AI key.
+  function answerCanned(c: CannedTopic) {
+    const now = Date.now();
+    setMessages((prev) => [
+      ...prev,
+      { id: `u-${now}`, role: "user", content: c.q, ts: now },
+      { id: `c-${now + 1}`, role: "assistant", content: c.a, ts: now + 1 },
+    ]);
+  }
+
   function submit(text: string) {
     const trimmed = text.trim();
     if (!trimmed || send.isPending) return;
     setMessages((prev) => [...prev, { id: `u-${Date.now()}`, role: "user", content: trimmed, ts: Date.now() }]);
     setInput("");
+    // Try a ready-made answer first (works offline / without an AI key).
+    const canned = findCanned(trimmed);
+    if (canned) {
+      setMessages((prev) => [
+        ...prev,
+        { id: `c-${Date.now()}`, role: "assistant", content: canned.a, ts: Date.now() },
+      ]);
+      return;
+    }
+    // No canned match — ask the LLM (returns a graceful note if no key is set).
     send.mutate({
       messages: [
         { role: "system", content: USER_MANUAL_PROMPT },
@@ -144,7 +253,7 @@ export function FloatingChatbot() {
         type="button"
         aria-label={open ? "Close help" : "Open help"}
         onClick={() => setOpen((v) => !v)}
-        className="fixed bottom-5 right-5 z-50 flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-emerald-700 to-emerald-900 text-white shadow-lg ring-1 ring-emerald-900/30 transition hover:shadow-2xl hover:scale-105"
+        className="fixed bottom-5 right-5 z-[1000] flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-emerald-700 to-emerald-900 text-white shadow-lg ring-1 ring-emerald-900/30 transition hover:shadow-2xl hover:scale-105"
       >
         {open ? <X className="h-6 w-6" /> : <MessageCircle className="h-6 w-6" />}
         {!open && (
@@ -153,7 +262,7 @@ export function FloatingChatbot() {
       </button>
 
       {open && (
-        <div className="fixed bottom-24 right-5 z-50 flex h-[540px] w-[380px] max-w-[calc(100vw-2.5rem)] flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl">
+        <div className="fixed bottom-24 right-5 z-[1000] flex h-[540px] w-[380px] max-w-[calc(100vw-2.5rem)] flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl">
           <header className="flex items-center justify-between gap-3 bg-gradient-to-br from-emerald-700 to-emerald-900 px-4 py-3 text-white">
             <div className="flex items-center gap-2">
               <span className="flex h-9 w-9 items-center justify-center rounded-full bg-white/15">
@@ -211,26 +320,25 @@ export function FloatingChatbot() {
             )}
           </div>
 
-          {messages.length <= 1 && (
-            <div className="border-t border-slate-100 bg-slate-50/60 px-3 py-2">
-              <div className="mb-1.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-500">
-                Quick help
-              </div>
-              <div className="flex flex-wrap gap-1.5">
-                {QUICK_TOPICS.map((q) => (
-                  <button
-                    key={q.label}
-                    type="button"
-                    onClick={() => submit(q.text)}
-                    disabled={send.isPending}
-                    className="rounded-full border border-slate-200 bg-white px-2.5 py-1 text-[11px] text-slate-700 transition hover:border-emerald-400 hover:bg-emerald-50 disabled:opacity-50"
-                  >
-                    {q.label}
-                  </button>
-                ))}
-              </div>
+          {/* Ready-made questions are always available — tap any for an instant
+              written answer (no AI key required). */}
+          <div className="max-h-32 overflow-y-auto border-t border-slate-100 bg-slate-50/60 px-3 py-2">
+            <div className="mb-1.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-500">
+              Quick help — tap a question
             </div>
-          )}
+            <div className="flex flex-wrap gap-1.5">
+              {CANNED_TOPICS.map((c) => (
+                <button
+                  key={c.label}
+                  type="button"
+                  onClick={() => answerCanned(c)}
+                  className="rounded-full border border-slate-200 bg-white px-2.5 py-1 text-[11px] text-slate-700 transition hover:border-emerald-400 hover:bg-emerald-50"
+                >
+                  {c.label}
+                </button>
+              ))}
+            </div>
+          </div>
 
           <form
             onSubmit={(e) => {

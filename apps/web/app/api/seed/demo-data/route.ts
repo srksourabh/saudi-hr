@@ -61,15 +61,24 @@ export async function POST(req: Request) {
   const log: string[] = [];
 
   try {
-    // 1. Leave types (use ON CONFLICT to make idempotent)
-    await tenantExec(schema, `
-      INSERT INTO leave_types (id, name, days_allowed, rules, created_at, updated_at)
-      VALUES
-        (gen_random_uuid(), 'Annual Leave', 21, '{"accrual":"monthly","carryover":5}'::jsonb, NOW(), NOW()),
-        (gen_random_uuid(), 'Sick Leave', 30, '{"requires_doc_after":2}'::jsonb, NOW(), NOW()),
-        (gen_random_uuid(), 'Unpaid Leave', 30, '{}'::jsonb, NOW(), NOW())
-    `);
-    log.push("leave_types seeded");
+    // 1. Leave types — idempotent by name. Previously this used a plain
+    //    multi-row INSERT with fresh UUIDs (the "ON CONFLICT" comment was
+    //    aspirational — there was no unique key), so every re-run inserted three
+    //    MORE rows and the request dropdown showed "Annual Leave" twice, etc.
+    //    Now each type is inserted only when its name is absent.
+    const leaveTypeSeeds: { name: string; days: number; rules: string }[] = [
+      { name: "Annual Leave", days: 21, rules: '{"accrual":"monthly","carryover":5}' },
+      { name: "Sick Leave", days: 30, rules: '{"requires_doc_after":2}' },
+      { name: "Unpaid Leave", days: 30, rules: "{}" },
+    ];
+    for (const lt of leaveTypeSeeds) {
+      await adminDb.execute(
+        sql`INSERT INTO ${sql.raw(schema)}.leave_types (id, name, days_allowed, rules, created_at, updated_at)
+            SELECT gen_random_uuid(), ${lt.name}, ${lt.days}, ${lt.rules}::jsonb, NOW(), NOW()
+            WHERE NOT EXISTS (SELECT 1 FROM ${sql.raw(schema)}.leave_types WHERE name = ${lt.name})`,
+      );
+    }
+    log.push("leave_types seeded (idempotent)");
 
     // 2. Leave balances for each active employee
     const emps = await adminDb.execute(

@@ -155,6 +155,12 @@ const employeeRoutePrefixes = [
   "/profile",
   "/leave",
   "/documents",
+  // Employee self-service payroll page (own payslips). Distinct from the
+  // HR-only /payroll routes — this prefix matches only /payroll/me[/...].
+  "/payroll/me",
+  // Self-centered organogram (own managers + reports). The full company chart
+  // stays HR-only; the page scopes its data to the employee server-side.
+  "/departments/organogram",
   "/retention/goals",
   "/retention/skills",
   "/modules/travel-expenses",
@@ -194,7 +200,19 @@ const employeeProcedures = new Set([
   "attendance.myMonthlySummary",
   "employee.me",
   "employee.exportMyData",
+  // Self-centered org chart: the employee's own managers-above / reports-below.
+  "employee.orgAroundMe",
+  // Employee expense self-service (submit + view + cancel own claims).
+  "expense.list",
+  "expense.summary",
+  "expense.getById",
+  "expense.create",
+  "expense.update",
+  "expense.cancel",
   "payroll.payslip.myLatest",
+  // My Payroll self-service: own payslips + request a correction from HR.
+  "payroll.payslip.mine",
+  "payroll.payslip.requestCorrection",
   "settlement.simulateOwn",
   "retention.goal.mine",
   // Employee self-help assistant (Taāzur AI). The answer is grounded in the
