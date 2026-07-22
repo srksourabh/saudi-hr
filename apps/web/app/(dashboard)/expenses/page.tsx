@@ -74,6 +74,9 @@ export default function ExpensesPage() {
     { enabled: !!session.data },
   );
   const summary = api.expense.summary.useQuery(undefined, { enabled: !!session.data });
+  // Own employee record (name + department) to show on the submit form. The
+  // expense is always filed for the signed-in employee, so these are read-only.
+  const me = api.employee.me.useQuery(undefined, { enabled: !!session.data });
 
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState<FormState>(emptyForm);
@@ -192,6 +195,18 @@ export default function ExpensesPage() {
                 {error}
               </div>
             )}
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-slate-700">Employee</label>
+              <div className="flex h-11 w-full items-center rounded-md border border-slate-200 bg-slate-50 px-3 text-sm text-slate-600">
+                {me.data?.fullName ?? "You"}
+              </div>
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-slate-700">Department</label>
+              <div className="flex h-11 w-full items-center rounded-md border border-slate-200 bg-slate-50 px-3 text-sm text-slate-600">
+                {me.data?.department?.name ?? "—"}
+              </div>
+            </div>
             <div className="space-y-2">
               <label className="text-sm font-medium text-slate-700">Category *</label>
               <select

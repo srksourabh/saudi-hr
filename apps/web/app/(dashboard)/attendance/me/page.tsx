@@ -66,9 +66,32 @@ export default function MyAttendancePage() {
 
   const records = today?.records ?? [];
   const shift = today?.assignment?.shift;
-  const latestRecord = records.find((r: any) => !r.punchOutAt) ?? records[0];
-  const punchedIn = !!latestRecord?.punchInAt;
+  // Use the LATEST sequence (records are ordered by punchSequence asc), not
+  // records[0]. Selecting the first, already-closed sequence made `punchedIn`
+  // stay true after a punch-out, which wrongly disabled a second punch-in.
+  const latestRecord = records.find((r: any) => !r.punchOutAt) ?? records[records.length - 1];
+  // Punched in = an OPEN sequence exists (in, not yet out). After punching out
+  // this is false, so the employee can start another sequence the same day.
+  const punchedIn = !!latestRecord?.punchInAt && !latestRecord?.punchOutAt;
   const punchedOut = !!latestRecord?.punchOutAt;
+  // Today's worked time = first punch-in → last punch-out across all sequences.
+  const workedTodayMin = (() => {
+    const nowMs = Date.now();
+    let firstIn: number | null = null;
+    let lastOut: number | null = null;
+    let anyOpen = false;
+    for (const r of records as any[]) {
+      const inMs = r.punchInAt ? new Date(r.punchInAt).getTime() : null;
+      if (inMs == null) continue;
+      firstIn = firstIn == null ? inMs : Math.min(firstIn, inMs);
+      const outMs = r.punchOutAt ? new Date(r.punchOutAt).getTime() : null;
+      if (outMs == null) anyOpen = true;
+      else lastOut = lastOut == null ? outMs : Math.max(lastOut, outMs);
+    }
+    if (firstIn == null) return 0;
+    const end = anyOpen ? nowMs : lastOut;
+    return end == null ? 0 : Math.max(0, Math.floor((end - firstIn) / 60_000));
+  })();
   const todayLocation = useMemo<LocationPickerValue | null>(() => {
     if (latestRecord?.punchInLat != null && latestRecord?.punchInLng != null) {
       return {
@@ -140,7 +163,7 @@ export default function MyAttendancePage() {
                 />
                 <TimeTile
                   label="Worked today"
-                  value={formatMinutes(latestRecord?.workedMinutes ?? 0)}
+                  value={formatMinutes(workedTodayMin)}
                   icon={<Clock className="h-4 w-4" />}
                 />
               </div>

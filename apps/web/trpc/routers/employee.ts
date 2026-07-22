@@ -102,6 +102,71 @@ export const employeeRouter = createTRPCRouter({
   }),
 
   /**
+   * Self-centered organogram: the current employee, their manager chain ABOVE,
+   * and their reporting tree BELOW. Own slice of the org only — an employee may
+   * not load the full company chart (that stays companyProcedure). Returns a
+   * flat node list + selfId; the client builds the tree and centers on self.
+   * Only non-PII columns are read (no iqama/bank decryption — QA-002).
+   */
+  orgAroundMe: protectedProcedure.query(async ({ ctx }) => {
+    const selfId = ctx.user.employeeId;
+    if (!selfId) return { selfId: null as string | null, nodes: [] as any[] };
+
+    const cols = {
+      id: true,
+      fullName: true,
+      managerEmployeeId: true,
+      employmentStatus: true,
+      nationality: true,
+    } as const;
+    const withDept = { department: { columns: { id: true, name: true } } } as const;
+
+    const nodes = new Map<string, any>();
+
+    const self = await ctx.db.query.employees.findFirst({
+      where: eq(schema.tenant.employees.id, selfId),
+      columns: cols,
+      with: withDept,
+    });
+    if (!self) return { selfId, nodes: [] as any[] };
+    nodes.set(self.id, self);
+
+    // Walk UP the manager chain (bounded depth guards against cycles).
+    let cursor: typeof self | undefined = self;
+    for (let i = 0; i < 8 && cursor?.managerEmployeeId; i++) {
+      if (nodes.has(cursor.managerEmployeeId)) break;
+      const mgr = await ctx.db.query.employees.findFirst({
+        where: eq(schema.tenant.employees.id, cursor.managerEmployeeId),
+        columns: cols,
+        with: withDept,
+      });
+      if (!mgr) break;
+      nodes.set(mgr.id, mgr);
+      cursor = mgr;
+    }
+
+    // Walk DOWN the reporting tree (BFS, bounded by depth and node count).
+    let frontier: string[] = [selfId];
+    for (let depth = 0; depth < 4 && frontier.length > 0 && nodes.size < 300; depth++) {
+      const reports = await ctx.db.query.employees.findMany({
+        where: inArray(schema.tenant.employees.managerEmployeeId, frontier),
+        columns: cols,
+        with: withDept,
+      });
+      const next: string[] = [];
+      for (const r of reports) {
+        if (!nodes.has(r.id)) {
+          nodes.set(r.id, r);
+          next.push(r.id);
+        }
+      }
+      frontier = next;
+    }
+
+    return { selfId, nodes: Array.from(nodes.values()) };
+  }),
+
+  /**
    * PDPL data-subject access request (PDPL-001): an employee exports their own
    * complete record. Own data only; the export itself is audited.
    */

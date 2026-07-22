@@ -7,7 +7,7 @@ import { api } from "~/trpc/react";
 import { LocationPicker, type LocationPickerValue } from "~/components/location-picker";
 import {
   Clock, MapPin, LogIn, LogOut, AlertTriangle, CalendarDays, ReceiptText,
-  UserRoundCheck, FileBadge, ArrowUpRight,
+  UserRoundCheck, FileBadge, ArrowUpRight, Target,
 } from "lucide-react";
 
 const statusBadge: Record<string, string> = {
@@ -52,6 +52,35 @@ interface DayRecord {
   workLocation: string | null;
 }
 
+function toMs(v: string | Date | null | undefined): number | null {
+  if (!v) return null;
+  const t = typeof v === "string" ? new Date(v).getTime() : v.getTime();
+  return Number.isFinite(t) ? t : null;
+}
+
+/**
+ * Working hours for a set of same-day records = span from the FIRST punch-in to
+ * the LAST punch-out (an open, not-yet-punched-out sequence counts up to now).
+ * This matches the agreed rule: multiple punches in a day, first-in to last-out.
+ */
+function spanMinutes(recs: DayRecord[], nowMs: number): number {
+  let firstIn: number | null = null;
+  let lastOut: number | null = null;
+  let anyOpen = false;
+  for (const r of recs) {
+    const inMs = toMs(r.punchInAt);
+    if (inMs == null) continue;
+    firstIn = firstIn == null ? inMs : Math.min(firstIn, inMs);
+    const outMs = toMs(r.punchOutAt);
+    if (outMs == null) anyOpen = true;
+    else lastOut = lastOut == null ? outMs : Math.max(lastOut, outMs);
+  }
+  if (firstIn == null) return 0;
+  const end = anyOpen ? nowMs : lastOut;
+  if (end == null) return 0;
+  return Math.max(0, Math.floor((end - firstIn) / 60_000));
+}
+
 const quickActions = [
   { href: "/leave", label: "Request leave", icon: CalendarDays },
   { href: "/expenses", label: "Submit expense", icon: ReceiptText },
@@ -73,6 +102,7 @@ export function EmployeeTimesheetHome({ userName }: { userName: string }) {
   const { data: today, isLoading: loadingToday } = api.attendance.today.useQuery();
   const { data: history } = api.attendance.myHistory.useQuery({});
   const { data: monthly } = api.attendance.myMonthlySummary.useQuery({ month });
+  const { data: goals } = api.retention.goal.mine.useQuery();
 
   const refetch = () => {
     setPunchError(null);
@@ -87,8 +117,30 @@ export function EmployeeTimesheetHome({ userName }: { userName: string }) {
   const shift = today?.assignment?.shift;
   const latest = records.find((r) => !r.punchOutAt) ?? records[records.length - 1];
   const punchedIn = !!latest?.punchInAt && !latest?.punchOutAt;
-  // Sum every completed sequence today = only punched-in intervals are counted.
-  const workedToday = records.reduce((sum, r) => sum + (r.workedMinutes ?? 0), 0);
+  // Today's hours = first punch-in → last punch-out (supports multiple punches).
+  const workedToday = spanMinutes(records, Date.now());
+
+  // This week's total worked = sum of each day's (first-in → last-out) span for
+  // days from the start of the current week (Sunday) onward.
+  const weekWorked = useMemo(() => {
+    const hist = (history ?? []) as DayRecord[];
+    const now = new Date();
+    const weekStart = new Date(now);
+    weekStart.setHours(0, 0, 0, 0);
+    weekStart.setDate(now.getDate() - now.getDay()); // Sunday = start of week
+    const weekStartISO = `${weekStart.getFullYear()}-${String(weekStart.getMonth() + 1).padStart(2, "0")}-${String(weekStart.getDate()).padStart(2, "0")}`;
+    const byDate = new Map<string, DayRecord[]>();
+    for (const r of hist) {
+      if (r.workDate < weekStartISO) continue;
+      const arr = byDate.get(r.workDate) ?? [];
+      arr.push(r);
+      byDate.set(r.workDate, arr);
+    }
+    const nowMs = Date.now();
+    let total = 0;
+    for (const recs of byDate.values()) total += spanMinutes(recs, nowMs);
+    return total;
+  }, [history]);
 
   const todayLocation = useMemo<LocationPickerValue | null>(() => {
     if (latest?.punchInLat != null && latest?.punchInLng != null) {
@@ -177,15 +229,59 @@ export function EmployeeTimesheetHome({ userName }: { userName: string }) {
         </div>
       </Card>
 
-      {/* This month */}
+      {/* Worked-time totals: today, this week, this month + overtime */}
       {monthly && (
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          <Stat label="Present" value={monthly.summary.present} />
-          <Stat label="Late" value={monthly.summary.late} sub={fmtMinutes(monthly.summary.totalLateMinutes)} />
-          <Stat label="Worked this month" value={fmtMinutes(monthly.summary.totalWorkedMinutes)} />
-          <Stat label="Overtime" value={fmtMinutes(monthly.summary.totalOvertimeMinutes)} />
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+          <Stat label="Worked today" value={fmtMinutes(workedToday)} />
+          <Stat label="This week" value={fmtMinutes(weekWorked)} />
+          <Stat label="This month" value={fmtMinutes(monthly.summary.totalWorkedMinutes)} />
+          <Stat label="Overtime (mo)" value={fmtMinutes(monthly.summary.totalOvertimeMinutes)} />
+          <Stat label="Present (mo)" value={monthly.summary.present} />
+          <Stat label="Late (mo)" value={monthly.summary.late} sub={fmtMinutes(monthly.summary.totalLateMinutes)} />
         </div>
       )}
+
+      {/* My goals — moved onto the main dashboard */}
+      <Card>
+        <CardContent className="p-5">
+          <div className="mb-3 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-50 text-emerald-800">
+                <Target className="h-4 w-4" />
+              </span>
+              <h3 className="text-base font-semibold">My goals</h3>
+            </div>
+            <Link href="/profile" className="text-xs font-semibold text-emerald-800 hover:underline">
+              View all →
+            </Link>
+          </div>
+          {goals && goals.length > 0 ? (
+            <div className="space-y-3">
+              {goals.slice(0, 3).map((goal: { id: string; title: string; status: string; progress: number | null; endDate: string | null }) => (
+                <div key={goal.id} className="rounded-xl bg-slate-50 p-3">
+                  <div className="flex items-center justify-between gap-3">
+                    <p className="text-sm font-semibold text-slate-900">{goal.title}</p>
+                    <span className="rounded-full bg-white px-2.5 py-1 text-xs font-semibold capitalize text-slate-600 ring-1 ring-slate-200">
+                      {goal.status.replace(/_/g, " ")}
+                    </span>
+                  </div>
+                  <div className="mt-2 h-2 rounded-full bg-slate-200">
+                    <div className="h-2 rounded-full bg-emerald-700" style={{ width: `${goal.progress ?? 0}%` }} />
+                  </div>
+                  <div className="mt-1.5 flex justify-between text-xs text-slate-500">
+                    <span>{goal.progress ?? 0}% complete</span>
+                    <span>Due {goal.endDate ?? "—"}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="rounded-xl bg-slate-50 p-4 text-sm text-slate-500">
+              No goals yet — agree a goal with your manager.
+            </p>
+          )}
+        </CardContent>
+      </Card>
 
       {/* Quick actions */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">

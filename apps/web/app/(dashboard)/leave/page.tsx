@@ -2,6 +2,7 @@
 
 import { api } from "~/trpc/react";
 import { useState } from "react";
+import { useSession } from "next-auth/react";
 import { Button, Badge } from "@hrms-app/ui";
 import { Check, X, Plus } from "lucide-react";
 import Link from "next/link";
@@ -23,11 +24,30 @@ const statusBadge: Record<string, { variant: "default" | "secondary" | "destruct
 export default function LeavePage() {
   const [statusFilter, setStatusFilter] = useState<string | undefined>(undefined);
   const utils = api.useUtils();
+  const { data: session } = useSession();
+  const isEmployee = session?.user?.role === "employee";
 
-  const { data: requests, isLoading } = api.leave.request.list.useQuery({ status: statusFilter as any });
+  // Employees may not call the company-scoped `list` (RBAC: leave:view_company).
+  // They read their OWN requests via `my`; managers/HR keep the full queue with
+  // the server-side status filter. This is why a submitted request looked
+  // "missing" — the page previously called the forbidden `list` for everyone.
+  const myQuery = api.leave.request.my.useQuery(undefined, { enabled: isEmployee });
+  const listQuery = api.leave.request.list.useQuery(
+    { status: statusFilter as any },
+    { enabled: !isEmployee },
+  );
   const approveMutation = api.leave.request.updateStatus.useMutation({
-    onSuccess: () => utils.leave.request.list.invalidate(),
+    onSuccess: () => {
+      utils.leave.request.list.invalidate();
+      utils.leave.request.my.invalidate();
+    },
   });
+
+  const isLoading = isEmployee ? myQuery.isLoading : listQuery.isLoading;
+  // `my` returns every status; apply the tab filter client-side for employees.
+  const requests = isEmployee
+    ? (myQuery.data ?? []).filter((r: any) => !statusFilter || r.status === statusFilter)
+    : listQuery.data;
 
   if (isLoading) return <div>Loading...</div>;
 
@@ -35,8 +55,10 @@ export default function LeavePage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Leave Requests</h1>
-          <p className="text-muted-foreground">Manage employee leave requests</p>
+          <h1 className="text-3xl font-bold">{isEmployee ? "My Leave Requests" : "Leave Requests"}</h1>
+          <p className="text-muted-foreground">
+            {isEmployee ? "Track your time-off requests and their approval status" : "Manage employee leave requests"}
+          </p>
         </div>
         <Button asChild>
           <Link href="/leave/new">
@@ -65,12 +87,12 @@ export default function LeavePage() {
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b bg-muted/50">
-              <th className="h-12 px-4 text-left font-medium text-muted-foreground">Employee</th>
+              {!isEmployee && <th className="h-12 px-4 text-left font-medium text-muted-foreground">Employee</th>}
               <th className="h-12 px-4 text-left font-medium text-muted-foreground">Leave Type</th>
               <th className="h-12 px-4 text-left font-medium text-muted-foreground">Start Date</th>
               <th className="h-12 px-4 text-left font-medium text-muted-foreground">End Date</th>
               <th className="h-12 px-4 text-left font-medium text-muted-foreground">Status</th>
-              <th className="h-12 px-4 text-left font-medium text-muted-foreground">Actions</th>
+              {!isEmployee && <th className="h-12 px-4 text-left font-medium text-muted-foreground">Actions</th>}
             </tr>
           </thead>
           <tbody>
@@ -78,7 +100,7 @@ export default function LeavePage() {
               const badge = statusBadge[req.status as keyof typeof statusBadge] ?? statusBadge.pending;
               return (
                 <tr key={req.id} className="border-b hover:bg-muted/50">
-                  <td className="p-4 align-middle">{req.employee?.fullName}</td>
+                  {!isEmployee && <td className="p-4 align-middle">{req.employee?.fullName}</td>}
                   <td className="p-4 align-middle">{req.leaveType?.name}</td>
                   <td className="p-4 align-middle">{req.startDate}</td>
                   <td className="p-4 align-middle">{req.endDate}</td>
@@ -87,34 +109,36 @@ export default function LeavePage() {
                       {req.status}
                     </Badge>
                   </td>
-                  <td className="p-4 align-middle">
-                    {req.status === "pending" && (
-                      <div className="flex gap-1">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="text-green-600"
-                          onClick={() => approveMutation.mutate({ id: req.id, data: { status: "approved" } })}
-                        >
-                          <Check className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="text-red-600"
-                          onClick={() => approveMutation.mutate({ id: req.id, data: { status: "rejected" } })}
-                        >
-                          <X className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    )}
-                  </td>
+                  {!isEmployee && (
+                    <td className="p-4 align-middle">
+                      {req.status === "pending" && (
+                        <div className="flex gap-1">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="text-green-600"
+                            onClick={() => approveMutation.mutate({ id: req.id, data: { status: "approved" } })}
+                          >
+                            <Check className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="text-red-600"
+                            onClick={() => approveMutation.mutate({ id: req.id, data: { status: "rejected" } })}
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      )}
+                    </td>
+                  )}
                 </tr>
               );
             })}
             {(!requests || requests.length === 0) && (
               <tr>
-                <td colSpan={6} className="p-4 text-center text-muted-foreground">
+                <td colSpan={isEmployee ? 4 : 6} className="p-4 text-center text-muted-foreground">
                   No leave requests found
                 </td>
               </tr>

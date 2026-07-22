@@ -146,7 +146,10 @@ export function LocationPicker({
         </div>
       )}
 
-      <div className={`relative overflow-hidden rounded-lg border border-slate-200 ${heightClass}`}>
+      {/* `isolate` + `z-0` pin Leaflet's internal panes/controls (which carry
+          z-index up to 1000) inside this box's own stacking context, so they
+          can no longer paint over the fixed chat window that sits above the page. */}
+      <div className={`relative isolate z-0 overflow-hidden rounded-lg border border-slate-200 ${heightClass}`}>
         {leafletReady && leafletMod ? (
           <leafletMod.MapContainer
             center={[center.lat, center.lng]}

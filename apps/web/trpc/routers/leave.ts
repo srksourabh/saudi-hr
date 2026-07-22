@@ -78,8 +78,18 @@ function toLeaveBalanceContext(row: typeof schema.tenant.leaveBalances.$inferSel
 export const leaveRouter = createTRPCRouter({
   leaveType: createTRPCRouter({
     list: protectedProcedure.query(async ({ ctx }) => {
-      return await ctx.db.query.leaveTypes.findMany({
+      const rows = await ctx.db.query.leaveTypes.findMany({
         orderBy: (leaveTypes: any, { asc }: any) => asc(leaveTypes.name),
+      });
+      // De-duplicate by name (LEV-DUP): a non-idempotent demo seed can leave
+      // multiple rows with the same name (e.g. two "Annual Leave"), which the
+      // request dropdown would otherwise list twice. Keep the first of each name.
+      const seen = new Set<string>();
+      return rows.filter((t: { name: string }) => {
+        const key = t.name.trim().toLowerCase();
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
       });
     }),
 

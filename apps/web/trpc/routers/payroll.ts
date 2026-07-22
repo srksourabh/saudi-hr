@@ -337,6 +337,72 @@ export const payrollRouter = createTRPCRouter({
       });
     }),
 
+    /**
+     * Self-service: ALL of the current employee's own payslips (My Payroll page).
+     * Own data only — scoped to ctx.user.employeeId.
+     */
+    mine: protectedProcedure.query(async ({ ctx }) => {
+      const employeeId = ctx.user.employeeId;
+      if (!employeeId) return [];
+      return await ctx.db.query.payslips.findMany({
+        where: eq(schema.tenant.payslips.employeeId, employeeId),
+        orderBy: desc(schema.tenant.payslips.createdAt),
+        with: { payrollRun: true },
+      });
+    }),
+
+    /**
+     * Employee-initiated payslip correction request. Verifies the payslip is the
+     * caller's own, then raises an in-app notification for the tenant's HR /
+     * payroll admins so they can review it.
+     */
+    requestCorrection: protectedProcedure
+      .input(z.object({ payslipId: z.string().uuid(), message: z.string().trim().min(5).max(500) }))
+      .mutation(async ({ ctx, input }) => {
+        const employeeId = ctx.user.employeeId;
+        if (!employeeId) {
+          throw new TRPCError({ code: "BAD_REQUEST", message: "Your login is not linked to an employee record." });
+        }
+        const payslip = await ctx.db.query.payslips.findFirst({
+          where: and(
+            eq(schema.tenant.payslips.id, input.payslipId),
+            eq(schema.tenant.payslips.employeeId, employeeId),
+          ),
+          with: { payrollRun: true },
+        });
+        if (!payslip) {
+          throw new TRPCError({ code: "NOT_FOUND", message: "Payslip not found." });
+        }
+        const me = await ctx.db.query.employees.findFirst({
+          where: eq(schema.tenant.employees.id, employeeId),
+          columns: { fullName: true },
+        });
+        // HR / payroll admins in THIS tenant (users live in the admin DB).
+        const hrUsers = await ctx.adminDb.query.users.findMany({
+          where: (users: any, { and: a, eq: e, inArray: ia }: any) =>
+            a(
+              e(users.tenantId, ctx.user.tenantId),
+              ia(users.role, ["super_admin", "hr_manager", "payroll_admin"]),
+            ),
+          columns: { id: true },
+        });
+        const period = (payslip as { payrollRun?: { periodMonth?: string } | null }).payrollRun?.periodMonth ?? "the latest period";
+        if (hrUsers.length > 0) {
+          await ctx.db.insert(schema.tenant.notifications).values(
+            hrUsers.map((u: { id: string }) => ({
+              userId: u.id,
+              channel: "in_app" as const,
+              type: "payslip_correction",
+              severity: "info",
+              title: "Payslip correction requested",
+              message: `${me?.fullName ?? "An employee"} requested a correction on their ${period} payslip: ${input.message}`,
+              metadata: { payslipId: input.payslipId, employeeId },
+            })),
+          );
+        }
+        return { success: true, notified: hrUsers.length };
+      }),
+
     // BIZ-010: the manual payslip.create endpoint (arbitrary net-pay injection
     // bypassing the calculation engine and audit) was removed. Payslips are
     // produced only by payrollRuns.create via orchestratePayrollRun().
