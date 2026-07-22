@@ -16,10 +16,17 @@ function assertSafeSchema(schemaName: unknown): asserts schemaName is string {
   }
 }
 
+// Connection budget: Supabase's session-mode pooler caps concurrent client
+// connections (observed EMAXCONNSESSION at pool_size 15). On Vercel each
+// serverless instance opens its OWN admin + tenant pools, so the pools are kept
+// small (admin 2 + tenant 3 = 5 per instance) to let several instances run
+// concurrently under that ceiling. idle_timeout reaps them quickly so they free
+// up for other instances. (Transaction-mode pooling would raise the ceiling but
+// breaks the per-tenant search_path this module relies on — see getTenantDb.)
 // Singleton admin client for public-schema queries (tenants, users, sessions).
 const adminSql = postgres(ADMIN_DB_URL, {
-  max: 5,
-  idle_timeout: 30,
+  max: 2,
+  idle_timeout: 20,
   connect_timeout: 10,
   prepare: false,
   keep_alive: 30,
@@ -50,8 +57,9 @@ export function getTenantDb(schemaName: string) {
   if (existing) return existing;
 
   const sql = postgres(ADMIN_DB_URL, {
-    max: 10,
-    idle_timeout: 30,
+    // Kept small for serverless — see the connection-budget note above adminSql.
+    max: 3,
+    idle_timeout: 20,
     connect_timeout: 10,
     prepare: false,
     keep_alive: 30,
