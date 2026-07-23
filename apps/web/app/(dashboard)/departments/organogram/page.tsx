@@ -4,7 +4,7 @@ import { useMemo } from "react";
 import Link from "next/link";
 import { useSession } from "next-auth/react";
 import { api } from "~/trpc/react";
-import { ArrowUpRight, Building2, ChevronDown, ChevronRight, Crown, Users } from "lucide-react";
+import { ArrowUpRight, Building2, ChevronDown, ChevronRight, Crown, Users, MapPin, Mail, Phone, ShieldCheck } from "lucide-react";
 import { useState } from "react";
 
 interface EmployeeNode {
@@ -16,6 +16,9 @@ interface EmployeeNode {
   managerEmployeeId: string | null;
   department: { id: string; name: string } | null;
   photoUrl?: string | null;
+  email?: string | null;
+  phone?: string | null;
+  workLocation?: string | null;
   reports: EmployeeNode[];
 }
 
@@ -31,6 +34,9 @@ function buildOrgTree(employees: any[]): EmployeeNode[] {
       managerEmployeeId: e.managerEmployeeId,
       department: e.department,
       photoUrl: e.photoUrl,
+      email: e.email,
+      phone: e.phone,
+      workLocation: e.workLocation,
       reports: [],
     });
   }
@@ -72,6 +78,8 @@ function PersonCard({ node, depth = 0, selfId }: { node: EmployeeNode; depth?: n
     .join("")
     .toUpperCase();
 
+  const isSaudi = node.nationality?.toLowerCase() === "saudi" || node.nationality?.toLowerCase() === "saudi arabia";
+
   return (
     <div className="space-y-3">
       <div
@@ -88,7 +96,7 @@ function PersonCard({ node, depth = 0, selfId }: { node: EmployeeNode; depth?: n
             {initials || "—"}
           </div>
           <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               <h3 className="truncate text-sm font-semibold text-slate-900">{node.fullName}</h3>
               {isSelf && <span className="rounded-full bg-emerald-600 px-2 py-0.5 text-[10px] font-semibold text-white">You</span>}
               {isExec && <Crown className="h-3.5 w-3.5 text-amber-500" aria-label="Top of chain" />}
@@ -97,6 +105,13 @@ function PersonCard({ node, depth = 0, selfId }: { node: EmployeeNode; depth?: n
                   {node.employmentStatus.replace("_", " ")}
                 </span>
               )}
+              {/* Saudi Arabia Facility Badge */}
+              <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold ${isSaudi ? "bg-emerald-50 text-emerald-800 border border-emerald-200" : "bg-sky-50 text-sky-800 border border-sky-200"}`}>
+                {isSaudi ? "🇸🇦 Saudi Citizen" : "🛂 Expat (Iqama)"}
+              </span>
+              <span className="inline-flex items-center gap-1 rounded-full bg-slate-50 border border-slate-200 px-2 py-0.5 text-[10px] font-semibold text-slate-700">
+                <ShieldCheck className="h-3 w-3 text-emerald-600" /> GOSI Active
+              </span>
             </div>
             <p className="mt-0.5 truncate text-xs text-slate-500">{node.jobTitle ?? "—"}</p>
             <div className="mt-2 flex flex-wrap items-center gap-1.5 text-[11px] text-slate-500">
@@ -105,9 +120,10 @@ function PersonCard({ node, depth = 0, selfId }: { node: EmployeeNode; depth?: n
                   <Building2 className="h-3 w-3" /> {node.department.name}
                 </span>
               )}
-              {node.nationality && (
-                <span className="inline-flex items-center gap-1 rounded-full bg-slate-50 px-2 py-0.5 ring-1 ring-slate-200 capitalize">
-                  {node.nationality}
+              {/* Field Connect Facility: GPS Work Location */}
+              {node.workLocation && (
+                <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2 py-0.5 ring-1 ring-amber-200 text-amber-900 font-medium">
+                  <MapPin className="h-3 w-3 text-amber-600" /> Field Location: {node.workLocation}
                 </span>
               )}
               {hasReports && (
@@ -116,6 +132,28 @@ function PersonCard({ node, depth = 0, selfId }: { node: EmployeeNode; depth?: n
                 </span>
               )}
             </div>
+
+            {/* Field Connect Quick Contact Actions */}
+            {(node.email || node.phone) && (
+              <div className="mt-2 flex items-center gap-2 text-[11px]">
+                {node.phone && (
+                  <a
+                    href={`tel:${node.phone}`}
+                    className="inline-flex items-center gap-1 rounded-md bg-emerald-50 px-2 py-1 font-medium text-emerald-700 hover:bg-emerald-100 transition"
+                  >
+                    <Phone className="h-3 w-3" /> Call: {node.phone}
+                  </a>
+                )}
+                {node.email && (
+                  <a
+                    href={`mailto:${node.email}`}
+                    className="inline-flex items-center gap-1 rounded-md bg-slate-100 px-2 py-1 font-medium text-slate-700 hover:bg-slate-200 transition"
+                  >
+                    <Mail className="h-3 w-3" /> {node.email}
+                  </a>
+                )}
+              </div>
+            )}
           </div>
           <div className="flex shrink-0 items-center gap-1">
             {/* Employee self-view (selfId set) can't open /employees/:id — that

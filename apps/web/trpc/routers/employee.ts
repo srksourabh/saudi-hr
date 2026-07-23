@@ -115,9 +115,13 @@ export const employeeRouter = createTRPCRouter({
     const cols = {
       id: true,
       fullName: true,
+      jobTitle: true,
       managerEmployeeId: true,
       employmentStatus: true,
       nationality: true,
+      email: true,
+      phone: true,
+      workLocation: true,
     } as const;
     const withDept = { department: { columns: { id: true, name: true } } } as const;
 
