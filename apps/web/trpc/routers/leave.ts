@@ -179,7 +179,7 @@ export const leaveRouter = createTRPCRouter({
         if (LEAVE_ONBEHALF_ROLES.includes(ctx.user.role) && input.employeeId) {
           employeeId = input.employeeId;
         } else {
-          let linkedEmployeeId = ctx.user.employeeId;
+          let linkedEmployeeId: string | null | undefined = ctx.user.employeeId;
           if (!linkedEmployeeId) {
             const user = await ctx.adminDb.query.users.findFirst({
               where: (users, { eq }) =>
