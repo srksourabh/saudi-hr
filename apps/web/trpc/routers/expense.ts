@@ -133,7 +133,13 @@ export const expenseRouter = createTRPCRouter({
   create: protectedProcedure
     .input(createExpenseSchema)
     .mutation(async ({ ctx, input }) => {
-      const userEmployeeId = ctx.session!.user.employeeId as string | undefined;
+      let userEmployeeId = ctx.session!.user.employeeId as string | undefined;
+      if (!userEmployeeId && ctx.user.email) {
+        const user = await ctx.adminDb.query.users.findFirst({
+          where: (users, { eq }) => eq(users.email, ctx.user.email!),
+        });
+        if (user?.employeeId) userEmployeeId = user.employeeId;
+      }
       if (!userEmployeeId) {
         throw new TRPCError({ code: "BAD_REQUEST", message: "Your login is not linked to an employee record" });
       }
@@ -153,13 +159,13 @@ export const expenseRouter = createTRPCRouter({
           where: eq(schema.tenant.employees.id, approverEmployeeId),
         });
         if (!approver) {
-          throw new TRPCError({ code: "BAD_REQUEST", message: "Approver employee not found" });
+          approverEmployeeId = undefined;
         }
       }
 
-      // BIZ-001: the submitter can never be their own approver.
+      // If submitter is their own approver (or top of chain), clear approver so it routes to HR.
       if (approverEmployeeId && approverEmployeeId === userEmployeeId) {
-        throw new TRPCError({ code: "BAD_REQUEST", message: "You cannot set yourself as your own approver" });
+        approverEmployeeId = undefined;
       }
 
       const [expense] = await ctx.db

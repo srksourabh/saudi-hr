@@ -87,14 +87,14 @@ export const recruitmentRouter = createTRPCRouter({
         });
       }),
 
-    create: requireRole("super_admin", "hr_manager", "recruiter")
+    create: requireRole("super_admin", "hr_manager", "hr_specialist", "recruiter")
       .input(createJobRequisitionSchema)
       .mutation(async ({ ctx, input }) => {
         const [jobRequisition] = await ctx.db.insert(schema.tenant.jobRequisitions).values(input).returning();
         return jobRequisition;
       }),
 
-    update: requireRole("super_admin", "hr_manager", "recruiter")
+    update: requireRole("super_admin", "hr_manager", "hr_specialist", "recruiter")
       .input(z.object({ id: z.string().uuid(), data: updateJobRequisitionSchema }))
       .mutation(async ({ ctx, input }) => {
         const [jobRequisition] = await ctx.db
@@ -118,7 +118,7 @@ export const recruitmentRouter = createTRPCRouter({
         return { success: true };
       }),
 
-    post: requireRole("super_admin", "hr_manager", "recruiter")
+    post: requireRole("super_admin", "hr_manager", "hr_specialist", "recruiter")
       .input(z.object({ id: z.string().uuid() }))
       .mutation(async ({ ctx, input }) => {
         const [jobRequisition] = await ctx.db
@@ -129,7 +129,7 @@ export const recruitmentRouter = createTRPCRouter({
         return jobRequisition;
       }),
 
-    close: requireRole("super_admin", "hr_manager", "recruiter")
+    close: requireRole("super_admin", "hr_manager", "hr_specialist", "recruiter")
       .input(z.string().uuid())
       .mutation(async ({ ctx, input }) => {
         const [jobRequisition] = await ctx.db
@@ -191,7 +191,7 @@ export const recruitmentRouter = createTRPCRouter({
         });
       }),
 
-    create: requireRole("super_admin", "hr_manager", "recruiter")
+    create: requireRole("super_admin", "hr_manager", "hr_specialist", "recruiter")
       .input(createCandidateSchema)
       .mutation(async ({ ctx, input }) => {
         const data = {
@@ -202,7 +202,7 @@ export const recruitmentRouter = createTRPCRouter({
         return candidate;
       }),
 
-    update: requireRole("super_admin", "hr_manager", "recruiter")
+    update: requireRole("super_admin", "hr_manager", "hr_specialist", "recruiter")
       .input(z.object({ id: z.string().uuid(), data: updateCandidateSchema }))
       .mutation(async ({ ctx, input }) => {
         const data = {
@@ -296,7 +296,7 @@ if (ctx.user.role === "employee") {
         return application;
       }),
 
-    update: requireRole("super_admin", "hr_manager", "recruiter")
+    update: requireRole("super_admin", "hr_manager", "hr_specialist", "recruiter")
       .input(z.object({ id: z.string().uuid(), data: updateApplicationSchema }))
       .mutation(async ({ ctx, input }) => {
         const data = {
@@ -313,7 +313,7 @@ if (ctx.user.role === "employee") {
         return application;
       }),
 
-    updateStatus: requireRole("super_admin", "hr_manager", "recruiter")
+    updateStatus: requireRole("super_admin", "hr_manager", "hr_specialist", "recruiter")
       .input(z.object({ id: z.string().uuid(), status: applicationStatusEnum }))
       .mutation(async ({ ctx, input }) => {
         const [application] = await ctx.db

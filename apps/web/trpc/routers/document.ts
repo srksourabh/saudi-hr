@@ -108,14 +108,14 @@ export const documentRouter = createTRPCRouter({
     });
   }),
 
-  create: requireRole("super_admin", "hr_manager")
+  create: requireRole("super_admin", "hr_manager", "hr_specialist")
     .input(createDocumentSchema)
     .mutation(async ({ ctx, input }) => {
       const [document] = await ctx.db.insert(schema.tenant.documents).values(input).returning();
       return document;
     }),
 
-  update: requireRole("super_admin", "hr_manager")
+  update: requireRole("super_admin", "hr_manager", "hr_specialist")
     .input(z.object({ id: z.string().uuid(), data: updateDocumentSchema }))
     .mutation(async ({ ctx, input }) => {
       const [document] = await ctx.db
@@ -126,7 +126,7 @@ export const documentRouter = createTRPCRouter({
       return document;
     }),
 
-  delete: requireRole("super_admin")
+  delete: requireRole("super_admin", "hr_manager", "hr_specialist")
     .input(z.string().uuid())
     .mutation(async ({ ctx, input }) => {
       await ctx.db.delete(schema.tenant.documents).where(eq(schema.tenant.documents.id, input));

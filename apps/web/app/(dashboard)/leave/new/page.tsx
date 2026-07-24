@@ -24,10 +24,14 @@ export default function NewLeaveRequestPage() {
   const [leaveTypeId, setLeaveTypeId] = useState("");
 
   useEffect(() => {
-    if (isEmployee && currentEmployee?.id) {
-      setEmployeeId(currentEmployee.id);
+    if (isEmployee) {
+      if (currentEmployee?.id) {
+        setEmployeeId(currentEmployee.id);
+      } else if (session?.user?.employeeId) {
+        setEmployeeId(session.user.employeeId);
+      }
     }
-  }, [isEmployee, currentEmployee?.id]);
+  }, [isEmployee, currentEmployee?.id, session?.user?.employeeId]);
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [error, setError] = useState("");
@@ -82,8 +86,8 @@ export default function NewLeaveRequestPage() {
             {isEmployee ? (
               <div className="space-y-2">
                 <label className="text-sm font-medium">Employee</label>
-                <div className="flex h-10 w-full items-center rounded-md border border-input bg-muted px-3 text-sm text-muted-foreground">
-                  {currentEmployee?.fullName ?? "Loading..."}
+                <div className="flex h-10 w-full items-center rounded-md border border-input bg-muted px-3 text-sm text-foreground">
+                  {currentEmployee?.fullName ?? session?.user?.name ?? "Employee"}
                 </div>
               </div>
             ) : (

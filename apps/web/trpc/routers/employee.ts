@@ -2,7 +2,7 @@ import { z } from "zod";
 import { createTRPCRouter, companyProcedure, protectedProcedure, requireRole } from "../server";
 import { schema } from "@hrms-app/db";
 import { createEmployeeSchema, updateEmployeeSchema, employeeQuerySchema } from "@hrms-app/validators";
-import { and, eq, like, desc, asc, count, inArray } from "drizzle-orm";
+import { and, eq, like, ilike, or, desc, asc, count, inArray } from "drizzle-orm";
 import { TRPCError } from "@trpc/server";
 import { writeAudit, SALARY_FIELDS, pickChanged } from "../audit";
 import { getManagedDepartmentIds } from "../scoping";
@@ -26,7 +26,7 @@ export const employeeRouter = createTRPCRouter({
       if (input?.status) conditions.push(eq(schema.tenant.employees.employmentStatus, input.status));
       if (input?.departmentId) conditions.push(eq(schema.tenant.employees.departmentId, input.departmentId));
       if (input?.search) {
-        conditions.push(like(schema.tenant.employees.fullName, `%${input.search}%`));
+        conditions.push(ilike(schema.tenant.employees.fullName, `%${input.search}%`));
       }
       // Department Manager sees only their own department(s) (RBAC-002).
       if (ctx.user.role === "department_manager") {
@@ -93,7 +93,13 @@ export const employeeRouter = createTRPCRouter({
    * employees, managers, HR and super admins.
    */
   me: protectedProcedure.query(async ({ ctx }) => {
-    const employeeId = ctx.user.employeeId;
+    let employeeId = ctx.user.employeeId;
+    if (!employeeId && ctx.user.email) {
+      const user = await ctx.adminDb.query.users.findFirst({
+        where: (users, { eq }) => eq(users.email, ctx.user.email!),
+      });
+      if (user?.employeeId) employeeId = user.employeeId;
+    }
     if (!employeeId) return null;
     return await ctx.db.query.employees.findFirst({
       where: eq(schema.tenant.employees.id, employeeId),
@@ -199,7 +205,7 @@ export const employeeRouter = createTRPCRouter({
   // in the same table — RBAC + ownership scopes decide what the rest of the
   // app can do with it.
   // Creating employee records is a people-management action (HR / super admin).
-  create: requireRole("super_admin", "hr_manager", "hr_specialist")
+  create: requireRole("super_admin", "hr_manager", "hr_specialist", "department_manager")
     .input(createEmployeeSchema)
     .mutation(async ({ ctx, input }) => {
       // Reject a duplicate national ID / iqama (EMP-006).
@@ -312,7 +318,7 @@ export const employeeRouter = createTRPCRouter({
       if (input?.status) conditions.push(eq(schema.tenant.employees.employmentStatus, input.status));
       if (input?.departmentId) conditions.push(eq(schema.tenant.employees.departmentId, input.departmentId));
       if (input?.search) {
-        conditions.push(like(schema.tenant.employees.fullName, `%${input.search}%`));
+        conditions.push(ilike(schema.tenant.employees.fullName, `%${input.search}%`));
       }
       const where = conditions.length > 0 ? and(...conditions) : undefined;
       const [result] = await ctx.db

@@ -26,14 +26,14 @@ export const departmentRouter = createTRPCRouter({
     });
   }),
 
-  create: requireRole("super_admin", "hr_manager")
+  create: requireRole("super_admin", "hr_manager", "hr_specialist")
     .input(createDepartmentSchema)
     .mutation(async ({ ctx, input }) => {
       const [dept] = await ctx.db.insert(schema.tenant.departments).values(input).returning();
       return dept;
     }),
 
-  update: requireRole("super_admin", "hr_manager")
+  update: requireRole("super_admin", "hr_manager", "hr_specialist")
     .input(z.object({ id: z.string().uuid(), data: updateDepartmentSchema }))
     .mutation(async ({ ctx, input }) => {
       const [dept] = await ctx.db
@@ -44,7 +44,7 @@ export const departmentRouter = createTRPCRouter({
       return dept;
     }),
 
-  delete: requireRole("super_admin")
+  delete: requireRole("super_admin", "hr_manager", "hr_specialist")
     .input(z.string().uuid())
     .mutation(async ({ ctx, input }) => {
       const activeEmployees = await ctx.db.query.employees.findFirst({

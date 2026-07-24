@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
-import { and, eq, gte, lte, desc, inArray } from "drizzle-orm";
+import { and, eq, gte, lte, desc, inArray, isNull } from "drizzle-orm";
 import {
   createTRPCRouter,
   protectedProcedure,
@@ -22,13 +22,10 @@ import {
 } from "@hrms-app/validators";
 
 async function resolveEmployeeId(ctx: any): Promise<string | null> {
-  // Any user linked to an employee record can act on their own attendance,
-  // regardless of role — a manager or admin may also be an employee who
-  // punches in. Previously this only resolved for the "employee" role, so
-  // every other role's punch failed with "not linked".
   if (ctx.user.employeeId) return ctx.user.employeeId;
   const user = await ctx.adminDb.query.users.findFirst({
-    where: (users: any, { eq }: any) => eq(users.id, ctx.user.id!),
+    where: (users: any, { eq }: any) =>
+      ctx.user.id ? eq(users.id, ctx.user.id) : eq(users.email, ctx.user.email!),
   });
   return user?.employeeId ?? null;
 }
@@ -227,14 +224,22 @@ export const attendanceRouter = createTRPCRouter({
       }
       const workDate = input.workDate ?? todayISO();
 
-      // Find the latest open record (no punch-out) for this employee+date
-      const openRecord = await ctx.db.query.attendanceRecords.findFirst({
-        where: and(
-          eq(schema.tenant.attendanceRecords.employeeId, employeeId),
-          eq(schema.tenant.attendanceRecords.workDate, workDate),
-        ),
-        orderBy: desc(schema.tenant.attendanceRecords.punchSequence),
-      });
+      // Find the latest open record (no punch-out) for this employee
+      const openRecord =
+        (await ctx.db.query.attendanceRecords.findFirst({
+          where: and(
+            eq(schema.tenant.attendanceRecords.employeeId, employeeId),
+            eq(schema.tenant.attendanceRecords.workDate, workDate),
+          ),
+          orderBy: desc(schema.tenant.attendanceRecords.punchSequence),
+        })) ??
+        (await ctx.db.query.attendanceRecords.findFirst({
+          where: and(
+            eq(schema.tenant.attendanceRecords.employeeId, employeeId),
+            isNull(schema.tenant.attendanceRecords.punchOutAt),
+          ),
+          orderBy: desc(schema.tenant.attendanceRecords.punchInAt),
+        }));
 
       if (!openRecord?.punchInAt) {
         throw new TRPCError({
