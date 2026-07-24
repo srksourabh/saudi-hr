@@ -179,13 +179,19 @@ export const leaveRouter = createTRPCRouter({
         if (LEAVE_ONBEHALF_ROLES.includes(ctx.user.role) && input.employeeId) {
           employeeId = input.employeeId;
         } else {
-          const linkedEmployeeId = ctx.user.employeeId || (
-            await ctx.adminDb.query.users.findFirst({
-              where: (users, { eq }) => eq(users.id, ctx.user.id!),
-            })
-          )?.employeeId;
+          let linkedEmployeeId = ctx.user.employeeId;
           if (!linkedEmployeeId) {
-            throw new Error("Employee profile is not linked to this login");
+            const user = await ctx.adminDb.query.users.findFirst({
+              where: (users, { eq }) =>
+                ctx.user.id ? eq(users.id, ctx.user.id) : eq(users.email, ctx.user.email!),
+            });
+            linkedEmployeeId = user?.employeeId;
+          }
+          if (!linkedEmployeeId) {
+            throw new TRPCError({
+              code: "FORBIDDEN",
+              message: "Employee profile is not linked to this login",
+            });
           }
           employeeId = linkedEmployeeId;
         }
