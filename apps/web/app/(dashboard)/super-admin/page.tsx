@@ -36,6 +36,25 @@ export default function SuperAdminPage() {
 
   const [search, setSearch] = useState("");
   const [_openTenant, setOpenTenant] = useState<string | null>(null);
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [formData, setFormData] = useState({
+    companyName: "",
+    crNumber: "",
+    email: "",
+    name: "",
+    password: "",
+    nitaqatActivity: "general",
+  });
+  const [createError, setCreateError] = useState<string | null>(null);
+
+  const createMutation = api.auth.createCompany.useMutation({
+    onSuccess: () => {
+      setShowCreateModal(false);
+      setFormData({ companyName: "", crNumber: "", email: "", name: "", password: "", nitaqatActivity: "general" });
+      list.refetch();
+    },
+    onError: (err) => setCreateError(err.message),
+  });
 
   if (session.isLoading || list.isLoading) {
     return (
@@ -93,12 +112,20 @@ export default function SuperAdminPage() {
               super_admin user, and is ready to seed their first employees.
             </p>
           </div>
-          <Link
-            href="/signup"
-            className="inline-flex items-center gap-2 rounded-full bg-emerald-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-emerald-700"
-          >
-            Open public signup <ArrowUpRight className="h-4 w-4" />
-          </Link>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setShowCreateModal(true)}
+              className="inline-flex items-center gap-2 rounded-full bg-emerald-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-emerald-700"
+            >
+              <Building2 className="h-4 w-4" /> Create new company
+            </button>
+            <Link
+              href="/signup"
+              className="inline-flex items-center gap-2 rounded-full bg-white/10 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-white/20"
+            >
+              Public signup <ArrowUpRight className="h-4 w-4" />
+            </Link>
+          </div>
         </div>
         <div className="mt-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
           <Stat label="Total tenants" value={stats.total} icon={Building2} />
@@ -214,6 +241,99 @@ export default function SuperAdminPage() {
         <Globe2 className="mr-1 inline h-3 w-3" />
         Each tenant schema is isolated. The platform operator (Taāzur) can read this metadata; tenant data is not exposed across companies.
       </p>
+
+      {showCreateModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
+          <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl space-y-4">
+            <div className="flex items-center justify-between">
+              <h2 className="text-xl font-bold text-slate-900">Create New Company</h2>
+              <button onClick={() => setShowCreateModal(false)} className="text-slate-400 hover:text-slate-600">
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            {createError && (
+              <div className="rounded-lg bg-rose-50 p-3 text-xs text-rose-700">{createError}</div>
+            )}
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                setCreateError(null);
+                createMutation.mutate(formData as any);
+              }}
+              className="space-y-3"
+            >
+              <div>
+                <label className="block text-xs font-semibold text-slate-700">Company Name</label>
+                <input
+                  required
+                  value={formData.companyName}
+                  onChange={(e) => setFormData({ ...formData, companyName: e.target.value })}
+                  placeholder="e.g. Al-Rawabi Enterprises"
+                  className="mt-1 w-full rounded-xl border border-slate-200 p-2.5 text-sm focus:border-emerald-500 focus:outline-none"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate-700">Commercial Registration (10 Digits)</label>
+                <input
+                  required
+                  value={formData.crNumber}
+                  onChange={(e) => setFormData({ ...formData, crNumber: e.target.value })}
+                  placeholder="1010123456"
+                  className="mt-1 w-full rounded-xl border border-slate-200 p-2.5 text-sm focus:border-emerald-500 focus:outline-none"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate-700">Admin Name</label>
+                <input
+                  required
+                  value={formData.name}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  placeholder="Mohammed Al-Otaibi"
+                  className="mt-1 w-full rounded-xl border border-slate-200 p-2.5 text-sm focus:border-emerald-500 focus:outline-none"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate-700">Admin Email</label>
+                <input
+                  required
+                  type="email"
+                  value={formData.email}
+                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                  placeholder="admin@company.sa"
+                  className="mt-1 w-full rounded-xl border border-slate-200 p-2.5 text-sm focus:border-emerald-500 focus:outline-none"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate-700">Password</label>
+                <input
+                  required
+                  type="password"
+                  value={formData.password}
+                  onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                  placeholder="••••••••••••"
+                  className="mt-1 w-full rounded-xl border border-slate-200 p-2.5 text-sm focus:border-emerald-500 focus:outline-none"
+                />
+              </div>
+              <div className="pt-2 flex justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setShowCreateModal(false)}
+                  className="rounded-full border border-slate-200 px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={createMutation.isPending}
+                  className="rounded-full bg-emerald-600 px-5 py-2 text-xs font-semibold text-white hover:bg-emerald-700 disabled:opacity-50"
+                >
+                  {createMutation.isPending ? "Creating Schema…" : "Provision Company Schema"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

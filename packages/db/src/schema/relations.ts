@@ -4,6 +4,7 @@ import {
   aiCompliancePredictions, aiRetentionRiskFlags,
 } from "./tenant/ai";
 import { departments } from "./tenant/departments";
+import { designations } from "./tenant/designations";
 import { employees } from "./tenant/employees";
 import { employmentHistory } from "./tenant/employment_history";
 import { documents } from "./tenant/documents";
@@ -69,13 +70,19 @@ import {
   talentReviewParticipants,
 } from "./tenant/retention";
 
+export const designationsRelations = relations(designations, ({ many }) => ({
+  employees: many(employees),
+}));
+
 export const departmentsRelations = relations(departments, ({ one, many }) => ({
   parent: one(departments, {
     fields: [departments.parentDepartmentId],
     references: [departments.id],
-    relationName: "parent",
+    relationName: "department_hierarchy",
   }),
-  children: many(departments, { relationName: "parent" }),
+  children: many(departments, {
+    relationName: "department_hierarchy",
+  }),
   head: one(employees, {
     fields: [departments.headEmployeeId],
     references: [employees.id],
@@ -87,6 +94,10 @@ export const employeesRelations = relations(employees, ({ one, many }) => ({
   department: one(departments, {
     fields: [employees.departmentId],
     references: [departments.id],
+  }),
+  designation: one(designations, {
+    fields: [employees.designationId],
+    references: [designations.id],
   }),
   manager: one(employees, {
     fields: [employees.managerEmployeeId],

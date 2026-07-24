@@ -69,7 +69,10 @@ const adminNavGroups: NavGroup[] = [
     items: [
       { href: "/employees", label: "People", labelAr: "الموظفون", icon: Users, capability: "people:view_company" },
       { href: "/departments", label: "Organization", labelAr: "الهيكل التنظيمي", icon: Building2, capability: "people:view_company" },
+      { href: "/designations", label: "Designations", labelAr: "المسميات الوظيفية", icon: BriefcaseBusiness, capability: "people:view_company" },
       { href: "/departments/organogram", label: "Organogram", labelAr: "الهيكل الإداري", icon: GitBranch, capability: "people:view_company" },
+      { href: "/manager/history", label: "Manager History", labelAr: "سجل المدير", icon: Users },
+      { href: "/super-admin", label: "Super Admin", labelAr: "مسؤول النظام", icon: ShieldCheck },
       { href: "/attendance/portal", label: "Attendance portal", labelAr: "بوابة الحضور", icon: CalendarCheck, capability: "attendance:view_company" },
       { href: "/attendance/reports", label: "Team reports", labelAr: "تقارير الفريق", icon: BarChart3, capability: "attendance:view_company" },
       { href: "/attendance/guide-map", label: "Guide map", labelAr: "خريطة المواقع", icon: MapPin, capability: "attendance:view_company" },

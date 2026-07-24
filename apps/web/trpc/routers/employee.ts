@@ -46,7 +46,7 @@ export const employeeRouter = createTRPCRouter({
 
       const rows = await ctx.db.query.employees.findMany({
         where,
-        with: { department: true },
+        with: { department: true, designation: true },
         orderBy,
         limit: input?.pageSize ?? 20,
         offset: input?.page ? (input.page - 1) * (input.pageSize ?? 20) : 0,
@@ -63,6 +63,7 @@ export const employeeRouter = createTRPCRouter({
       where: eq(schema.tenant.employees.id, input),
       with: {
         department: true,
+        designation: true,
         manager: true,
         documents: true,
         leaveRequests: true,
@@ -103,7 +104,26 @@ export const employeeRouter = createTRPCRouter({
     if (!employeeId) return null;
     return await ctx.db.query.employees.findFirst({
       where: eq(schema.tenant.employees.id, employeeId),
-      with: { department: true, manager: true },
+      with: { department: true, designation: true, manager: true },
+    });
+  }),
+
+  /**
+   * Manager self-service: returns list of direct reports managed by the current user.
+   */
+  myDirectReports: protectedProcedure.query(async ({ ctx }) => {
+    let employeeId = ctx.user.employeeId;
+    if (!employeeId && ctx.user.email) {
+      const user = await ctx.adminDb.query.users.findFirst({
+        where: (users, { eq }) => eq(users.email, ctx.user.email!),
+      });
+      if (user?.employeeId) employeeId = user.employeeId;
+    }
+    if (!employeeId) return [];
+    return await ctx.db.query.employees.findMany({
+      where: eq(schema.tenant.employees.managerEmployeeId, employeeId),
+      with: { department: true, designation: true, leaveRequests: true, attendanceRecords: true },
+      orderBy: desc(schema.tenant.employees.createdAt),
     });
   }),
 

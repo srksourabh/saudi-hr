@@ -2,6 +2,7 @@ import { createTRPCRouter } from "./server";
 import { authRouter } from "./routers/auth";
 import { employeeRouter } from "./routers/employee";
 import { departmentRouter } from "./routers/department";
+import { designationRouter } from "./routers/designation";
 import { userRouter } from "./routers/user";
 import { leaveRouter } from "./routers/leave";
 import { payrollRouter } from "./routers/payroll";
@@ -27,6 +28,7 @@ export const appRouter = createTRPCRouter({
   user: userRouter,
   employee: employeeRouter,
   department: departmentRouter,
+  designation: designationRouter,
   leave: leaveRouter,
   payroll: payrollRouter,
   document: documentRouter,

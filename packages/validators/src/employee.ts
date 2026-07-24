@@ -33,6 +33,8 @@ const employeeBaseSchema = z.object({
   fullName: z.string().min(1, "Full name is required").max(200).describe("Employee full name"),
   nationality: z.enum(["saudi", "expat"]).describe("Nationality classification"),
   departmentId: uuidSchema.optional().describe("Department UUID"),
+  designationId: uuidSchema.optional().describe("Designation UUID"),
+  jobTitle: z.string().optional().describe("Job title"),
   managerEmployeeId: uuidSchema.optional().describe("Manager employee UUID"),
   iqamaNumberEnc: z.string().optional().describe("National ID / Iqama number (10 digits)"),
   passportNumberEnc: z.string().optional().describe("Encrypted passport number"),

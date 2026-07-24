@@ -106,4 +106,35 @@ export const authRouter = createTRPCRouter({
       })),
     };
   }),
+
+  createCompany: protectedProcedure.input(signupSchema).mutation(async ({ ctx, input }) => {
+    if (ctx.user.role !== "super_admin") {
+      throw new TRPCError({ code: "FORBIDDEN", message: "Only super_admin can create new companies" });
+    }
+    const existing = await adminDb.query.users.findFirst({
+      where: eq(users.email, input.email),
+    });
+    if (existing) {
+      throw new TRPCError({ code: "CONFLICT", message: "A user with this admin email already exists" });
+    }
+    const { createTenantRegistry } = await import("@hrms-app/db");
+    const tenant = await createTenantRegistry(
+      input.companyName,
+      input.crNumber,
+      input.nitaqatActivity ?? "",
+      input.regulatoryContext,
+    );
+    if (!tenant) {
+      throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Failed to create company tenant schema" });
+    }
+    const passwordHash = await hash(input.password, 12);
+    await adminDb.insert(users).values({
+      email: input.email,
+      name: input.name,
+      passwordHash,
+      role: "hr_manager",
+      tenantId: tenant.id,
+    });
+    return { success: true, tenantId: tenant.id, adminUser: input.email };
+  }),
 });

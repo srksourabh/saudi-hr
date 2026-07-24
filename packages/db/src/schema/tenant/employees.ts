@@ -1,6 +1,7 @@
 import { pgTable, uuid, text, timestamp, pgEnum, numeric, date, index, uniqueIndex } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
 import { departments } from "./departments";
+import { designations } from "./designations";
 import { encryptedText } from "../../crypto";
 
 export const employmentStatusEnum   = pgEnum("employment_status",   ["active", "terminated", "suspended", "on_leave"]);
@@ -29,6 +30,7 @@ export const immigrationStatusEnum = pgEnum("immigration_status", [
 export const employees = pgTable("employees", {
   id: uuid("id").defaultRandom().primaryKey(),
   departmentId: uuid("department_id").references(() => departments.id, { onDelete: "set null" }),
+  designationId: uuid("designation_id").references(() => designations.id, { onDelete: "set null" }),
   managerEmployeeId: uuid("manager_employee_id"),
 
   // ── Core identity ──────────────────────────────────────────────────────
