@@ -17,6 +17,10 @@ export const signupSchema = z.object({
   companyName: z.string().min(1, "Company name is required").max(200),
   crNumber: z.string().min(1, "CR number is required"),
   nitaqatActivity: z.string().optional(),
+  industry: z.string().max(120).optional(),
+  companySize: z.string().max(40).optional(),
+  website: z.string().url("Invalid website URL").or(z.literal("")).optional(),
+  logoUrl: z.string().url("Invalid logo URL").or(z.literal("")).optional(),
   regulatoryContext: z.enum(["saudi", "india"]).optional().default("saudi"),
 });
 

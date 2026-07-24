@@ -1,7 +1,12 @@
 const { Client } = require('pg');
 const bcrypt = require('bcryptjs');
 
-const dbUrl = process.env.DATABASE_URL || "postgresql://postgres.iefwhxxhrycaalhxkfgp:0uKNZKTCt9JjHonT@aws-1-ap-south-1.pooler.supabase.com:5432/postgres";
+const dbUrl = process.env.DATABASE_URL;
+
+if (!dbUrl) {
+  console.error("DATABASE_URL is required. Load the target environment before running this script.");
+  process.exit(1);
+}
 
 async function run() {
   const client = new Client({ connectionString: dbUrl, ssl: { rejectUnauthorized: false } });

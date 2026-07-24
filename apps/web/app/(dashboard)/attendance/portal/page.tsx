@@ -218,11 +218,16 @@ export default function AttendancePortalPage() {
                               onClick={() => {
                                 const openRec = recs.find((r: any) => !r.punchOutAt);
                                 setSelectedEmployee({ id: emp.id, fullName: emp.fullName });
-                                setLocation(openRec?.workLocation ? {
-                                  lat: parseFloat(openRec.workLocation.split(",")[0]?.trim() ?? "0"),
-                                  lng: parseFloat(openRec.workLocation.split(",")[1]?.trim() ?? "0"),
-                                  siteName: openRec.workLocation,
-                                } : null);
+                                setLocation(
+                                  openRec?.punchInLat != null && openRec?.punchInLng != null
+                                    ? {
+                                        lat: openRec.punchInLat,
+                                        lng: openRec.punchInLng,
+                                        accuracy: openRec.punchInAccuracy ?? undefined,
+                                        siteName: openRec.workLocation ?? "Punch-in location",
+                                      }
+                                    : null,
+                                );
                               }}
                             >
                               <LogOut className="mr-1 h-3.5 w-3.5" />
@@ -295,6 +300,9 @@ export default function AttendancePortalPage() {
                   punchInMutation.mutate({
                     employeeId: selectedEmployee.id,
                     workLocation: location?.siteName ?? `${location?.lat?.toFixed(4)}, ${location?.lng?.toFixed(4)}`,
+                    lat: location.lat,
+                    lng: location.lng,
+                    accuracy: location.accuracy,
                     notes: location ? `lat=${location.lat},lng=${location.lng}${location.accuracy ? `,acc=${Math.round(location.accuracy)}m` : ""}` : undefined,
                   });
                 }}
@@ -314,7 +322,9 @@ export default function AttendancePortalPage() {
                   const openRec = selectedRecords.find((r: any) => !r.punchOutAt);
                   punchOutMutation.mutate({
                     employeeId: selectedEmployee.id,
-                    workLocation: location?.siteName ?? location ? `${location?.lat?.toFixed(4)}, ${location?.lng?.toFixed(4)}` : undefined,
+                    workLocation: location
+                      ? location.siteName ?? `${location.lat.toFixed(4)}, ${location.lng.toFixed(4)}`
+                      : undefined,
                     punchSequence: openRec?.punchSequence,
                   });
                 }}

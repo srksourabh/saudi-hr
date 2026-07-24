@@ -16,7 +16,7 @@ Status: Enhanced for engineering handoff (Claude Code ready)
 | 3.0 | 11 Jul 2026 | Added 7 new sections (NFR, Accessibility, Pricing, SLA, RACI, Migration, Legal Docs), enhanced 5 existing sections (AI risk tiering, API failure playbook, security verification levels, data retention/RTO-RPO, go-live ownership) | Gap analysis against ISO 29148, ISO 27001, OWASP ASVS, WCAG 2.1 AA, PDPL, NIST AI RMF |
 | 4.0 | 11 Jul 2026 | Added 13 new features closing HR generalist coverage gaps across all phases of recruitment, retention, and release (workforce planning, referrals, background/reference checks, 30/60/90 onboarding, succession planning, internal mobility, total rewards, recognition, stay interviews, employee relations, career pathing, alumni/boomerang tracking), plus new Section 21 | Research against SHRM Body of Applied Skills and Knowledge, full-cycle recruitment life cycle research, retention framework research (5 C's, total rewards), offboarding/alumni best-practice research |
 | 5.1 | 13 Jul 2026 | Adopted the configurable Taāzur / تآزر product identity, bilingual lockup, UDS-Noon JV attribution, and white-label rules across product surfaces and generated outputs. Customer career domains remain tenant-configured. | Shipment branding |
-| 5.0 | 11 Jul 2026 | Added Section 13.5, Data Structure & Entity Model: 45 entities across 12 domains, a core ERD, domain-grouped entity reference tables, a representative Prisma schema pattern, and indexing notes. Every entity traces back to a feature already defined in Sections 5-20; none are speculative | Brainstorm pass across every feature in the document, cross-checked against the tech stack (Section 4) and multi-tenancy model (Section 13.2) |
+| 5.0 | 11 Jul 2026 | Added Section 13.5, Data Structure & Entity Model: 45 entities across 12 domains, a core ERD, domain-grouped entity reference tables, a representative Drizzle/Postgres schema pattern, and indexing notes. Every entity traces back to a feature already defined in Sections 5-20; none are speculative | Brainstorm pass across every feature in the document, cross-checked against the tech stack (Section 4) and multi-tenancy model (Section 13.2) |
 
 **Sections and features marked `[NEW]` or `[ENHANCED]` throughout this document carry an inline tag noting which revision introduced them** (v3.0 or v4.0). Untagged content is carried forward from v2.0 unchanged.
 
@@ -209,7 +209,7 @@ Also supports SSO login via Microsoft (SAML/OIDC) as an alternative to email/pas
 | Cache/Queue | Redis + BullMQ | Job queues, session cache, rate limiting, AI response cache |
 | File Storage | AWS S3 (me-south-1) | Encrypted document storage with KMS |
 | Auth | NextAuth.js + JWT | MFA, SSO (SAML/OIDC), role-based routing |
-| ORM | Prisma | Type-safe queries, migrations, schema-per-tenant |
+| ORM | Drizzle ORM | Type-safe queries, generated tenant DDL, schema-per-tenant |
 | AI/ML | Claude API (Anthropic) | Arabic support, tool-use for structured queries, large context |
 | AI Agents | LangGraph (TypeScript) | Autonomous workflow orchestration, multi-step HR task agents |
 | Vector Store | pgvector | Regulation embeddings, candidate resume search, policy Q&A |
@@ -553,7 +553,7 @@ Primary threats for a multi-tenant Saudi payroll SaaS, in priority order: (1) cr
 | Authorization | RBAC with per-endpoint permission guards; tenant schema isolation | L2, moving to L3 for payroll-write endpoints | Cross-tenant leakage, payroll fraud |
 | API Security | Rate limiting (100 req/min/user); input validation (class-validator); CORS whitelist | L1 | General hardening |
 | Sessions | JWT access tokens (15 min); refresh tokens (7 days, httpOnly, secure, sameSite) | L2 | Credential compromise |
-| Injection | Prisma parameterized queries; CSP headers; XSS sanitization | L1 | General hardening |
+| Injection | Drizzle parameterized queries; CSP headers; XSS sanitization | L1 | General hardening |
 | File Uploads | Type whitelist (PDF, JPG, PNG, DOCX); 10 MB limit; ClamAV scan before S3 | L1 | PII exposure via malicious upload |
 | Audit Trail | Immutable append-only log: user, timestamp, IP, action, old/new values | L2 | Payroll fraud detection |
 | AI Security | PII filter on all AI prompts; prompt injection detection; output validation | L2, custom control not in standard ASVS categories | Prompt injection |
@@ -946,9 +946,10 @@ src/
 │   ├── pipes/                   # Validation pipes
 │   └── utils/                   # Hijri conversion, PII filter, Saudi rounding
 ├── config/                      # Env, DB, Redis, S3, AI, SMS, Email config
-└── prisma/
-    ├── schema.prisma
-    └── migrations/
+└── packages/db/
+    ├── src/schema/
+    ├── src/tenant-ddl.generated.ts
+    └── drizzle/
 ```
 
 ### 13.2 Multi-Tenancy Model
@@ -1281,72 +1282,34 @@ Everything in the platform ultimately answers to `tenant_id`. Per Section 13.2, 
 | Notification | id, tenant_id, user_id, channel (email/sms/inapp), message, status | References User | Backs Feature 1.14 |
 | DSARRequest | id, tenant_id, requester_employee_id, request_type (access/deletion), status, deadline_date | Belongs to Employee | Backs Section 10.3 |
 
-#### 13.5.3 Representative Prisma Schema Pattern
+#### 13.5.3 Representative Drizzle/Postgres Schema Pattern
 
-Rather than writing all 45 models out in full Prisma syntax here (which would roughly double this document's length for a mechanical transformation Claude Code can do directly from the tables above), three representative models are given below. They establish the pattern, field naming, and access-control annotation convention to apply consistently across the rest.
+The repository implements the data model with Drizzle ORM and PostgreSQL schema-per-tenant isolation. Public registry tables live in `packages/db/src/schema/public`, tenant tables live in `packages/db/src/schema/tenant`, and `packages/db/src/tenant-ddl.generated.ts` is generated from the tenant schema for new-company provisioning. The entity table above remains the product contract; the code below shows the implementation pattern.
 
-```prisma
-model Tenant {
-  id            String   @id @default(uuid())
-  companyName   String
-  crNumber      String   @unique
-  nitaqatActivity String
-  planTier      PlanTier @default(BASIC)
-  schemaName    String   @unique
-  createdAt     DateTime @default(now())
+```ts
+export const tenants = pgTable("tenants", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  companyName: text("company_name").notNull(),
+  crNumber: text("cr_number").notNull().unique(),
+  nitaqatActivity: text("nitaqat_activity").notNull(),
+  schemaName: text("schema_name").notNull().unique(),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+});
 
-  employees     Employee[]
-  departments   Department[]
-  users         User[]
-}
-
-model Employee {
-  id                String   @id @default(uuid())
-  tenantId          String
-  departmentId      String?
-  managerEmployeeId String?
-  // Encrypted fields, see Section 10.1: field-level encryption, not just column-level DB encryption
-  iqamaNumberEnc    String?
-  passportNumberEnc String?
-  bankIbanEnc       String?
-  nationality       String
-  employmentStatus  EmploymentStatus @default(ACTIVE)
-  hireDate          DateTime
-  terminationDate   DateTime?
-  gosiRegistrationDate DateTime?
-  gosiSystem        GosiSystem
-  salaryBasic       Decimal
-  salaryHousing     Decimal
-  salaryTransport   Decimal
-  rehireEligible    Boolean?
-  rehireReason      String?
-
-  tenant            Tenant   @relation(fields: [tenantId], references: [id])
-  department        Department? @relation(fields: [departmentId], references: [id])
-  manager           Employee?   @relation("EmployeeManager", fields: [managerEmployeeId], references: [id])
-  reports           Employee[]  @relation("EmployeeManager")
-  documents         Document[]
-  payslips          Payslip[]
-  leaveRequests     LeaveRequest[]
-}
-
-model EmployeeRelationsCase {
-  id                 String   @id @default(uuid())
-  tenantId           String
-  employeeId         String
-  caseType           CaseType // GRIEVANCE | DISCIPLINARY
-  filedByUserId      String
-  confidentialityLevel ConfidentialityLevel @default(HR_ONLY)
-  status             CaseStatus @default(OPEN)
-  resolutionNotes    String?
-
-  tenant             Tenant   @relation(fields: [tenantId], references: [id])
-  employee           Employee @relation(fields: [employeeId], references: [id])
-
-  // Row-level access enforced in the NestJS guard layer, per Section 21.4:
-  // only HR_MANAGER and SUPER_ADMIN roles may read this model, regardless of
-  // reporting-line relationship to the employee in question.
-}
+export const employees = pgTable("employees", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  departmentId: uuid("department_id").references(() => departments.id, { onDelete: "set null" }),
+  managerEmployeeId: uuid("manager_employee_id"),
+  fullName: text("full_name").notNull(),
+  nationality: nationalityEnum("nationality").notNull(),
+  employmentStatus: employmentStatusEnum("employment_status").notNull().default("active"),
+  hireDate: date("hire_date").notNull(),
+  salaryBasic: numeric("salary_basic", { precision: 12, scale: 2 }).notNull(),
+  iqamaNumberEnc: encryptedText("iqama_number_enc"),
+  passportNumberEnc: encryptedText("passport_number_enc"),
+  bankIbanEnc: encryptedText("bank_iban_enc"),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+});
 ```
 
 #### 13.5.4 Indexing and Query Pattern Notes

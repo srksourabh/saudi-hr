@@ -11,6 +11,18 @@ export const appRoles = [
 
 export type AppRole = (typeof appRoles)[number];
 
+const defaultPlatformAdminEmails = ["srksourabh@gmail.com"];
+
+export function isPlatformAdminEmail(email: string | null | undefined): boolean {
+  if (!email) return false;
+  const configured = (process.env.PLATFORM_ADMIN_EMAILS ?? "")
+    .split(",")
+    .map((entry) => entry.trim().toLowerCase())
+    .filter(Boolean);
+  const allowed = configured.length > 0 ? configured : defaultPlatformAdminEmails;
+  return allowed.includes(email.toLowerCase());
+}
+
 export const capabilities = [
   "dashboard:view_admin",
   "dashboard:view_employee",
@@ -198,7 +210,9 @@ const employeeProcedures = new Set([
   "attendance.today",
   "attendance.myHistory",
   "attendance.myMonthlySummary",
+  "attendance.requestCorrection",
   "employee.me",
+  "employee.orgChart",
   "employee.exportMyData",
   // Self-centered org chart: the employee's own managers-above / reports-below.
   "employee.orgAroundMe",

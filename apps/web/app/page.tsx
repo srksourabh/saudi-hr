@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { auth } from "@hrms-app/auth";
-import { can, type AppRole, type Capability } from "@hrms-app/auth/rbac";
+import { can, isPlatformAdminEmail, type AppRole, type Capability } from "@hrms-app/auth/rbac";
 import { adminDb, getTenantDb, tenants, schema } from "@hrms-app/db";
 import { eq } from "drizzle-orm";
 import { formatDual, todayHijri } from "@hrms-app/date";
@@ -47,6 +47,7 @@ export default async function RootPage() {
   const session = await auth();
 
   if (!session?.user) redirect("/login");
+  if (isPlatformAdminEmail(session.user.email)) redirect("/super-admin");
 
   const isEmployee = session.user.role === "employee";
 

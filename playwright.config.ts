@@ -1,7 +1,26 @@
 import { defineConfig, devices } from "@playwright/test";
+import { existsSync, readFileSync } from "node:fs";
+import { resolve } from "node:path";
 
 const port = 3100;
 const baseURL = process.env.PLAYWRIGHT_BASE_URL ?? `http://127.0.0.1:${port}`;
+
+function loadEnvFile(path: string) {
+  if (!existsSync(path)) return;
+  const lines = readFileSync(path, "utf8").split(/\r?\n/);
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith("#") || !trimmed.includes("=")) continue;
+    const [key, ...valueParts] = trimmed.split("=");
+    if (!key || process.env[key]) continue;
+    process.env[key] = valueParts.join("=").replace(/^['"]|['"]$/g, "");
+  }
+}
+
+loadEnvFile(resolve(process.cwd(), "../../.env"));
+loadEnvFile(resolve(process.cwd(), ".env"));
+loadEnvFile(resolve(process.cwd(), "apps/web/.env"));
+process.env.FIELD_ENCRYPTION_KEY ??= "playwright-local-only-field-encryption-key";
 
 export default defineConfig({
   testDir: "./apps/web/e2e",

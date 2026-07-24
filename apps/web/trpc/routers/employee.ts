@@ -18,6 +18,21 @@ function redactSalary<T extends Record<string, unknown>>(row: T): T {
 const SALARY_AUTHORISED_ROLES = ["super_admin", "hr_manager", "payroll_admin"] as const;
 const PROFILE_AUTHORISED_ROLES = ["super_admin", "hr_manager", "hr_specialist"] as const;
 
+const bulkEmployeeRowSchema = z.object({
+  fullName: z.string().min(1).max(200),
+  nationality: z.enum(["saudi", "expat"]),
+  hireDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  departmentName: z.string().optional(),
+  designationTitle: z.string().optional(),
+  managerFullName: z.string().optional(),
+  jobTitle: z.string().optional(),
+  gosiSystem: z.enum(["old", "new"]).optional(),
+  iqamaNumberEnc: z.string().optional(),
+  salaryBasic: z.number().positive(),
+  salaryHousing: z.number().min(0).default(0),
+  salaryTransport: z.number().min(0).default(0),
+});
+
 export const employeeRouter = createTRPCRouter({
   list: companyProcedure
     .input(employeeQuerySchema.optional().default({}))
@@ -124,6 +139,28 @@ export const employeeRouter = createTRPCRouter({
       where: eq(schema.tenant.employees.managerEmployeeId, employeeId),
       with: { department: true, designation: true, leaveRequests: true, attendanceRecords: true },
       orderBy: desc(schema.tenant.employees.createdAt),
+    });
+  }),
+
+  /**
+   * Company-wide organogram data for every signed-in user. This endpoint is
+   * intentionally non-sensitive: it exposes only reporting structure, status,
+   * department and designation, not salary, iqama, passport, bank or documents.
+   */
+  orgChart: protectedProcedure.query(async ({ ctx }) => {
+    return await ctx.db.query.employees.findMany({
+      columns: {
+        id: true,
+        fullName: true,
+        nationality: true,
+        employmentStatus: true,
+        managerEmployeeId: true,
+      },
+      with: {
+        department: { columns: { id: true, name: true } },
+        designation: { columns: { id: true, title: true } },
+      },
+      orderBy: asc(schema.tenant.employees.fullName),
     });
   }),
 
@@ -248,6 +285,119 @@ export const employeeRouter = createTRPCRouter({
         newValue: { fullName: input.fullName, nationality: input.nationality, departmentId: input.departmentId },
       });
       return employee;
+    }),
+
+  bulkCreate: requireRole("super_admin", "hr_manager", "hr_specialist")
+    .input(z.object({ rows: z.array(bulkEmployeeRowSchema).min(1).max(200) }))
+    .mutation(async ({ ctx, input }) => {
+      const departments = await ctx.db.query.departments.findMany();
+      const designations = await ctx.db.query.designations.findMany();
+      const existingEmployees = await ctx.db.query.employees.findMany({
+        columns: { id: true, fullName: true },
+      });
+      const departmentRows = departments as { id: string; name: string }[];
+      const designationRows = designations as { id: string; title: string }[];
+      const employeeRows = existingEmployees as { id: string; fullName: string }[];
+
+      const departmentByName = new Map(
+        departmentRows.map((dept) => [dept.name.trim().toLowerCase(), dept.id]),
+      );
+      const designationByTitle = new Map(
+        designationRows.map((designation) => [
+          designation.title.trim().toLowerCase(),
+          designation.id,
+        ]),
+      );
+      const employeeByName = new Map(
+        employeeRows.map((employee) => [
+          employee.fullName.trim().toLowerCase(),
+          employee.id,
+        ]),
+      );
+
+      const created: { row: number; id: string; fullName: string }[] = [];
+      const errors: { row: number; message: string }[] = [];
+
+      for (const [index, row] of input.rows.entries()) {
+        try {
+          let departmentId: string | undefined;
+          const departmentName = row.departmentName?.trim();
+          if (departmentName) {
+            const key = departmentName.toLowerCase();
+            departmentId = departmentByName.get(key);
+            if (!departmentId) {
+              const [dept] = await ctx.db
+                .insert(schema.tenant.departments)
+                .values({ name: departmentName })
+                .returning();
+              departmentId = dept?.id;
+              if (departmentId) departmentByName.set(key, departmentId);
+            }
+          }
+
+          let designationId: string | undefined;
+          const designationTitle = row.designationTitle?.trim();
+          if (designationTitle) {
+            const key = designationTitle.toLowerCase();
+            designationId = designationByTitle.get(key);
+            if (!designationId) {
+              const [designation] = await ctx.db
+                .insert(schema.tenant.designations)
+                .values({ title: designationTitle })
+                .returning();
+              designationId = designation?.id;
+              if (designationId) designationByTitle.set(key, designationId);
+            }
+          }
+
+          let managerEmployeeId: string | undefined;
+          const managerName = row.managerFullName?.trim();
+          if (managerName) {
+            managerEmployeeId = employeeByName.get(managerName.toLowerCase());
+            if (!managerEmployeeId) {
+              errors.push({ row: index + 2, message: `Manager not found: ${managerName}` });
+              continue;
+            }
+          }
+
+          const employeeInput = createEmployeeSchema.parse({
+            fullName: row.fullName.trim(),
+            nationality: row.nationality,
+            hireDate: row.hireDate,
+            departmentId,
+            designationId,
+            managerEmployeeId,
+            jobTitle: row.jobTitle?.trim() || undefined,
+            gosiSystem: row.gosiSystem,
+            iqamaNumberEnc: row.iqamaNumberEnc?.trim() || undefined,
+            salaryBasic: row.salaryBasic,
+            salaryHousing: row.salaryHousing,
+            salaryTransport: row.salaryTransport,
+          });
+
+          const [employee] = await ctx.db.insert(schema.tenant.employees).values(employeeInput).returning();
+          if (!employee) {
+            errors.push({ row: index + 2, message: "Employee insert did not return a row" });
+            continue;
+          }
+          employeeByName.set(employee.fullName.trim().toLowerCase(), employee.id);
+          created.push({ row: index + 2, id: employee.id, fullName: employee.fullName });
+        } catch (error) {
+          errors.push({
+            row: index + 2,
+            message: error instanceof Error ? error.message : "Unknown import error",
+          });
+        }
+      }
+
+      await writeAudit(ctx, {
+        action: "employee.bulk_create",
+        entityType: "employee",
+        entityId: "bulk",
+        newValue: { created: created.length, errors: errors.length },
+      });
+
+      return { created, errors };
     }),
 
   // Field-scoped update (B1):

@@ -43,9 +43,13 @@ Phase 0 emergency fixes implemented and verified (`apps/web` typecheck clean; no
 - **Deploy note:** set `PLATFORM_ADMIN_EMAILS` in the environment to the operator email(s) or the `/super-admin` page will (correctly) deny everyone.
 - Test required: RBAC-T02/T02b
 
-### 2026-07-20 — SEC-005 — Demo seed/migrate routes disabled in production
-- Change: `/api/seed/demo-data`, `/api/migrate/fix-critical-bugs`, `/api/migrate/fix-schema-drift` now return 404 when `NODE_ENV === "production"` (kept for demo/staging use). Token gate retained.
+### 2026-07-20 - SEC-005 - Demo seed/migrate routes disabled in production
+- Change: `/api/seed/demo-data`, `/api/migrate/fix-critical-bugs`, `/api/migrate/fix-schema-drift` returned 404 when `NODE_ENV === "production"` while retained for demo/staging use.
 - Files: `apps/web/app/api/seed/demo-data/route.ts`, `apps/web/app/api/migrate/fix-critical-bugs/route.ts`, `apps/web/app/api/migrate/fix-schema-drift/route.ts`
+
+### 2026-07-25 - SEC-005 - Demo seed/migrate HTTP routes removed
+- Change: deleted `/api/seed/demo-data`, `/api/migrate/fix-critical-bugs`, and `/api/migrate/fix-schema-drift`; removed the now-dead middleware matchers and migration-token CSRF exception.
+- Files: deleted route files above; updated `apps/web/middleware.ts`
 
 ### Verification
 - `apps/web` `tsc --noEmit`: **pass**.

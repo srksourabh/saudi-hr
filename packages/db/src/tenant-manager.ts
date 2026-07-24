@@ -1,10 +1,19 @@
 import postgres from "postgres";
 import { drizzle } from "drizzle-orm/postgres-js";
+import { eq } from "drizzle-orm";
 import * as tenantSchema from "./schema/tenant";
 import * as publicSchema from "./schema/public";
 import { TENANT_DDL_STATEMENTS } from "./tenant-ddl.generated";
 
-const ADMIN_DB_URL = process.env.DATABASE_URL ?? "postgresql://postgres:***@localhost:5432/hrms-app";
+function requiredDatabaseUrl(): string {
+  const url = process.env.DATABASE_URL;
+  if (!url) {
+    throw new Error("DATABASE_URL is required to initialize tenant database connections.");
+  }
+  return url;
+}
+
+const ADMIN_DB_URL = requiredDatabaseUrl();
 
 // Validate schema names to prevent SQL injection in the search_path parameter.
 // Tenant schema names follow the pattern `tenant_<12-char-hex>` or are matched
@@ -133,11 +142,31 @@ export async function createTenantSchema(schemaName: string) {
   }
 }
 
+export async function dropTenantSchema(schemaName: string) {
+  assertSafeSchema(schemaName);
+  const sql = postgres(ADMIN_DB_URL, {
+    max: 1,
+    prepare: false,
+    connect_timeout: 10,
+  });
+  try {
+    await sql.unsafe(`DROP SCHEMA IF EXISTS "${schemaName}" CASCADE`);
+  } finally {
+    await sql.end();
+  }
+}
+
 export async function createTenantRegistry(
   companyName: string,
   crNumber: string,
   nitaqatActivity: string,
   regulatoryContext?: "saudi" | "india",
+  profile?: {
+    industry?: string | null;
+    companySize?: string | null;
+    website?: string | null;
+    logoUrl?: string | null;
+  },
 ) {
   const schemaName = `tenant_${crypto.randomUUID().replace(/-/g, "").slice(0, 12)}`;
   const [tenant] = await adminDb
@@ -147,9 +176,22 @@ export async function createTenantRegistry(
       crNumber,
       nitaqatActivity,
       schemaName,
+      industry: profile?.industry || null,
+      companySize: profile?.companySize || null,
+      website: profile?.website || null,
+      logoUrl: profile?.logoUrl || null,
       ...(regulatoryContext ? { regulatoryContext } : {}),
     })
     .returning();
-  await createTenantSchema(schemaName);
+  if (!tenant) {
+    throw new Error("Failed to create tenant registry row.");
+  }
+  try {
+    await createTenantSchema(schemaName);
+  } catch (error) {
+    await adminDb.delete(publicSchema.tenants).where(eq(publicSchema.tenants.id, tenant.id));
+    await dropTenantSchema(schemaName).catch(() => undefined);
+    throw error;
+  }
   return tenant;
 }

@@ -1,6 +1,6 @@
 # Implemented API and Data Reference
 
-**Scope:** current repository contracts, not the aspirational NestJS/Prisma endpoint list in PRD Section 13.3.
+**Scope:** current repository contracts, not the older aspirational NestJS endpoint list in PRD Section 13.3.
 
 ## 1. Architecture reality
 
@@ -8,7 +8,7 @@
 |---|---|---|
 | Web | Next.js App Router | Next.js 16 App Router |
 | API | NestJS REST | Next.js route handlers + tRPC v11 |
-| ORM | Prisma | Drizzle ORM |
+| ORM | Drizzle ORM | Drizzle ORM |
 | Hosting | AWS ECS/RDS/S3 in me-south-1 | Public demo inspected on Vercel; database/external topology not fully verified |
 | Auth | NextAuth JWT, MFA, SSO | Auth.js/NextAuth credentials + JWT; MFA/SSO not established |
 | Queue/cache | Redis/BullMQ | Queue package/scaffolding; production operation requires environment verification |
@@ -22,11 +22,8 @@ Documentation and customer claims must follow current repository/deployment evid
 |---|---|---|
 | `/api/auth/[...nextauth]` | Auth.js provider/session/callback routes | Credentials/JWT; rate-limited callback path |
 | `/api/auth/signup` | Create tenant registry/schema and Super Admin account | Public validation; database required; transactional/rollback review needed |
-| `/api/auth/login` | Application-specific auth helper route | Inspect before third-party use; Auth.js is canonical session path |
-| `/api/auth/debug` | Auth diagnostics | Must be disabled/restricted in production |
-| `/api/auth/test` | Auth test helper | Must be disabled/restricted in production |
 | `/api/health` | Health response | Should distinguish process, database, queue, storage, and external dependencies |
-| `/api/qiwa` | Qiwa-related route | No production credential evidence; treat as non-live until verified |
+| `/api/vitals` | Client performance telemetry | Public POST with payload validation |
 | `/api/trpc/[trpc]` | tRPC HTTP adapter | Procedure authorization applies server-side |
 | `/api/cron/accrual` | Scheduled leave accrual | Requires scheduler authentication, idempotency, timezone/effective-date tests |
 | `/api/cron/expiry` | Scheduled document expiry processing | Requires scheduler authentication, retry/audit, AST schedule verification |

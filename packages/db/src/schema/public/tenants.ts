@@ -11,6 +11,7 @@ export const tenants = pgTable("tenants", {
   industry: text("industry"),
   companySize: text("company_size"),
   website: text("website"),
+  logoUrl: text("logo_url"),
   planTier: planTierEnum("plan_tier").notNull().default("basic"),
   regulatoryContext: regulatoryContextEnum("regulatory_context").notNull().default("saudi"),
   schemaName: text("schema_name").notNull().unique(),

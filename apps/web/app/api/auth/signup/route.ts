@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { hash } from "bcryptjs";
-import { adminDb, createTenantRegistry, tenants } from "@hrms-app/db";
+import { adminDb, createTenantRegistry, dropTenantSchema, tenants } from "@hrms-app/db";
 import { users } from "@hrms-app/db";
 import { eq } from "drizzle-orm";
 import { signupSchema } from "@hrms-app/validators";
@@ -24,6 +24,7 @@ function allowSignup(ip: string): boolean {
 }
 
 export async function POST(request: Request) {
+  let tenant: Awaited<ReturnType<typeof createTenantRegistry>> | null = null;
   try {
     const ip =
       request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??
@@ -44,7 +45,19 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Validation failed", errors }, { status: 400 });
     }
 
-    const { email, password, name, companyName, crNumber, nitaqatActivity, regulatoryContext } = parsed.data;
+    const {
+      email,
+      password,
+      name,
+      companyName,
+      crNumber,
+      nitaqatActivity,
+      regulatoryContext,
+      industry,
+      companySize,
+      website,
+      logoUrl,
+    } = parsed.data;
 
     // Saudi Commercial Registration numbers are 10 digits (AUTH-009). Only
     // enforced for the saudi regulatory context; other contexts keep the
@@ -64,11 +77,17 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Email already in use" }, { status: 409 });
     }
 
-    const tenant = await createTenantRegistry(
+    tenant = await createTenantRegistry(
       companyName,
       crNumber,
       nitaqatActivity ?? "",
       regulatoryContext,
+      {
+        industry: industry || null,
+        companySize: companySize || null,
+        website: website || null,
+        logoUrl: logoUrl || null,
+      },
     );
     if (!tenant) {
       throw new Error("Failed to create tenant");
@@ -92,6 +111,10 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ success: true }, { status: 201 });
   } catch (error) {
+    if (tenant) {
+      await adminDb.delete(tenants).where(eq(tenants.id, tenant.id)).catch(() => undefined);
+      await dropTenantSchema(tenant.schemaName).catch(() => undefined);
+    }
     console.error("Signup error:", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }

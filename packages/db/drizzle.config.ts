@@ -1,10 +1,16 @@
 import { defineConfig } from "drizzle-kit";
 
+const databaseUrl = process.env.DATABASE_URL;
+
+if (!databaseUrl) {
+  throw new Error("DATABASE_URL is required to run Drizzle database commands.");
+}
+
 export default defineConfig({
   schema: "./src/schema/**/*.ts",
   out: "./drizzle",
   dialect: "postgresql",
   dbCredentials: {
-    url: process.env.DATABASE_URL ?? "postgresql://postgres:postgres@localhost:5432/hrms-app",
+    url: databaseUrl,
   },
 });

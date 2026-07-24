@@ -10,6 +10,7 @@ const profilePatchSchema = z.object({
   industry: z.string().max(120).nullish(),
   companySize: z.string().max(60).nullish(),
   website: z.string().max(255).nullish(),
+  logoUrl: z.string().url().max(500).or(z.literal("")).nullish(),
 });
 
 export async function GET() {
@@ -26,6 +27,7 @@ export async function GET() {
       industry: tenant.industry ?? "",
       companySize: tenant.companySize ?? "",
       website: tenant.website ?? "",
+      logoUrl: tenant.logoUrl ?? "",
     });
   } catch (err) {
     console.error("[GET /api/company/profile]", err);
@@ -50,7 +52,7 @@ export async function PATCH(request: Request) {
     const first = parsed.error.issues[0]?.message ?? "Invalid input";
     return NextResponse.json({ error: first }, { status: 400 });
   }
-  const { industry, companySize, website } = parsed.data;
+  const { industry, companySize, website, logoUrl } = parsed.data;
 
   try {
     await adminDb
@@ -59,6 +61,7 @@ export async function PATCH(request: Request) {
         industry: industry ?? null,
         companySize: companySize ?? null,
         website: website ?? null,
+        logoUrl: logoUrl || null,
       })
       .where(eq(tenants.id, session.user.tenantId as string));
 

@@ -59,6 +59,20 @@ export const resolveExceptionSchema = z.object({
   resolutionNotes: z.string().max(500).optional(),
 });
 
+export const requestAttendanceCorrectionSchema = z.object({
+  attendanceRecordId: uuidSchema,
+  exceptionType: z.enum([
+    "missing_punch_in",
+    "missing_punch_out",
+    "late_arrival",
+    "early_departure",
+    "no_show",
+    "missed_break",
+    "location_violation",
+  ]),
+  description: z.string().min(5, "Explain what needs correction").max(500),
+});
+
 export const punchInForEmployeeSchema = z.object({
   employeeId: uuidSchema,
   workDate: z
@@ -67,6 +81,9 @@ export const punchInForEmployeeSchema = z.object({
     .optional()
     .describe("Defaults to today if omitted"),
   workLocation: z.string().max(100).optional(),
+  lat: z.number().min(-90).max(90).optional(),
+  lng: z.number().min(-180).max(180).optional(),
+  accuracy: z.number().nonnegative().optional(),
   notes: z.string().max(500).optional(),
 });
 
@@ -103,5 +120,6 @@ export type PunchOutInput = z.infer<typeof punchOutSchema>;
 export type PunchInForEmployeeInput = z.infer<typeof punchInForEmployeeSchema>;
 export type PunchOutForEmployeeInput = z.infer<typeof punchOutForEmployeeSchema>;
 export type ResolveExceptionInput = z.infer<typeof resolveExceptionSchema>;
+export type RequestAttendanceCorrectionInput = z.infer<typeof requestAttendanceCorrectionSchema>;
 export type AttendanceQueryInput = z.infer<typeof attendanceQuerySchema>;
 export type EmployeeLocationInput = z.infer<typeof employeeLocationSchema>;

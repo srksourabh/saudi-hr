@@ -6,6 +6,7 @@ interface ScopingContext {
   db: {
     query: {
       departments: { findMany: (args: unknown) => Promise<{ id: string }[]> };
+      employees?: { findMany: (args: unknown) => Promise<{ id: string }[]> };
     };
   };
   user: { employeeId?: string; role: string };
@@ -25,6 +26,31 @@ export async function getManagedDepartmentIds(ctx: ScopingContext): Promise<stri
   return depts.map((d) => d.id);
 }
 
+interface DirectReportContext {
+  db: {
+    query: {
+      employees: {
+        findMany: (args: unknown) => Promise<{ id: string }[]>;
+        findFirst: (args: unknown) => Promise<{ managerEmployeeId: string | null } | undefined>;
+      };
+      attendanceExceptions?: {
+        findFirst: (args: unknown) => Promise<{ employeeId: string } | undefined>;
+      };
+    };
+  };
+  user: { employeeId?: string; role: string };
+}
+
+/** Employee ids that report directly to the current manager. */
+export async function getDirectReportEmployeeIds(ctx: DirectReportContext): Promise<string[]> {
+  if (!ctx.user.employeeId) return [];
+  const reports = await ctx.db.query.employees.findMany({
+    where: eq(schema.tenant.employees.managerEmployeeId, ctx.user.employeeId),
+    columns: { id: true },
+  });
+  return reports.map((employee) => employee.id);
+}
+
 // ── Department-manager write scoping (SEC-013) ──────────────────────────────
 // A department_manager may only write records belonging to employees in the
 // department(s) they head. Company-wide roles (super_admin, hr_manager, ...)
@@ -41,7 +67,9 @@ interface WriteScopeContext extends ScopingContext {
   db: ScopingContext["db"] & {
     query: {
       departments: { findMany: (args: unknown) => Promise<{ id: string }[]> };
-      employees: FindOne<{ departmentId: string | null }>;
+      employees: FindOne<{ departmentId: string | null; managerEmployeeId?: string | null }> & {
+        findMany: (args: unknown) => Promise<{ id: string }[]>;
+      };
       goals: FindOne<{ employeeId: string }>;
       reviews: FindOne<{ employeeId: string }>;
       reviewResponses: FindOne<{ reviewId: string }>;
@@ -52,6 +80,9 @@ interface WriteScopeContext extends ScopingContext {
 
 const outOfScope = () =>
   new TRPCError({ code: "FORBIDDEN", message: "This record is outside your department scope." });
+
+const outOfReportingScope = () =>
+  new TRPCError({ code: "FORBIDDEN", message: "This record is outside your reporting team." });
 
 /** Assert the target employee is in a department the caller heads. */
 export async function assertManagesEmployee(ctx: WriteScopeContext, employeeId: string): Promise<void> {
@@ -107,4 +138,26 @@ export async function assertManagesException(ctx: WriteScopeContext, exceptionId
   });
   if (!exc) throw new TRPCError({ code: "NOT_FOUND", message: "Attendance exception not found." });
   await assertManagesEmployee(ctx, exc.employeeId);
+}
+
+/** Assert a department manager is the employee's immediate reporting manager. */
+export async function assertDirectManagerOfEmployee(ctx: WriteScopeContext, employeeId: string): Promise<void> {
+  if (ctx.user.role !== "department_manager") return;
+  if (!ctx.user.employeeId) throw outOfReportingScope();
+  const emp = await ctx.db.query.employees.findFirst({
+    where: eq(schema.tenant.employees.id, employeeId),
+    columns: { managerEmployeeId: true },
+  });
+  if (!emp || emp.managerEmployeeId !== ctx.user.employeeId) throw outOfReportingScope();
+}
+
+/** Assert an attendance exception belongs to a direct report of this manager. */
+export async function assertDirectManagerOfException(ctx: WriteScopeContext, exceptionId: string): Promise<void> {
+  if (ctx.user.role !== "department_manager") return;
+  const exc = await ctx.db.query.attendanceExceptions.findFirst({
+    where: eq(schema.tenant.attendanceExceptions.id, exceptionId),
+    columns: { employeeId: true },
+  });
+  if (!exc) throw new TRPCError({ code: "NOT_FOUND", message: "Attendance exception not found." });
+  await assertDirectManagerOfEmployee(ctx, exc.employeeId);
 }

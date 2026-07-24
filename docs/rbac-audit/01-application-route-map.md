@@ -70,11 +70,9 @@ These bypass the tRPC guards and must self-enforce. **This is where enforcement 
 | `/api/company/setup-complete` | POST | session only | none | Low |
 | `/api/company/setup-status` | GET | session only | none | Low |
 | `/api/upload` | POST | session only | none (tenant-scoped path) | Low-Med |
-| `/api/seed/demo-data` | POST | `MIGRATION_TOKEN` (fail-closed) | n/a | Medium - remove before prod (SEC-005) |
-| `/api/migrate/fix-critical-bugs` | POST | `MIGRATION_TOKEN` (fail-closed) | n/a | Medium - hardcodes a customer schema; remove (SEC-005) |
-| `/api/migrate/fix-schema-drift` | POST | `MIGRATION_TOKEN` (fail-closed) | n/a | Medium - remove (SEC-005) |
 | `/api/auth/*` | - | NextAuth | - | Rate-limited (MW) |
 | `/api/health` | GET | none | - | Low |
+| `/api/vitals` | POST | none | - | Low (validated telemetry payload) |
 
 ---
 
@@ -82,7 +80,7 @@ These bypass the tRPC guards and must self-enforce. **This is where enforcement 
 
 - Pages (page.tsx) mapped: **80+ routes** across auth, public, and dashboard groups.
 - tRPC routers: **22**.
-- Custom REST route handlers: **11**.
+- Custom REST route handlers: **15 route files**, including Auth.js, company setup, cron, health, upload, vitals, and tRPC adapter routes.
 - Background jobs / queue (BullMQ): declared in stack; not yet wired into audited routers (verify before launch).
 
 See `04-page-feature-audit.md` for per-page feature/role analysis and `05-security-findings.md` for the detailed findings referenced above.

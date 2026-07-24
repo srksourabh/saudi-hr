@@ -1,6 +1,13 @@
 export { departments } from "./departments";
 export { designations } from "./designations";
-export { employees, employmentStatusEnum, gosiSystemEnum, nationalityEnum } from "./employees";
+export {
+  employees,
+  employmentStatusEnum,
+  gosiSystemEnum,
+  nationalityEnum,
+  visaTypeEnum,
+  immigrationStatusEnum,
+} from "./employees";
 export { employmentHistory } from "./employment_history";
 export { documents } from "./documents";
 export {

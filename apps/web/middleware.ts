@@ -1,4 +1,4 @@
-import { canAccessRoute } from "@hrms-app/auth/rbac";
+import { canAccessRoute, isPlatformAdminEmail } from "@hrms-app/auth/rbac";
 import { getToken } from "next-auth/jwt";
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
@@ -36,7 +36,7 @@ function checkRateLimit(key: string, maxRequests: number, windowMs: number): boo
   return true;
 }
 
-const CSRF_PROTECTED_PREFIXES = ["/api/upload", "/api/company", "/api/seed", "/api/migrate"];
+const CSRF_PROTECTED_PREFIXES = ["/api/upload", "/api/company"];
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
@@ -66,26 +66,19 @@ export async function middleware(request: NextRequest) {
       }
     } else {
       // Fail closed when Origin is absent (API-007): fall back to Referer and
-      // reject requests carrying neither. Requests bearing the migration token
-      // (header or ?token=) are exempt — cross-site browser requests cannot
-      // attach custom headers, and the seed/migrate routes validate the token
-      // value themselves.
-      const hasMigrationToken =
-        request.headers.has("x-migration-token") || request.nextUrl.searchParams.has("token");
-      if (!hasMigrationToken) {
-        const referer = request.headers.get("referer");
-        let refererHost: string | null = null;
-        try {
-          refererHost = referer ? new URL(referer).host : null;
-        } catch {
-          refererHost = null;
-        }
-        if (!refererHost || refererHost !== host) {
-          return new NextResponse(JSON.stringify({ error: "Cross-origin request rejected" }), {
-            status: 403,
-            headers: { "Content-Type": "application/json" },
-          });
-        }
+      // reject requests carrying neither.
+      const referer = request.headers.get("referer");
+      let refererHost: string | null = null;
+      try {
+        refererHost = referer ? new URL(referer).host : null;
+      } catch {
+        refererHost = null;
+      }
+      if (!refererHost || refererHost !== host) {
+        return new NextResponse(JSON.stringify({ error: "Cross-origin request rejected" }), {
+          status: 403,
+          headers: { "Content-Type": "application/json" },
+        });
       }
     }
     // Rate-limit these sensitive endpoints (30/min/IP).
@@ -128,6 +121,27 @@ export async function middleware(request: NextRequest) {
       secureCookie: request.nextUrl.protocol === "https:",
     });
     const role = typeof token?.role === "string" ? token.role : null;
+    const email = typeof token?.email === "string" ? token.email : null;
+    if (isPlatformAdminEmail(email)) {
+      const allowed =
+        pathname === "/" ||
+        pathname === "/super-admin" ||
+        pathname.startsWith("/super-admin/") ||
+        pathname === "/superadmin" ||
+        pathname.startsWith("/superadmin/");
+      if (!allowed) {
+        const destination = request.nextUrl.clone();
+        destination.pathname = "/super-admin";
+        destination.search = "";
+        return NextResponse.redirect(destination);
+      }
+      if (pathname === "/") {
+        const destination = request.nextUrl.clone();
+        destination.pathname = "/super-admin";
+        destination.search = "";
+        return NextResponse.redirect(destination);
+      }
+    }
     if (role && !canAccessRoute(role, pathname)) {
       const destination = request.nextUrl.clone();
       destination.pathname = "/";
@@ -141,14 +155,13 @@ export async function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
+    "/",
     "/api/auth/callback/credentials",
     "/api/auth/signup",
     "/api/auth/request-reset",
     "/api/auth/reset",
     "/api/upload",
     "/api/company/:path*",
-    "/api/seed/:path*",
-    "/api/migrate/:path*",
     "/api/trpc/:path*",
     "/employees/:path*",
     "/departments/:path*",

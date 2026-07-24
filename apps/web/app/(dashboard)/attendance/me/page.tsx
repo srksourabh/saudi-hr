@@ -1,7 +1,7 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { Button, Card, CardHeader, CardContent, Badge, Input } from "@hrms-app/ui";
+import { useEffect, useMemo, useState } from "react";
+import { Button, Card, CardHeader, CardContent, Badge, Input, Textarea } from "@hrms-app/ui";
 import { api } from "~/trpc/react";
 import { LocationPicker, type LocationPickerValue } from "~/components/location-picker";
 import { Clock, MapPin, LogIn, LogOut, AlertTriangle, Calendar } from "lucide-react";
@@ -35,10 +35,24 @@ function currentMonth(): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
 }
 
+const correctionOptions = [
+  { value: "missing_punch_in", label: "Forgot punch in" },
+  { value: "missing_punch_out", label: "Forgot punch out" },
+  { value: "late_arrival", label: "Late arrival correction" },
+  { value: "early_departure", label: "Early departure correction" },
+  { value: "missed_break", label: "Break correction" },
+  { value: "location_violation", label: "Location correction" },
+] as const;
+
 export default function MyAttendancePage() {
   const [month, setMonth] = useState<string>(currentMonth());
   const [location, setLocation] = useState<LocationPickerValue | null>(null);
   const [punchError, setPunchError] = useState<string | null>(null);
+  const [localPunchOpen, setLocalPunchOpen] = useState<boolean | null>(null);
+  const [correctionType, setCorrectionType] = useState<(typeof correctionOptions)[number]["value"]>("missing_punch_in");
+  const [correctionText, setCorrectionText] = useState("");
+  const [correctionMessage, setCorrectionMessage] = useState<string | null>(null);
+  const [correctionError, setCorrectionError] = useState<string | null>(null);
   const utils = api.useUtils();
 
   const { data: today, isLoading: loadingToday } = api.attendance.today.useQuery();
@@ -48,20 +62,41 @@ export default function MyAttendancePage() {
   const punchInMutation = api.attendance.punchIn.useMutation({
     onSuccess: () => {
       setPunchError(null);
+      setLocalPunchOpen(true);
       utils.attendance.today.invalidate();
       utils.attendance.myHistory.invalidate();
       utils.attendance.myMonthlySummary.invalidate({ month });
     },
-    onError: (e) => setPunchError(e.message),
+    onError: (e) => {
+      setLocalPunchOpen(null);
+      setPunchError(e.message);
+    },
   });
   const punchOutMutation = api.attendance.punchOut.useMutation({
     onSuccess: () => {
       setPunchError(null);
+      setLocalPunchOpen(false);
       utils.attendance.today.invalidate();
       utils.attendance.myHistory.invalidate();
       utils.attendance.myMonthlySummary.invalidate({ month });
     },
-    onError: (e) => setPunchError(e.message),
+    onError: (e) => {
+      setLocalPunchOpen(null);
+      setPunchError(e.message);
+    },
+  });
+  const correctionMutation = api.attendance.requestCorrection.useMutation({
+    onSuccess: () => {
+      setCorrectionText("");
+      setCorrectionError(null);
+      setCorrectionMessage("Correction request sent to your reporting manager.");
+      utils.attendance.today.invalidate();
+      utils.attendance.myHistory.invalidate();
+    },
+    onError: (e) => {
+      setCorrectionMessage(null);
+      setCorrectionError(e.message);
+    },
   });
 
   const records = today?.records ?? [];
@@ -72,8 +107,17 @@ export default function MyAttendancePage() {
   const latestRecord = records.find((r: any) => !r.punchOutAt) ?? records[records.length - 1];
   // Punched in = an OPEN sequence exists (in, not yet out). After punching out
   // this is false, so the employee can start another sequence the same day.
-  const punchedIn = !!latestRecord?.punchInAt && !latestRecord?.punchOutAt;
+  const serverPunchOpen = records.some((r: any) => !!r.punchInAt && !r.punchOutAt);
+  const punchedIn = localPunchOpen ?? serverPunchOpen;
   const punchedOut = !!latestRecord?.punchOutAt;
+  const punchInDisabled = punchedIn || punchInMutation.isPending || punchOutMutation.isPending;
+  const punchOutDisabled = !punchedIn || punchInMutation.isPending || punchOutMutation.isPending;
+
+  useEffect(() => {
+    if (localPunchOpen !== null && localPunchOpen === serverPunchOpen) {
+      setLocalPunchOpen(null);
+    }
+  }, [localPunchOpen, serverPunchOpen]);
   // Today's worked time = first punch-in → last punch-out across all sequences.
   const workedTodayMin = (() => {
     const nowMs = Date.now();
@@ -205,7 +249,12 @@ export default function MyAttendancePage() {
               <div className="flex flex-wrap gap-3 pt-1">
                 <Button
                   size="lg"
-                  disabled={punchedIn || punchInMutation.isPending}
+                  disabled={punchInDisabled}
+                  className={
+                    punchInDisabled
+                      ? "bg-slate-200 text-slate-500 hover:bg-slate-200"
+                      : "bg-emerald-700 text-white hover:bg-emerald-800"
+                  }
                   onClick={() =>
                     punchInMutation.mutate({
                       workLocation: location?.siteName ?? (location ? `${location.lat.toFixed(4)}, ${location.lng.toFixed(4)}` : "On-site"),
@@ -216,19 +265,75 @@ export default function MyAttendancePage() {
                   }
                 >
                   <LogIn className="mr-2 h-4 w-4" />
-                  {punchedIn ? "Already punched in" : "Punch in"}
+                  {punchInMutation.isPending ? "Punching in..." : punchedIn ? "Punched in" : "Punch in"}
                 </Button>
                 <Button
                   size="lg"
-                  variant="outline"
-                  disabled={!punchedIn || punchedOut || punchOutMutation.isPending}
+                  variant={punchOutDisabled ? "outline" : "default"}
+                  disabled={punchOutDisabled}
+                  className={
+                    punchOutDisabled
+                      ? "border-slate-200 bg-slate-100 text-slate-500 hover:bg-slate-100"
+                      : "bg-rose-700 text-white hover:bg-rose-800"
+                  }
                   // Punch-out records the time only — location is not tracked
                   // once the employee is off the clock.
                   onClick={() => punchOutMutation.mutate({})}
                 >
                   <LogOut className="mr-2 h-4 w-4" />
-                  {punchedOut ? "Already punched out" : "Punch out"}
+                  {punchOutMutation.isPending ? "Punching out..." : punchedIn ? "Punch out" : "Punched out"}
                 </Button>
+              </div>
+
+              <div className="rounded-lg border border-slate-200 bg-white p-4">
+                <div className="mb-3">
+                  <div className="text-sm font-semibold text-slate-900">Attendance correction</div>
+                  <div className="text-xs text-muted-foreground">
+                    Requests are sent to your reporting manager.
+                  </div>
+                </div>
+                <div className="grid gap-3 sm:grid-cols-[220px_1fr]">
+                  <select
+                    value={correctionType}
+                    onChange={(e) => setCorrectionType(e.target.value as typeof correctionType)}
+                    className="h-10 rounded-md border border-input bg-background px-3 text-sm"
+                    disabled={!latestRecord?.id || correctionMutation.isPending}
+                  >
+                    {correctionOptions.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                  <Textarea
+                    rows={3}
+                    value={correctionText}
+                    onChange={(e) => setCorrectionText(e.target.value)}
+                    placeholder="Explain what needs correction"
+                    disabled={!latestRecord?.id || correctionMutation.isPending}
+                  />
+                </div>
+                <div className="mt-3 flex flex-wrap items-center gap-3">
+                  <Button
+                    size="sm"
+                    disabled={!latestRecord?.id || correctionText.trim().length < 5 || correctionMutation.isPending}
+                    onClick={() => {
+                      if (!latestRecord?.id) return;
+                      correctionMutation.mutate({
+                        attendanceRecordId: latestRecord.id,
+                        exceptionType: correctionType,
+                        description: correctionText.trim(),
+                      });
+                    }}
+                  >
+                    {correctionMutation.isPending ? "Sending..." : "Send request"}
+                  </Button>
+                  {!latestRecord?.id && (
+                    <span className="text-xs text-muted-foreground">Punch in first to create an attendance record.</span>
+                  )}
+                  {correctionMessage && <span className="text-xs text-emerald-700">{correctionMessage}</span>}
+                  {correctionError && <span className="text-xs text-red-700">{correctionError}</span>}
+                </div>
               </div>
             </div>
           )}

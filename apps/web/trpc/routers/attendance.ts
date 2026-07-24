@@ -8,7 +8,11 @@ import {
   requireCapability,
 } from "../server";
 import { schema } from "@hrms-app/db";
-import { assertManagesException } from "../scoping";
+import { can } from "@hrms-app/auth/rbac";
+import {
+  assertDirectManagerOfException,
+  getDirectReportEmployeeIds,
+} from "../scoping";
 import {
   createShiftSchema,
   updateShiftSchema,
@@ -16,6 +20,7 @@ import {
   punchInSchema,
   punchOutSchema,
   resolveExceptionSchema,
+  requestAttendanceCorrectionSchema,
   attendanceQuerySchema,
   punchInForEmployeeSchema,
   punchOutForEmployeeSchema,
@@ -45,7 +50,7 @@ export interface TreeNode {
   managerId: string | null;
   employmentStatus: string;
   children: TreeNode[];
-  lastLocation: { lat: number; lng: number; workLocation: string | null; punchInAt: Date | null } | null;
+  lastLocation: { lat: number; lng: number; workLocation: string | null; punchInAt: Date | null; status: string } | null;
 }
 
 export const attendanceRouter = createTRPCRouter({
@@ -296,33 +301,46 @@ export const attendanceRouter = createTRPCRouter({
     }),
 
   // ── Today's status for the current user (employee self-service) ─────
-  today: protectedProcedure.query(async ({ ctx }) => {
-    const employeeId = await resolveEmployeeId(ctx);
-    if (!employeeId) {
-      throw new TRPCError({
-        code: "FORBIDDEN",
-        message: "Employee profile is not linked to this login",
+  today: protectedProcedure
+    .input(z.object({ employeeId: z.string().uuid().optional() }).optional().default({}))
+    .query(async ({ ctx, input }) => {
+      const selfEmployeeId = await resolveEmployeeId(ctx);
+      const employeeId = input.employeeId ?? selfEmployeeId;
+      if (!employeeId) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "Employee profile is not linked to this login",
+        });
+      }
+      if (
+        input.employeeId &&
+        input.employeeId !== selfEmployeeId &&
+        !can(ctx.user.role, "attendance:view_company")
+      ) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "You do not have permission to view this employee's attendance",
+        });
+      }
+      const workDate = todayISO();
+      const records = await ctx.db.query.attendanceRecords.findMany({
+        where: and(
+          eq(schema.tenant.attendanceRecords.employeeId, employeeId),
+          eq(schema.tenant.attendanceRecords.workDate, workDate),
+        ),
+        with: { shift: true, exceptions: true },
+        orderBy: (r: any, { asc }: any) => asc(r.punchSequence),
       });
-    }
-    const workDate = todayISO();
-    const records = await ctx.db.query.attendanceRecords.findMany({
-      where: and(
-        eq(schema.tenant.attendanceRecords.employeeId, employeeId),
-        eq(schema.tenant.attendanceRecords.workDate, workDate),
-      ),
-      with: { shift: true, exceptions: true },
-      orderBy: (r: any, { asc }: any) => asc(r.punchSequence),
-    });
-    const assignment = await ctx.db.query.shiftAssignments.findFirst({
-      where: and(
-        eq(schema.tenant.shiftAssignments.employeeId, employeeId),
-        lte(schema.tenant.shiftAssignments.effectiveFrom, workDate),
-      ),
-      with: { shift: true },
-      orderBy: desc(schema.tenant.shiftAssignments.effectiveFrom),
-    });
-    return { records, assignment };
-  }),
+      const assignment = await ctx.db.query.shiftAssignments.findFirst({
+        where: and(
+          eq(schema.tenant.shiftAssignments.employeeId, employeeId),
+          lte(schema.tenant.shiftAssignments.effectiveFrom, workDate),
+        ),
+        with: { shift: true },
+        orderBy: desc(schema.tenant.shiftAssignments.effectiveFrom),
+      });
+      return { records, assignment };
+    }),
 
   // ── Self-service history for an employee ─────────────────────────────
   myHistory: protectedProcedure
@@ -542,7 +560,73 @@ export const attendanceRouter = createTRPCRouter({
       return { month: input.month, employees: employees_report };
     }),
 
-  // ── Exception queue for HR ──────────────────────────────────────────
+  requestCorrection: protectedProcedure
+    .input(requestAttendanceCorrectionSchema)
+    .mutation(async ({ ctx, input }) => {
+      const employeeId = await resolveEmployeeId(ctx);
+      if (!employeeId) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "Employee profile is not linked to this login",
+        });
+      }
+
+      const record = await ctx.db.query.attendanceRecords.findFirst({
+        where: eq(schema.tenant.attendanceRecords.id, input.attendanceRecordId),
+        columns: { id: true, employeeId: true },
+      });
+      if (!record || record.employeeId !== employeeId) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "You can only request corrections for your own attendance.",
+        });
+      }
+
+      const employee = await ctx.db.query.employees.findFirst({
+        where: eq(schema.tenant.employees.id, employeeId),
+        columns: { managerEmployeeId: true },
+      });
+      if (!employee?.managerEmployeeId) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "No reporting manager is assigned for this employee.",
+        });
+      }
+
+      const duplicate = await ctx.db.query.attendanceExceptions.findFirst({
+        where: and(
+          eq(schema.tenant.attendanceExceptions.attendanceRecordId, input.attendanceRecordId),
+          eq(schema.tenant.attendanceExceptions.employeeId, employeeId),
+          eq(schema.tenant.attendanceExceptions.exceptionType, input.exceptionType),
+          inArray(schema.tenant.attendanceExceptions.status, ["open", "acknowledged"]),
+        ),
+        columns: { id: true },
+      });
+      if (duplicate) {
+        throw new TRPCError({
+          code: "CONFLICT",
+          message: "A correction request for this item is already open.",
+        });
+      }
+
+      const [exception] = await ctx.db
+        .insert(schema.tenant.attendanceExceptions)
+        .values({
+          attendanceRecordId: input.attendanceRecordId,
+          employeeId,
+          exceptionType: input.exceptionType,
+          status: "open",
+          description: input.description,
+        })
+        .returning();
+
+      return {
+        ...exception,
+        managerEmployeeId: employee.managerEmployeeId,
+      };
+    }),
+
+  // ── Exception queue for HR / direct reporting managers ──────────────
   exceptions: requireCapability("attendance:view_company")
     .input(
       z
@@ -553,9 +637,14 @@ export const attendanceRouter = createTRPCRouter({
         .default({}),
     )
     .query(async ({ ctx, input }) => {
-      const conditions: ReturnType<typeof eq>[] = [];
+      const conditions: any[] = [];
       if (input?.status)
         conditions.push(eq(schema.tenant.attendanceExceptions.status, input.status));
+      if (ctx.user.role === "department_manager") {
+        const directReportIds = await getDirectReportEmployeeIds(ctx);
+        if (directReportIds.length === 0) return [];
+        conditions.push(inArray(schema.tenant.attendanceExceptions.employeeId, directReportIds));
+      }
       const where = conditions.length > 0 ? and(...conditions) : undefined;
       return await ctx.db.query.attendanceExceptions.findMany({
         where,
@@ -571,8 +660,8 @@ export const attendanceRouter = createTRPCRouter({
   resolveException: requireRole("super_admin", "hr_manager", "department_manager")
     .input(resolveExceptionSchema)
     .mutation(async ({ ctx, input }) => {
-      // A department_manager may only resolve exceptions for their own team (SEC-013).
-      await assertManagesException(ctx, input.id);
+      // A department_manager may only resolve exceptions for direct reports.
+      await assertDirectManagerOfException(ctx, input.id);
       const [exc] = await ctx.db
         .update(schema.tenant.attendanceExceptions)
         .set({
@@ -650,6 +739,9 @@ export const attendanceRouter = createTRPCRouter({
           scheduledStart,
           scheduledEnd,
           workLocation: input.workLocation,
+          punchInLat: input.lat ?? null,
+          punchInLng: input.lng ?? null,
+          punchInAccuracy: input.accuracy != null ? Math.round(input.accuracy) : null,
           notes: input.notes,
           shiftId: assignment?.shiftId ?? null,
         })
@@ -822,13 +914,13 @@ export const attendanceRouter = createTRPCRouter({
 
         for (const node of nodes) {
           const lastRec = latestByEmployee.get(node.id);
-          if (lastRec?.workLocation) {
-            const parts = lastRec.workLocation.split(",");
+          if (lastRec?.punchInLat != null && lastRec?.punchInLng != null) {
             node.lastLocation = {
-              lat: parseFloat(parts[0]?.trim() ?? "0"),
-              lng: parseFloat(parts[1]?.trim() ?? "0"),
+              lat: lastRec.punchInLat,
+              lng: lastRec.punchInLng,
               workLocation: lastRec.workLocation,
               punchInAt: lastRec.punchInAt,
+              status: lastRec.status,
             };
           }
         }

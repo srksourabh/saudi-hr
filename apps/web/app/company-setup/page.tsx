@@ -35,6 +35,7 @@ interface StepData {
     industry: string;
     companySize: string;
     website: string;
+    logoUrl: string;
   };
   departments: Department[];
   invites: Invite[];
@@ -46,7 +47,7 @@ export default function CompanySetupPage() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
   const [data, setData] = useState<StepData>({
-    companyProfile: { industry: "", companySize: "", website: "" },
+    companyProfile: { industry: "", companySize: "", website: "", logoUrl: "" },
     departments: [{ id: "1", name: "" }],
     invites: [],
   });
@@ -266,6 +267,33 @@ export default function CompanySetupPage() {
                       }))
                     }
                   />
+                </div>
+
+                <div>
+                  <label className="mb-1.5 block text-xs font-medium text-slate-700">Company logo URL</label>
+                  <input
+                    type="url"
+                    placeholder="https://yourcompany.com/logo.png"
+                    className="w-full rounded-xl border border-slate-200 px-3.5 py-2.5 text-sm text-slate-900 ring-1 ring-slate-200 placeholder:text-slate-400 focus:border-emerald-600 focus:ring-emerald-600 focus:outline-none transition"
+                    value={data.companyProfile.logoUrl}
+                    onChange={(e) =>
+                      setData((d) => ({
+                        ...d,
+                        companyProfile: { ...d.companyProfile, logoUrl: e.target.value },
+                      }))
+                    }
+                  />
+                  {data.companyProfile.logoUrl && (
+                    <div className="mt-2 flex items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 p-3">
+                      {/* Tenant logo URLs are customer configuration and may be hosted outside Next image domains. */}
+                      <img
+                        src={data.companyProfile.logoUrl}
+                        alt="Company logo preview"
+                        className="h-10 w-10 rounded-lg object-contain ring-1 ring-slate-200"
+                      />
+                      <span className="text-xs text-slate-500">Logo preview for this company workspace</span>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>

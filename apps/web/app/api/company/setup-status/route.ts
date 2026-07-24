@@ -18,6 +18,7 @@ export async function GET() {
       industry: tenant.industry ?? null,
       companySize: tenant.companySize ?? null,
       website: tenant.website ?? null,
+      logoUrl: tenant.logoUrl ?? null,
     });
   } catch (err) {
     console.error("[GET /api/company/setup-status]", err);
