@@ -175,26 +175,46 @@ export const leaveRouter = createTRPCRouter({
         // is bound to their own session employee — a client-supplied
         // employeeId is never trusted for them (SEC-012).
         const LEAVE_ONBEHALF_ROLES = ["super_admin", "hr_manager", "hr_specialist"];
-        let employeeId: string;
+        let targetEmployeeId: string | undefined;
+
         if (LEAVE_ONBEHALF_ROLES.includes(ctx.user.role) && input.employeeId) {
-          employeeId = input.employeeId;
-        } else {
-          let linkedEmployeeId: string | null | undefined = ctx.user.employeeId;
-          if (!linkedEmployeeId) {
+          const emp = await ctx.db.query.employees.findFirst({
+            where: eq(schema.tenant.employees.id, input.employeeId),
+          });
+          if (emp) {
+            targetEmployeeId = emp.id;
+          }
+        }
+
+        if (!targetEmployeeId) {
+          let linkedId: string | null | undefined = ctx.user.employeeId;
+          if (linkedId) {
+            const emp = await ctx.db.query.employees.findFirst({
+              where: eq(schema.tenant.employees.id, linkedId),
+            });
+            if (emp) targetEmployeeId = emp.id;
+          }
+          if (!targetEmployeeId) {
             const user = await ctx.adminDb.query.users.findFirst({
               where: (users, { eq }) =>
                 ctx.user.id ? eq(users.id, ctx.user.id) : eq(users.email, ctx.user.email!),
             });
-            linkedEmployeeId = user?.employeeId;
+            if (user?.employeeId) {
+              const emp = await ctx.db.query.employees.findFirst({
+                where: eq(schema.tenant.employees.id, user.employeeId),
+              });
+              if (emp) targetEmployeeId = emp.id;
+            }
           }
-          if (!linkedEmployeeId) {
-            throw new TRPCError({
-              code: "FORBIDDEN",
-              message: "Employee profile is not linked to this login",
-            });
-          }
-          employeeId = linkedEmployeeId;
         }
+
+        if (!targetEmployeeId) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "The selected employee profile was not found or your user login is not linked to an employee record.",
+          });
+        }
+        const employeeId = targetEmployeeId;
 
         // Overlap check (LEV-010): reject a request that overlaps an existing
         // active (pending/approved) request for the same employee.

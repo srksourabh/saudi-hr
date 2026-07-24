@@ -16,22 +16,20 @@ export default function NewLeaveRequestPage() {
     ? { data: undefined }
     : api.employee.list.useQuery({ pageSize: 200 });
   const { data: leaveTypes } = api.leave.leaveType.list.useQuery();
-  const { data: currentEmployee } = isEmployee
-    ? api.employee.me.useQuery()
-    : { data: undefined };
+  const { data: currentEmployee } = api.employee.me.useQuery();
 
   const [employeeId, setEmployeeId] = useState("");
   const [leaveTypeId, setLeaveTypeId] = useState("");
 
   useEffect(() => {
-    if (isEmployee) {
+    if (!employeeId) {
       if (currentEmployee?.id) {
         setEmployeeId(currentEmployee.id);
       } else if (session?.user?.employeeId) {
         setEmployeeId(session.user.employeeId);
       }
     }
-  }, [isEmployee, currentEmployee?.id, session?.user?.employeeId]);
+  }, [currentEmployee?.id, session?.user?.employeeId, employeeId]);
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [error, setError] = useState("");
